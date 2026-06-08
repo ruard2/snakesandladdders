@@ -182,6 +182,9 @@
           <span>💬 Chat</span>
           <button onclick="CommLayer.closeChat()">✕</button>
         </div>
+        <div id="__cl_topic" style="display:none;padding:6px 14px 2px;font-size:.75rem;
+          color:#b8a860;font-style:italic;border-bottom:1px solid rgba(200,160,64,.12);
+          flex-shrink:0;line-height:1.4;"></div>
         <div id="__cl_msgs"></div>
         <div id="__cl_irow">
           <input id="__cl_inp" placeholder="Schrijf iets..."
@@ -649,7 +652,21 @@
         setTimeout(() => document.getElementById('__cl_inp')?.focus(), 60);
       }
     },
-    closeChat()  { C.chatOpen = false;  document.getElementById('__cl_chat')?.classList.remove('open'); },
+    // openChat(topic) — open chat met optionele context-zin bovenaan (voor games)
+    openChat(topic) {
+      const topicEl = document.getElementById('__cl_topic');
+      if (topicEl) {
+        if (topic) { topicEl.textContent = '💬 ' + topic; topicEl.style.display = 'block'; }
+        else { topicEl.style.display = 'none'; }
+      }
+      if (!C.chatOpen) this.toggleChat();
+    },
+    closeChat()  {
+      C.chatOpen = false;
+      document.getElementById('__cl_chat')?.classList.remove('open');
+      const topicEl = document.getElementById('__cl_topic');
+      if (topicEl) topicEl.style.display = 'none';
+    },
     toggleSett() {
       C.settOpen = !C.settOpen;
       document.getElementById('__cl_sett')?.classList.toggle('open', C.settOpen);

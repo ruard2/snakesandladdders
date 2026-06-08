@@ -276,44 +276,35 @@ if (sn) S.myName = sn;
 
 ---
 
-## 6. Chat overlay
+## 6. Chat openen vanuit een spel
 
-Een volledig scherm chat-window dat bovenop alles opent.
+**Nooit een eigen chat-overlay bouwen per spel.** Gebruik altijd CommLayer's ingebouwde chat — dat is dezelfde als op world.html en werkt automatisch.
 
-### HTML structuur
-```html
-<div id="chat-overlay">
-  <div id="chat-header">
-    <button onclick="closeChat()">← Terug</button>
-    <div id="chat-partner-name">Naam partner</div>
-  </div>
-  <div id="chat-question-bar"></div>  <!-- vraag bovenaan -->
-  <div id="chat-messages"></div>
-  <div id="chat-input-row">
-    <input type="text" id="chat-text-input">
-    <button onclick="sendChatMsg()">↑</button>
-  </div>
-</div>
-```
-
-### Openen met vraag
+### Eén regel code
 ```javascript
 function openChat(vraag) {
-  document.getElementById('chat-question-bar').textContent = vraag || '';
-  document.getElementById('chat-overlay').classList.add('open');
-  document.getElementById('chat-partner-name').textContent =
-    S.partnerName || 'Je partner';
-}
-function closeChat() {
-  document.getElementById('chat-overlay').classList.remove('open');
+  CommLayer.openChat(vraag); // toont vraag als context bovenin het chatpaneel
 }
 ```
 
-### z-index
-```css
-#chat-overlay { position: fixed; inset: 0; z-index: 40000; display: none; }
-#chat-overlay.open { display: flex; }
+### Wat CommLayer.openChat(topic) doet
+- Opent het CommLayer chatpaneel (bottom sheet)
+- Toont `topic` als grijze contextzin bovenin (verdwijnt bij sluiten)
+- Sturen/ontvangen/badge werkt automatisch via de globale comm-socket
+
+### Scripts (kopieer dit exact)
+```html
+<script src="config.js"></script>
+<script src="sd-client.js"></script>
+<script src="comm.js"></script>
+<!-- GEEN sd-chat.js — dat is een apart widget dat conflicteert -->
 ```
+
+### Wat NIET te doen
+- ❌ Geen eigen `#chat-overlay` HTML per spel
+- ❌ Geen `KoppelClient.chat()` voor berichten (gebruikt game sub-code, niet comm-code)
+- ❌ Geen `CommLayer.sendBoardChat()` rechtstreeks aanroepen vanuit game
+- ❌ Geen `sd-chat.js` includeren naast `comm.js`
 
 ---
 

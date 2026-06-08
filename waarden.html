@@ -904,46 +904,8 @@ function setupVraagSwipe(n) {
 // ══════════════════════════════════════════════════════════
 let chatMessages = []; // { sender, text }
 
-function openChat(vraag) {
-  const overlay = document.getElementById('chat-overlay');
-  const qBar = document.getElementById('chat-question-bar');
-  qBar.textContent = vraag || '';
-  overlay.classList.add('open');
-  document.getElementById('chat-partner-name').textContent =
-    S.partnerName ? S.partnerName : (S.solo ? 'Solo verkennen' : 'Je partner');
-  renderChatMessages();
-  setTimeout(() => document.getElementById('chat-text-input').focus(), 100);
-}
-function closeChat() {
-  document.getElementById('chat-overlay').classList.remove('open');
-}
-function sendChatMsg() {
-  const input = document.getElementById('chat-text-input');
-  const text = input.value.trim();
-  if (!text) return;
-  chatMessages.push({ sender: S.myName || 'Jij', mine: true, text });
-  input.value = '';
-  renderChatMessages();
-  // TODO: send via KoppelClient / CommLayer
-}
-function receiveChatMsg(senderName, text) {
-  chatMessages.push({ sender: senderName, mine: false, text });
-  renderChatMessages();
-}
-function renderChatMessages() {
-  const container = document.getElementById('chat-messages');
-  container.innerHTML = '';
-  chatMessages.forEach(m => {
-    const el = document.createElement('div');
-    el.className = 'chat-msg ' + (m.mine ? 'mine' : 'theirs');
-    el.innerHTML = `<div class="msg-sender">${m.sender}</div>${m.text}`;
-    container.appendChild(el);
-  });
-  container.scrollTop = container.scrollHeight;
-}
-document.getElementById('chat-text-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { sendChatMsg(); e.preventDefault(); }
-});
+// ── chat: volledig via CommLayer (zelfde als world.html — modulair)
+function openChat(vraag){ CommLayer.openChat(vraag); }
 
 // ══════════════════════════════════════════════════════════
 //  SCHERMEN
