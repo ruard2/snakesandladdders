@@ -313,7 +313,7 @@ html, body {
   <!-- Chat -->
   <div class="chat-panel open" id="chat-panel">
     <div class="chat-toggle" onclick="toggleChat()">
-      <span class="chat-toggle-label">💬 Chat</span>
+      <span class="chat-toggle-label">💬 Chat <span id="chat-badge" style="display:none;background:#e07070;color:#fff;border-radius:10px;padding:1px 6px;font-size:.65rem;font-weight:bold;"></span></span>
       <span class="chat-toggle-arrow">▲</span>
     </div>
     <div class="chat-messages" id="chat-messages">
@@ -792,8 +792,14 @@ function nextQuestion() {
 // ══════════════════════════════════════════════════════════
 // CHAT
 // ══════════════════════════════════════════════════════════
+let lsChatUnread = 0;
 function toggleChat() {
-  document.getElementById('chat-panel').classList.toggle('open');
+  const panel = document.getElementById('chat-panel');
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) {
+    lsChatUnread = 0;
+    const b = document.getElementById('chat-badge'); if (b) { b.style.display='none'; b.textContent=''; }
+  }
 }
 
 let typingTimer = null;
@@ -816,7 +822,14 @@ function sendChat() {
 }
 // Ontvang via CommLayer
 window.CommLayer?.onChatMessage(({ text, side }) => {
-  if (side === 'them') appendChat('them', text);
+  if (side !== 'them') return;
+  appendChat('them', text);
+  const panel = document.getElementById('chat-panel');
+  if (!panel?.classList.contains('open')) {
+    lsChatUnread++;
+    const b = document.getElementById('chat-badge');
+    if (b) { b.textContent = lsChatUnread > 9 ? '9+' : lsChatUnread; b.style.display = 'inline'; }
+  }
 });
 
 function appendChat(side, text) {

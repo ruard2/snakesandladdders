@@ -355,7 +355,7 @@ html, body { height: 100dvh; font-family: 'Segoe UI', system-ui, sans-serif; bac
 
     <!-- Chat (inklapbaar) -->
     <div class="chat-toggle-fd" onclick="fdToggleChat()">
-      💬 Of chat <span class="arr" id="fd-chat-arr">▼</span>
+      💬 Of chat <span id="fd-chat-badge" style="display:none;background:#e07070;color:#fff;border-radius:10px;padding:1px 7px;font-size:.65rem;margin-left:4px;font-weight:bold;"></span><span class="arr" id="fd-chat-arr">▼</span>
     </div>
     <div class="inline-chat" id="fd-inline-chat">
       <div class="inline-chat-msgs" id="fd-chat-msgs">
@@ -1133,8 +1133,14 @@ function appendRevealBubble(side, text, panelId) {
 
 // Ontvang chat via CommLayer
 window.CommLayer?.onChatMessage(({ text, side }) => {
-  appendRevealBubble(side, text, 'chat-panel-me');
-  fdAddChatMsg(text, side);
+  if (side !== 'them') return;  // eigen berichten al lokaal toegevoegd
+  appendRevealBubble('them', text, 'chat-panel-me');
+  fdAddChatMsg(text, 'them');
+  if (!fdChatOpen) {
+    fdChatUnread++;
+    const b = document.getElementById('fd-chat-badge');
+    if (b) { b.textContent = fdChatUnread > 9 ? '9+' : fdChatUnread; b.style.display = 'inline'; }
+  }
 });
 
 // Bellen + chat gaan via CommLayer
@@ -1145,8 +1151,13 @@ function fdToggleChat() {
   fdChatOpen = !fdChatOpen;
   document.getElementById('fd-inline-chat').classList.toggle('open', fdChatOpen);
   document.getElementById('fd-chat-arr').textContent = fdChatOpen ? '▲' : '▼';
-  if (fdChatOpen) document.getElementById('fd-chat-input').focus();
+  if (fdChatOpen) {
+    document.getElementById('fd-chat-input').focus();
+    const b = document.getElementById('fd-chat-badge'); b.style.display='none'; b.textContent='';
+    fdChatUnread = 0;
+  }
 }
+let fdChatUnread = 0;
 
 function fdSendChat() {
   const inp = document.getElementById('fd-chat-input');

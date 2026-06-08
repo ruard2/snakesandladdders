@@ -590,7 +590,7 @@ html, body {
   <div class="chat-bar" id="chat-bar">
     <div class="chat-handle" onclick="cycleChat()">
       <div class="chat-handle-pill"></div>
-      <span class="chat-handle-label" id="chat-handle-lbl">Chat</span>
+      <span class="chat-handle-label" id="chat-handle-lbl">Chat <span id="chat-badge" style="display:none;background:#e07070;color:#fff;border-radius:10px;padding:1px 6px;font-size:.6rem;font-weight:bold;"></span></span>
       <div class="chat-handle-btns">
         <button class="chat-size-btn" id="chat-size-btn" onclick="cycleChat(); event.stopPropagation();">⌃</button>
       </div>
@@ -1138,7 +1138,13 @@ function onVragenKlaar(partnerVragenVoorMij) {
 
   if (!S.adminMode) {
     window.CommLayer?.onChatMessage(({ text, side }) => {
-      addBubble(text, side);
+      if (side !== 'them') return;
+      addBubble(text, 'them');
+      if (chatState === 'mini') {
+        kwChatUnread++;
+        const b = el('chat-badge');
+        if (b) { b.textContent = kwChatUnread > 9 ? '9+' : kwChatUnread; b.style.display = 'inline'; }
+      }
     });
   }
 }
@@ -1273,13 +1279,14 @@ function positionPresContent(contentEl) {
   contentEl.style.right = right + 'px';
 }
 
+let kwChatUnread = 0;
 function setChatState(state) {
   chatState = state;
   const bar = el('chat-bar');
   const btn = el('chat-size-btn');
   bar.classList.remove('normal','full');
-  if (state === 'normal') { bar.classList.add('normal'); btn.textContent = '⌄'; }
-  else if (state === 'full') { bar.classList.add('full'); btn.textContent = '⌄'; }
+  if (state === 'normal') { bar.classList.add('normal'); btn.textContent = '⌄'; kwChatUnread=0; const b=el('chat-badge'); if(b){b.style.display='none';b.textContent='';} }
+  else if (state === 'full') { bar.classList.add('full'); btn.textContent = '⌄'; kwChatUnread=0; const b=el('chat-badge'); if(b){b.style.display='none';b.textContent='';} }
   else { btn.textContent = '⌃'; } // mini — no extra class
   setTimeout(updatePresContentBottom, 360);
 }
