@@ -8,7 +8,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
 <title>Waarden · Slow Dating</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=Cinzel:wght@400;600&display=swap" rel="stylesheet"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 html,body{height:100%;background:#0f0820;color:#f0e6d3;font-family:'Inter',sans-serif;overflow:hidden;}
@@ -45,23 +45,194 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
 .dots span:nth-child(2){animation-delay:.2s;}
 .dots span:nth-child(3){animation-delay:.4s;}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
-.chips-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
-  width:100%;max-width:420px;padding:0 16px;}
-.chip{border-radius:16px;padding:12px 6px;cursor:pointer;transition:all .18s;
-  background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.1);
-  display:flex;flex-direction:column;align-items:center;gap:5px;
-  -webkit-tap-highlight-color:transparent;user-select:none;}
-.chip:active{transform:scale(0.93);}
-.chip.gekozen{background:rgba(212,175,55,0.2);border-color:#d4af37;
-  box-shadow:0 0 14px rgba(212,175,55,0.3);}
-.chip-emoji{font-size:1.5rem;line-height:1;}
-.chip-naam{font-size:0.62rem;font-weight:600;color:#c8b090;text-align:center;line-height:1.2;}
-.chip.gekozen .chip-naam{color:#f0d060;}
-.slots{display:flex;gap:8px;justify-content:center;padding:4px 0;}
-.slot{width:36px;height:36px;border-radius:10px;border:1.5px dashed rgba(212,175,55,0.35);
+/* ═══════════════════════════════════════════════════
+   s-kies — Beginland / Waarden theme
+   ═══════════════════════════════════════════════════ */
+#s-kies {
+  background: url('images/waarden.webp') center top / cover no-repeat;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Proportional 9:16 frame over the background */
+.kies-frame {
+  position: relative;
+  width: min(100vw, calc(100dvh * 9 / 16));
+  height: min(100dvh, calc(100vw * 16 / 9));
+  flex-shrink: 0;
+}
+
+/* Back button — wooden sign top-left */
+.kies-back {
+  position: absolute;
+  top: 3.1%; left: 6.9%;
+  width: 15.9%; height: 4.2%;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, #b07d3a 0%, #8b5e20 100%);
+  border: 2px solid #5c3a0e;
+  border-radius: 8px;
+  box-shadow: 2px 3px 8px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.18);
+  color: #fef0c8;
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(0.55rem, 1.4vw, 0.78rem);
+  font-weight: 600;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  z-index: 10;
+  cursor: pointer;
+  transition: filter .15s;
+}
+.kies-back:hover { filter: brightness(1.12); }
+.kies-back:active { transform: scale(0.97); }
+
+/* Selection slots — 3 parchment squares */
+.kies-slots {
+  position: absolute;
+  top: 26.5%;
+  left: 34.3%;
+  width: 31.5%; /* from slot1 left to slot3 right = (531+83-323)/941 */
+  height: 5%;
+  display: flex;
+  gap: 0;
+  justify-content: space-between;
+}
+.slot {
+  width: 30%; aspect-ratio: 1;
+  background: rgba(252, 242, 195, 0.55);
+  border: 2px solid rgba(139, 95, 32, 0.55);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(0.7rem, 2vw, 1rem);
+  color: rgba(100, 68, 20, 0.6);
+  transition: all .25s;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.12);
+}
+.slot.vol {
+  background: rgba(252, 235, 150, 0.75);
+  border-color: #c8960a;
+  color: #5c3a00;
+  font-size: clamp(1rem, 2.8vw, 1.4rem);
+  box-shadow: 0 0 10px rgba(212,175,55,0.35), inset 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Value cards grid */
+.chips-grid {
+  position: absolute;
+  top: 32.7%;
+  left: 16.9%;
+  width: 65.5%;
+  height: 31.5%; /* rows from y:546 to y:1024+149=1173, range=627, 627/1672=37.5% */
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 1.1%;
+}
+
+/* Individual value card — parchment tile */
+.chip {
+  background: linear-gradient(160deg, #fef8e4 0%, #f5e8b8 60%, #eedda0 100%);
+  border: 2px solid #9b7428;
+  border-radius: 9px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3%;
+  cursor: pointer;
+  transition: all .18s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.6);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+  padding: 4% 2%;
+}
+.chip::before {
+  content: '';
+  position: absolute; inset: 2px;
+  border: 1px solid rgba(155, 116, 40, 0.25);
+  border-radius: 7px;
+  pointer-events: none;
+}
+.chip:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 14px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.chip:active { transform: scale(0.94); }
+.chip.gekozen {
+  background: linear-gradient(160deg, #fff8d6 0%, #fce97a 60%, #f0d040 100%);
+  border: 2.5px solid #c8960a;
+  box-shadow: 0 0 14px rgba(212,175,55,0.5), 0 3px 8px rgba(0,0,0,0.25),
+              inset 0 1px 0 rgba(255,255,255,0.7);
+}
+.chip.gekozen::after {
+  content: '✦';
+  position: absolute; top: 2px; right: 4px;
+  font-size: 0.45rem; color: #c8960a; opacity: 0.8;
+}
+.chip-emoji {
+  font-size: clamp(1.1rem, 3vw, 1.6rem);
+  line-height: 1;
+}
+.chip-naam {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(0.42rem, 1.15vw, 0.62rem);
+  font-weight: 600;
+  color: #5c3a0e;
+  text-align: center;
+  line-height: 1.2;
+}
+.chip.gekozen .chip-naam { color: #3a2200; }
+
+/* CTA button — carved wooden plaque */
+.kies-cta {
+  position: absolute;
+  top: 72.4%;
+  left: 19.9%;
+  width: 59.9%;
+  height: 5%;
+}
+#kies-btn {
+  width: 100%; height: 100%;
+  background: linear-gradient(180deg, #d4a030 0%, #a87020 50%, #c89030 100%);
+  border: 2.5px solid #7a4e10;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,230,100,0.4);
+  color: #fef0c8;
+  font-family: 'Cinzel', 'Playfair Display', serif;
+  font-size: clamp(0.75rem, 2vw, 1.05rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+#kies-btn:disabled {
+  background: linear-gradient(180deg, #a08840 0%, #7a6630 100%);
+  border-color: #5a4818;
+  color: rgba(254,240,200,0.5);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  cursor: default;
+}
+#kies-btn:not(:disabled):hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,230,100,0.5);
+}
+#kies-btn:not(:disabled):active { transform: scale(0.97); }
+
+/* chip count feedback: wiggle when trying to add 4th */
+@keyframes kies-wiggle { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-3px)} 75%{transform:translateX(3px)} }
+.chip.vol-schud { animation: kies-wiggle .3s ease; }
+
+/* ── Shared (non-kies screens) chips/slots kept for reveal etc. ── */
+.slots-old{display:flex;gap:8px;justify-content:center;padding:4px 0;}
+.slot-old{width:36px;height:36px;border-radius:10px;border:1.5px dashed rgba(212,175,55,0.35);
   display:flex;align-items:center;justify-content:center;font-size:0.75rem;
   color:rgba(255,255,255,0.25);transition:all .2s;}
-.slot.vol{background:rgba(212,175,55,0.2);border-color:#d4af37;border-style:solid;font-size:1rem;}
+.slot-old.vol{background:rgba(212,175,55,0.2);border-color:#d4af37;border-style:solid;font-size:1rem;}
 .reveal-section{width:100%;max-width:420px;padding:0 16px 4px;}
 .label-small{font-size:0.65rem;letter-spacing:0.13em;text-transform:uppercase;
   margin-bottom:8px;display:flex;align-items:center;gap:6px;}
@@ -130,20 +301,26 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
 </div>
 
 <div id="s-kies" class="screen">
-  <div style="width:100%;max-width:440px;padding:50px 0 120px;">
-    <div class="pad" style="padding-bottom:12px;text-align:center;">
-      <h2>Wat telt voor jou?</h2>
-      <p class="sub" style="margin:6px 0 12px;">Kies precies 3 waarden</p>
-      <div class="slots" id="slots">
-        <div class="slot" id="sl0">1</div>
-        <div class="slot" id="sl1">2</div>
-        <div class="slot" id="sl2">3</div>
-      </div>
+  <div class="kies-frame">
+
+    <!-- Back button -->
+    <a href="world.html" class="kies-back">← Kaart</a>
+
+    <!-- Selection slots -->
+    <div class="kies-slots" id="slots">
+      <div class="slot" id="sl0">1</div>
+      <div class="slot" id="sl1">2</div>
+      <div class="slot" id="sl2">3</div>
     </div>
+
+    <!-- Value cards grid (populated by JS) -->
     <div class="chips-grid" id="chips-grid"></div>
-    <div class="pad" style="padding-top:16px;">
-      <button class="btn btn-gold" id="kies-btn" disabled onclick="submitKeuze()">Dit zijn mijn 3 →</button>
+
+    <!-- CTA -->
+    <div class="kies-cta">
+      <button id="kies-btn" disabled onclick="submitKeuze()">Dit zijn mijn 3 →</button>
     </div>
+
   </div>
 </div>
 
@@ -282,7 +459,16 @@ function toggleChip(id) {
   if (idx > -1) {
     S.gekozen.splice(idx, 1);
   } else {
-    if (S.gekozen.length >= 3) return;
+    if (S.gekozen.length >= 3) {
+      // Subtle wiggle feedback on all selected cards
+      document.querySelectorAll('.chip.gekozen').forEach(el => {
+        el.classList.remove('vol-schud');
+        void el.offsetWidth;
+        el.classList.add('vol-schud');
+        el.addEventListener('animationend', () => el.classList.remove('vol-schud'), {once:true});
+      });
+      return;
+    }
     S.gekozen.push(id);
   }
   document.querySelectorAll('.chip').forEach(el => {
