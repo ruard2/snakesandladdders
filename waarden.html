@@ -406,7 +406,7 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
 
     <!-- Chat / Call buttons -->
     <button class="onth-action-btn" id="onth-chat" onclick="openChat(null)">chat</button>
-    <button class="onth-action-btn" id="onth-call" onclick="tryCall()">bellen</button>
+    <button class="onth-action-btn" id="onth-call" onclick="CommLayer.toggleCall()">bellen</button>
   </div>
 </div>
 
@@ -1120,43 +1120,6 @@ function showToast(msg, durationMs) {
   _toastTimer = setTimeout(() => el.classList.remove('show'), durationMs);
 }
 
-// ══════════════════════════════════════════════════════════
-//  CALL — spelregel: eerst chatten
-// ══════════════════════════════════════════════════════════
-const MIN_BERICHTEN_VOOR_BEL = 3; // minimaal 3 berichten uitgewisseld
-
-function tryCall() {
-  // Solo: geen bellen
-  if (S.solo) {
-    showToast('💬 Bellen werkt alleen met een partner.');
-    return;
-  }
-  // Geen actieve sessie
-  if (!S.code) {
-    showToast('💬 Verbind eerst met je partner om te bellen.');
-    return;
-  }
-  // Spelregel: chat eerst genoeg
-  const eigen = chatMessages.filter(m => m.mine).length;
-  const partner = chatMessages.filter(m => !m.mine).length;
-  const totaal = eigen + partner;
-  if (totaal < MIN_BERICHTEN_VOOR_BEL) {
-    const nog = MIN_BERICHTEN_VOOR_BEL - totaal;
-    showToast(
-      '📱 Nog even chatten — wissel nog ' + nog +
-      (nog === 1 ? ' bericht' : ' berichten') +
-      ' uit voor je kunt bellen. 💬',
-      4500
-    );
-    return;
-  }
-  // Alles ok — probeer te bellen
-  if (window.CommLayer && typeof CommLayer.toggleCall === 'function') {
-    CommLayer.toggleCall();
-  } else {
-    showToast('📵 Bellen is nog niet beschikbaar. Probeer het later opnieuw.');
-  }
-}
 </script>
 </body>
 </html>
