@@ -96,72 +96,40 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
 }
 .kies-back:active { filter: brightness(0.8); }
 
-/* Slots — full-frame overlay, each slot individually positioned */
+/* Slots / chips / CTA: alle posities worden pixel-exact gezet door JS (placeHotspots) */
 .kies-slots { position: absolute; inset: 0; pointer-events: none; }
 .slot {
-  position: absolute;
-  pointer-events: none;
+  position: absolute; pointer-events: none;
+  border-radius: 10px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s;
   background: transparent;
-  border: none;
-  /* JSON: 83×83 px on 941×1672 artboard */
-  width: 8.820%; height: 4.964%;
-  border-radius: 8px;
-  transition: box-shadow .25s;
-  overflow: hidden;
 }
-/* Exact px→% from JSON: x/941, y/1672 */
-#sl0 { left: 34.325%; top: 26.495%; }
-#sl1 { left: 45.377%; top: 26.495%; }
-#sl2 { left: 56.429%; top: 26.495%; }
-/* Selected: inner glow only — never overflows the box */
-.slot.vol { box-shadow: inset 0 0 0 2px rgba(212,175,55,0.9), inset 0 0 10px rgba(212,175,55,0.4); }
-
-/* Chips grid — full-frame overlay, chips individually positioned via JS */
-.chips-grid {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
+.slot.vol {
+  background: rgba(252,235,150,0.72);
+  box-shadow: inset 0 0 0 2px rgba(200,150,10,0.85);
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
 }
-
-/* Chip — invisible hotspot, positioned absolutely via JS */
+.chips-grid { position: absolute; inset: 0; pointer-events: none; }
 .chip {
-  position: absolute;
-  background: transparent;
-  border: none;
-  border-radius: 9px;
-  cursor: pointer;
-  pointer-events: auto;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-  transition: background .18s ease;
+  position: absolute; pointer-events: auto;
+  border-radius: 10px; cursor: pointer;
+  background: transparent; border: none;
+  -webkit-tap-highlight-color: transparent; user-select: none;
+  transition: background .15s;
 }
-/* Selected: golden overlay */
 .chip.gekozen {
-  background: rgba(212, 175, 55, 0.40);
+  background: rgba(212,175,55,0.38);
   box-shadow: inset 0 0 0 2.5px #c8960a;
 }
-.chip:active { opacity: 0.7; }
+.chip:active { opacity: 0.65; }
 .chip-emoji, .chip-naam { display: none; }
-
-/* CTA — invisible hotspot. JSON: x=187,y=1211,w=564,h=83 / 941×1672 */
-.kies-cta {
-  position: absolute;
-  top:  72.43%; left: 19.87%;
-  width: 59.94%; height: 4.96%;
-  /* Dim whole area when disabled so image button looks inactive */
-  transition: opacity .2s;
-}
-.kies-cta.disabled { opacity: 0.45; pointer-events: none; }
-#kies-btn {
-  width: 100%; height: 100%;
-  background: transparent;
-  border: none;
-  color: transparent;   /* text hidden — image shows the label */
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-#kies-btn:disabled { cursor: default; }
-#kies-btn:not(:disabled):active { opacity: 0.7; }
+/* CTA */
+.kies-cta { position: absolute; transition: opacity .2s; }
+.kies-cta.disabled { opacity: 0.42; pointer-events: none; }
+#kies-btn { width:100%; height:100%; background:transparent; border:none; color:transparent; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+#kies-btn:disabled { cursor:default; }
+#kies-btn:not(:disabled):active { opacity:0.7; }
 
 /* chip count feedback: wiggle when trying to add 4th */
 @keyframes kies-wiggle { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-3px)} 75%{transform:translateX(3px)} }
@@ -381,44 +349,70 @@ function showScreen(id) {
 }
 function wById(id) { return W16.find(x => x.id === id); }
 
-// Exact pixel positions from design JSON (artboard 941×1672)
-const CHIP_POS = [
-  { l:159, t:546,  w:147, h:149 }, // Eerlijkheid
-  { l:314, t:546,  w:148, h:149 }, // Trouw
-  { l:470, t:546,  w:148, h:149 }, // Familie
-  { l:627, t:546,  w:148, h:149 }, // Humor
-  { l:159, t:705,  w:147, h:149 }, // Respect
-  { l:314, t:705,  w:148, h:149 }, // Avontuur
-  { l:470, t:705,  w:148, h:149 }, // Geloof
-  { l:627, t:705,  w:148, h:149 }, // Warmte
-  { l:159, t:865,  w:147, h:149 }, // Vrijheid
-  { l:314, t:865,  w:148, h:149 }, // Groei
-  { l:470, t:865,  w:148, h:149 }, // Rust
-  { l:627, t:865,  w:148, h:149 }, // Vriendschap
-  { l:159, t:1024, w:147, h:149 }, // Ambitie
-  { l:314, t:1024, w:148, h:149 }, // Verbinding
-  { l:470, t:1024, w:148, h:149 }, // Dankbaarheid
-  { l:627, t:1024, w:148, h:149 }, // Creativiteit
-];
-const AW = 941, AH = 1672; // artboard dimensions
+// ── DESIGN JSON — exact pixel coords on 941×1672 artboard
+const AW = 941, AH = 1672;
+const DESIGN = {
+  back:  { x:65,  y:52,   w:150, h:71 },
+  slots: [
+    { x:323, y:443, w:83, h:83 },
+    { x:427, y:443, w:83, h:83 },
+    { x:531, y:443, w:83, h:83 },
+  ],
+  chips: [
+    { x:159, y:546,  w:147, h:149 }, // Eerlijkheid
+    { x:314, y:546,  w:148, h:149 }, // Trouw
+    { x:470, y:546,  w:148, h:149 }, // Familie
+    { x:627, y:546,  w:148, h:149 }, // Humor
+    { x:159, y:705,  w:147, h:149 }, // Respect
+    { x:314, y:705,  w:148, h:149 }, // Avontuur
+    { x:470, y:705,  w:148, h:149 }, // Geloof
+    { x:627, y:705,  w:148, h:149 }, // Warmte
+    { x:159, y:865,  w:147, h:149 }, // Vrijheid
+    { x:314, y:865,  w:148, h:149 }, // Groei
+    { x:470, y:865,  w:148, h:149 }, // Rust
+    { x:627, y:865,  w:148, h:149 }, // Vriendschap
+    { x:159, y:1024, w:147, h:149 }, // Ambitie
+    { x:314, y:1024, w:148, h:149 }, // Verbinding
+    { x:470, y:1024, w:148, h:149 }, // Dankbaarheid
+    { x:627, y:1024, w:148, h:149 }, // Creativiteit
+  ],
+  cta:   { x:187, y:1211, w:564, h:83 },
+};
+
+// Place an element pixel-exactly using rendered frame dimensions
+function px(el, d, fw, fh) {
+  if (!el) return;
+  el.style.left   = (d.x / AW * fw) + 'px';
+  el.style.top    = (d.y / AH * fh) + 'px';
+  el.style.width  = (d.w / AW * fw) + 'px';
+  el.style.height = (d.h / AH * fh) + 'px';
+}
+
+function placeHotspots(fw, fh) {
+  px(document.querySelector('.kies-back'), DESIGN.back, fw, fh);
+  DESIGN.slots.forEach((d, i) => px(document.getElementById('sl' + i), d, fw, fh));
+  px(document.querySelector('.kies-cta'),  DESIGN.cta,  fw, fh);
+  document.querySelectorAll('.chip').forEach((el, i) => {
+    if (i < DESIGN.chips.length) px(el, DESIGN.chips[i], fw, fh);
+  });
+}
 
 // ── CHIPS
 function buildChips() {
   const grid = document.getElementById('chips-grid');
   grid.innerHTML = '';
   W16.forEach((waarde, i) => {
-    const p = CHIP_POS[i];
     const el = document.createElement('div');
     el.className = 'chip' + (S.gekozen.includes(waarde.id) ? ' gekozen' : '');
     el.dataset.id = waarde.id;
-    // Position exactly over chip in image
-    el.style.left   = (p.l / AW * 100).toFixed(3) + '%';
-    el.style.top    = (p.t / AH * 100).toFixed(3) + '%';
-    el.style.width  = (p.w / AW * 100).toFixed(3) + '%';
-    el.style.height = (p.h / AH * 100).toFixed(3) + '%';
     el.addEventListener('click', () => toggleChip(waarde.id));
     grid.appendChild(el);
   });
+  // Position chips using current frame pixel size
+  const frame = document.querySelector('.kies-frame');
+  const fw = frame ? parseFloat(frame.style.width)  || frame.offsetWidth  : AW;
+  const fh = frame ? parseFloat(frame.style.height) || frame.offsetHeight : AH;
+  placeHotspots(fw, fh);
   updateSlots();
 }
 
@@ -449,7 +443,7 @@ function updateSlots() {
   for (let i = 0; i < 3; i++) {
     const sl = document.getElementById('sl' + i);
     const wid = S.gekozen[i];
-    if (wid) { sl.classList.add('vol'); sl.textContent = ''; }
+    if (wid) { sl.classList.add('vol'); sl.textContent = wById(wid).emoji; }
     else     { sl.classList.remove('vol'); sl.textContent = ''; }
   }
   const btn = document.getElementById('kies-btn');
@@ -608,20 +602,19 @@ function buildVragen(overlap, jijUniek, partnerUniek) {
   });
 }
 
-// ── FRAME SIZING — zelfde aanpak als world.html fitMap()
+// ── FRAME SIZING + HOTSPOT POSITIONERING (pixel-exact via JS)
 function fitKies() {
   const vw = window.innerWidth, vh = window.innerHeight;
-  const ratio = 941 / 1672;
-  let w, h;
-  if (vw / vh > ratio) { h = vh; w = h * ratio; }
-  else                  { w = vw; h = w / ratio; }
-  w = Math.round(w); h = Math.round(h);
+  const ratio = AW / AH;
+  let fw, fh;
+  if (vw / vh > ratio) { fh = vh; fw = fh * ratio; }
+  else                  { fw = vw; fh = fw / ratio; }
+  fw = Math.round(fw); fh = Math.round(fh);
   const frame = document.querySelector('.kies-frame');
-  console.log('[fitKies] vw=' + vw + ' vh=' + vh + ' → frame=' + w + 'x' + h + ' found=' + !!frame);
-  if (frame) {
-    frame.style.width  = w + 'px';
-    frame.style.height = h + 'px';
-  }
+  if (!frame) return;
+  frame.style.width  = fw + 'px';
+  frame.style.height = fh + 'px';
+  placeHotspots(fw, fh);
 }
 // Run now and on every resize
 fitKies();
