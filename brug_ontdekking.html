@@ -446,7 +446,7 @@ function doJoin(){
 function startSolo(){S.solo=true;startKiezen();}
 
 // ── grid
-function startKiezen(){buildGrid();showS('s-kies');}
+function startKiezen(){buildGrid();showS('s-kies');showCommBar(true);}
 function buildGrid(){
   const g=document.getElementById('stones-grid');
   g.innerHTML='';
