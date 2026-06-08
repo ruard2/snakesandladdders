@@ -607,7 +607,7 @@ function renderVertel(){
   document.getElementById('vertel-teller').textContent=(S.vertelIdx+1)+'/'+tot;
   const wie=cur.isPartner?'👀 Partner vertelt':'🌱 Jij vertelt';
   const kleur=cur.isPartner?'#c8a8f0':'#7ac47a';
-  const vragen=stone.vragen.map(v=>'<button class="vertel-vraag" onclick="openChat(\''+v.replace(/'/g,"\\'")+'\')" >💬 '+v+'</button>').join('');
+  const vragen=stone.vragen.map(v=>'<button class="vertel-vraag" data-vraag="'+v.replace(/"/g,'&quot;')+'" onclick="openChat(this.dataset.vraag)">💬 '+v+'</button>').join('');
   const nextBtn=S.vertelIdx<tot-1
     ?'<button class="btn btn-gold" style="width:100%;margin-top:10px;" onclick="volgendeVertel()">Volgende →</button>'
     :'<button class="btn btn-gold" style="width:100%;margin-top:10px;" onclick="startEind()">Afronden ✦</button>';
@@ -622,7 +622,9 @@ function renderVertel(){
 }
 function volgendeVertel(){S.vertelIdx++;renderVertel();}
 
-// ── chat overlay (zelfde patroon als waarden.html)
+// ── chat overlay (gebruikt CommLayer kanaal — zelfde als waarden.html)
+const _chatLog = []; // lokale log: {text, side}
+
 function openChat(vraag){
   document.getElementById('chat-question-bar').textContent = vraag || '';
   document.getElementById('chat-partner-name').textContent = S.partnerName || 'Je partner';
@@ -637,23 +639,26 @@ function sendChatMsg(){
   const inp = document.getElementById('chat-text-input');
   const txt = inp.value.trim();
   if(!txt) return;
-  KoppelClient.chat(txt);
   inp.value = '';
+  _chatLog.push({text:txt, side:'me'});
+  CommLayer.sendBoardChat(txt);  // via globale comm_code — partner krijgt het
   renderChatMessages();
 }
 function renderChatMessages(){
   const box = document.getElementById('chat-messages');
   if(!box) return;
-  // CommLayer beheert berichten — gebruik zelfde bron als waarden.html
-  const msgs = window.CommLayer?._getChatMessages?.() || [];
-  box.innerHTML = msgs.map(m=>{
-    const mine = m.player === KoppelClient.getPlayer();
-    return '<div class="chat-msg '+(mine?'mine':'theirs')+'">'+m.text+'</div>';
-  }).join('');
+  box.innerHTML = _chatLog.map(m=>
+    '<div class="chat-msg '+m.side+'">'+m.text+'</div>'
+  ).join('');
   box.scrollTop = box.scrollHeight;
 }
-// Nieuwe berichten ook in overlay tonen
-KoppelClient.on('chat_message', ()=>{ if(document.getElementById('chat-overlay').classList.contains('open')) renderChatMessages(); });
+// Berichten van partner ontvangen via CommLayer (juiste kanaal + badge werkt automatisch)
+CommLayer.onChatMessage(({text, side})=>{
+  if(side === 'them'){
+    _chatLog.push({text, side:'theirs'});
+    if(document.getElementById('chat-overlay').classList.contains('open')) renderChatMessages();
+  }
+});
 
 // ── afsluiting
 function startEind(){
