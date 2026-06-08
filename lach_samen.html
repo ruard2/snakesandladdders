@@ -1,0 +1,866 @@
+﻿﻿<!DOCTYPE html>
+<html lang="nl">
+<head>
+<script src="config.js"></script>
+<script src="sd-client.js"></script>
+<script src="comm.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Lach Samen</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  height: 100dvh; font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #0f1a0f; color: #e8f0e8; overflow: hidden;
+}
+#app {
+  height: 100dvh; display: flex; flex-direction: column;
+  max-width: 480px; margin: 0 auto; position: relative;
+}
+
+/* ── Screens ── */
+.screen { display: none; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.screen.active { display: flex; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+.screen.active { animation: fadeIn .25s ease; }
+
+/* ── Header strip ── */
+.top-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px 8px; flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.back-btn {
+  background: none; border: none; color: #6a9a6a;
+  font-size: .88rem; cursor: pointer; padding: 4px 0;
+  font-family: inherit; flex-shrink: 0;
+}
+.back-btn:hover { color: #a8d0a8; }
+.top-bar-title { font-size: .9rem; font-weight: 700; color: #a8d0a8; flex: 1; text-align: center; }
+.progress-text { font-size: .75rem; color: #4a7a4a; flex-shrink: 0; }
+
+/* ── Progress bar ── */
+.progress-bar { height: 3px; background: rgba(255,255,255,.07); flex-shrink: 0; }
+.progress-fill { height: 100%; background: #3fcfb4; transition: width .4s; }
+
+/* ── Question area ── */
+.question-area {
+  flex: 1; overflow-y: auto; padding: 16px 14px 8px;
+  display: flex; flex-direction: column; gap: 12px; min-height: 0;
+}
+.category-badge {
+  font-size: .7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; padding: 3px 10px; border-radius: 20px;
+  align-self: flex-start;
+}
+.badge-oo   { background: rgba(251,191,36,.15); color: #fbbf24; }
+.badge-gs   { background: rgba(167,139,250,.15); color: #a78bfa; }
+.badge-wzjd { background: rgba(52,211,153,.15);  color: #34d399; }
+
+.question-text {
+  font-size: 1.05rem; font-weight: 600; color: #e8f0e8;
+  line-height: 1.5; padding: 4px 0;
+}
+
+/* ── Choice buttons ── */
+.choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.choice-btn {
+  background: rgba(255,255,255,.06); border: 2px solid rgba(255,255,255,.1);
+  border-radius: 14px; padding: 14px 12px; cursor: pointer;
+  font-family: inherit; font-size: .88rem; color: #c8e0c8;
+  text-align: center; line-height: 1.4; transition: all .18s;
+  position: relative; min-height: 70px;
+  display: flex; align-items: center; justify-content: center;
+}
+.choice-btn:hover:not(:disabled) { border-color: #3fcfb4; background: rgba(63,207,180,.1); }
+.choice-btn.chosen-me  { border-color: #3fcfb4; background: rgba(63,207,180,.15); color: #3fcfb4; }
+.choice-btn.chosen-them { border-color: #fbbf24; background: rgba(251,191,36,.1); }
+.choice-btn.chosen-both { border-color: #3fcfb4; background: rgba(63,207,180,.15); }
+.choice-btn:disabled { cursor: default; }
+.choice-label {
+  position: absolute; top: 6px; left: 8px;
+  font-size: .65rem; font-weight: 800; opacity: .5;
+}
+
+/* ── Waiting indicator ── */
+.waiting-dots { display: flex; gap: 4px; align-items: center; justify-content: center; padding: 8px 0; }
+.waiting-dots span { width: 6px; height: 6px; border-radius: 50%; background: #3fcfb4; display: inline-block; }
+.waiting-dots span:nth-child(1) { animation: pd 1.2s .0s ease-in-out infinite; }
+.waiting-dots span:nth-child(2) { animation: pd 1.2s .2s ease-in-out infinite; }
+.waiting-dots span:nth-child(3) { animation: pd 1.2s .4s ease-in-out infinite; }
+@keyframes pd { 0%,80%,100%{transform:scale(.7);opacity:.4} 40%{transform:scale(1.1);opacity:1} }
+
+/* ── Reveal strip ── */
+.reveal-strip {
+  display: none; background: rgba(63,207,180,.07);
+  border: 1px solid rgba(63,207,180,.2); border-radius: 14px;
+  padding: 12px 14px;
+}
+.reveal-strip.show { display: block; animation: fadeIn .3s ease; }
+.reveal-row { display: flex; gap: 8px; margin-bottom: 6px; }
+.reveal-pill {
+  flex: 1; border-radius: 10px; padding: 8px 10px;
+  font-size: .82rem; text-align: center; line-height: 1.3;
+}
+.reveal-pill.me   { background: rgba(63,207,180,.15); color: #3fcfb4; }
+.reveal-pill.them { background: rgba(251,191,36,.12); color: #fbbf24; }
+.reveal-pill .pill-who { font-size: .65rem; font-weight: 700; opacity: .65; display: block; margin-bottom: 3px; }
+.match-msg { font-size: .8rem; text-align: center; color: #6a9a6a; margin-top: 4px; }
+.match-msg.same { color: #3fcfb4; font-weight: 700; }
+.next-btn {
+  display: block; width: 100%; margin-top: 10px;
+  background: #1a5a2a; border: none; border-radius: 10px;
+  padding: 11px; color: #a8d0a8; font-size: .9rem;
+  font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: background .2s;
+}
+.next-btn:hover { background: #1e6a30; }
+
+/* ── Chat ── */
+.chat-panel {
+  flex-shrink: 0; border-top: 1px solid rgba(255,255,255,.07);
+  display: flex; flex-direction: column;
+  max-height: 40vh; min-height: 48px;
+  transition: max-height .25s ease;
+}
+.chat-panel:not(.open) { max-height: 48px; overflow: hidden; }
+.chat-panel:not(.open) .chat-toggle-arrow { transform: rotate(180deg); }
+.chat-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 14px; cursor: pointer; user-select: none; flex-shrink: 0;
+}
+.chat-toggle-label { font-size: .75rem; color: #4a7a4a; }
+.chat-toggle-arrow { font-size: .75rem; color: #4a7a4a; transition: transform .2s; }
+.chat-panel.open .chat-toggle-arrow { transform: rotate(180deg); }
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 4px 14px 6px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.chat-msg { max-width: 82%; border-radius: 14px; padding: 8px 12px; font-size: .85rem; line-height: 1.4; }
+.chat-msg.me   { background: #1a5a2a; color: #c8e0c8; align-self: flex-end; border-bottom-right-radius: 4px; }
+.chat-msg.them { background: rgba(255,255,255,.09); color: #e8f0e8; align-self: flex-start; border-bottom-left-radius: 4px; }
+.typing-hint { font-size: .75rem; color: #4a7a4a; font-style: italic; padding: 0 14px 2px; flex-shrink: 0; }
+.chat-input-row {
+  display: flex; gap: 8px; padding: 6px 14px 10px; flex-shrink: 0;
+}
+.chat-input-row input {
+  flex: 1; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 20px; padding: 9px 14px; color: white;
+  font-size: .85rem; font-family: inherit; outline: none;
+}
+.chat-input-row input::placeholder { color: #3a5a3a; }
+.chat-send {
+  width: 36px; height: 36px; border-radius: 50%; background: #1a5a2a;
+  border: none; color: #a8d0a8; font-size: 1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+/* ── Done screen ── */
+.done-wrap {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 32px 24px; text-align: center; gap: 16px;
+}
+.done-icon { font-size: 4rem; }
+.done-title { font-size: 1.4rem; font-weight: 700; color: #a8d0a8; }
+.done-sub { font-size: .9rem; color: #6a9a6a; line-height: 1.5; }
+.btn-map {
+  margin-top: 8px; padding: 14px 32px; background: #1a5a2a;
+  border: none; border-radius: 14px; color: #a8d0a8;
+  font-size: 1rem; font-weight: 700; cursor: pointer;
+  font-family: inherit; transition: background .2s;
+}
+.btn-map:hover { background: #1e6a30; }
+
+/* ── Koppel screen ── */
+.koppel-wrap { flex: 1; overflow-y: auto; padding: 24px 16px; display: flex; flex-direction: column; gap: 14px; }
+.koppel-header { text-align: center; }
+.koppel-header .icon { font-size: 2.8rem; display: block; margin-bottom: 8px; }
+.koppel-header h1 { font-size: 1.5rem; font-weight: 700; color: #a8d0a8; }
+.koppel-header p  { font-size: .88rem; color: #6a9a6a; margin-top: 4px; }
+.card { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.09); border-radius: 16px; padding: 18px; }
+.btn-primary {
+  display: block; width: 100%; padding: 13px;
+  background: #1a5a2a; border: none; border-radius: 12px;
+  color: #a8d0a8; font-size: .95rem; font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: background .2s;
+}
+.btn-primary:hover { background: #1e6a30; }
+.btn-primary:disabled { opacity: .5; cursor: default; }
+.code-display {
+  background: rgba(63,207,180,.07); border-radius: 12px;
+  padding: 16px; text-align: center; display: none;
+}
+.code-big { font-size: 2.8rem; font-weight: 800; letter-spacing: 8px; color: #3fcfb4; font-family: monospace; }
+.divider { display: flex; align-items: center; gap: 8px; }
+.divider span { font-size: .72rem; color: #3a5a3a; text-transform: uppercase; }
+.divider::before, .divider::after { content:''; flex:1; height:1px; background: rgba(255,255,255,.08); }
+.input-row { display: flex; gap: 8px; }
+.code-input {
+  flex: 1; padding: 11px 14px; background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12); border-radius: 10px;
+  color: white; font-size: 1rem; font-family: monospace;
+  text-transform: uppercase; letter-spacing: 3px; outline: none;
+}
+.error-msg { color: #f87171; font-size: .8rem; display: none; }
+.connected-box {
+  background: rgba(63,207,180,.08); border: 1px solid rgba(63,207,180,.25);
+  border-radius: 12px; padding: 14px; text-align: center; display: none;
+}
+.status-bar {
+  font-size: .78rem; text-align: center; padding: 4px 14px;
+  border-radius: 8px; display: none; margin: 0 16px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══ KOPPEL ══════════════════════════════════════════════ -->
+<div id="screen-koppel" class="screen active">
+  <div class="koppel-wrap">
+    <div class="koppel-header">
+      <span class="icon">😄</span>
+      <h1>Lach Samen</h1>
+      <p>15 speelse vragen — kies tegelijk, zie daarna elkaars antwoord.</p>
+    </div>
+
+    <div id="status-bar" class="status-bar"></div>
+
+    <!-- Saved session -->
+    <div id="saved-block" style="display:none;" class="card">
+      <div style="font-size:.75rem;color:#6a9a6a;margin-bottom:4px;">Opgeslagen koppeling</div>
+      <div id="saved-code" style="font-size:1.3rem;font-weight:800;letter-spacing:4px;color:#3fcfb4;font-family:monospace;margin-bottom:10px;"></div>
+      <button class="btn-primary" onclick="lsReconnect()">Verder met partner →</button>
+      <button onclick="lsForget()" style="background:none;border:none;color:#3a5a3a;font-size:.78rem;cursor:pointer;text-decoration:underline;display:block;margin-top:8px;">Andere koppeling</button>
+    </div>
+
+    <div id="new-block" class="card">
+      <button class="btn-primary" id="btn-create" onclick="lsCreate()" style="margin-bottom:12px;">Maak koppelcode +</button>
+      <div class="code-display" id="code-display">
+        <div style="font-size:.72rem;color:#6a9a6a;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Jouw code</div>
+        <div class="code-big" id="code-text"></div>
+        <div style="font-size:.75rem;color:#3a5a3a;margin-top:6px;">Deel met je partner</div>
+        <div class="waiting-dots" style="margin-top:10px;"><span></span><span></span><span></span></div>
+      </div>
+      <div class="divider" style="margin:12px 0;"><span>of</span></div>
+      <div style="font-size:.82rem;color:#6a9a6a;margin-bottom:8px;">Code van je partner:</div>
+      <div class="input-row" style="margin-bottom:8px;">
+        <input class="code-input" id="code-input" placeholder="BOOM42" maxlength="6"
+          oninput="this.value=this.value.toUpperCase()"
+          onkeydown="if(event.key==='Enter')lsJoin()">
+        <button class="btn-primary" style="width:auto;padding:11px 16px;white-space:nowrap;" onclick="lsJoin()">Verbinden</button>
+      </div>
+      <div class="error-msg" id="err-msg"></div>
+    </div>
+
+    <div class="connected-box" id="connected-box">
+      <div style="font-size:1.2rem;margin-bottom:4px;">✓ Beide verbonden!</div>
+      <div style="font-size:.82rem;color:#6a9a6a;margin-bottom:12px;">Klaar om te lachen.</div>
+      <button class="btn-primary" onclick="lsStart()">Begin →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SPEL ════════════════════════════════════════════════ -->
+<div id="screen-spel" class="screen">
+  <!-- Top bar -->
+  <div class="top-bar">
+    <button class="back-btn" onclick="backToMap()">← Kaart</button>
+    <div class="top-bar-title">😄 Lach Samen</div>
+    <div class="progress-text" id="progress-text">1 / 15</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+  <!-- Question -->
+  <div class="question-area" id="question-area">
+    <span class="category-badge" id="cat-badge"></span>
+    <div class="question-text" id="question-text"></div>
+
+    <div class="choice-grid" id="choice-grid">
+      <button class="choice-btn" id="btn-a" onclick="choose('a')">
+        <span class="choice-label">A</span>
+        <span id="label-a"></span>
+      </button>
+      <button class="choice-btn" id="btn-b" onclick="choose('b')">
+        <span class="choice-label">B</span>
+        <span id="label-b"></span>
+      </button>
+    </div>
+
+    <div class="waiting-dots" id="waiting-dots" style="display:none;">
+      <span></span><span></span><span></span>
+      <span style="margin-left:6px;font-size:.8rem;color:#4a7a4a;">Wacht op partner...</span>
+    </div>
+
+    <!-- Reveal -->
+    <div class="reveal-strip" id="reveal-strip">
+      <div class="reveal-row">
+        <div class="reveal-pill me">
+          <span class="pill-who">Jij</span>
+          <span id="reveal-me"></span>
+        </div>
+        <div class="reveal-pill them">
+          <span class="pill-who">Partner</span>
+          <span id="reveal-them"></span>
+        </div>
+      </div>
+      <div class="match-msg" id="match-msg"></div>
+      <button class="next-btn" id="next-btn" onclick="nextQuestion()">Volgende vraag →</button>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-panel open" id="chat-panel">
+    <div class="chat-toggle" onclick="toggleChat()">
+      <span class="chat-toggle-label">💬 Chat</span>
+      <span class="chat-toggle-arrow">▲</span>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div data-empty style="text-align:center;color:#2a4a2a;font-size:.8rem;margin:8px 0;">Typ iets bij elke vraag...</div>
+    </div>
+    <div class="typing-hint" id="typing-hint" style="display:none;">... typt</div>
+    <div class="chat-input-row">
+      <input id="chat-input" placeholder="Reageer..." onkeydown="if(event.key==='Enter')sendChat()" oninput="onType()">
+      <button class="chat-send" onclick="sendChat()">↑</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ KLAAR ════════════════════════════════════════════════ -->
+<div id="screen-done" class="screen">
+  <div class="done-wrap">
+    <div class="done-icon">🎉</div>
+    <div class="done-title">Alle 15 gedaan!</div>
+    <div class="done-sub">Jullie hebben samen gelachen.<br>Volgende keer kiest de app andere vragen.</div>
+    <button class="btn-map" onclick="backToMap()">← Terug naar de kaart</button>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+'use strict';
+const ADMIN = '1111';
+
+// ══════════════════════════════════════════════════════════
+// DATA (inline)
+// ══════════════════════════════════════════════════════════
+const DATA = {
+  of_of: [
+    {id:'OO-001',v:'Je moet één dag lang alles fluisteren of alles zingen.',a:'Alles fluisteren',b:'Alles zingen'},
+    {id:'OO-002',v:'Je moet op een eerste date één opvallend ding meenemen.',a:'Een tamme eend aan een tuigje',b:'Een enorme bos ballonnen'},
+    {id:'OO-003',v:'Je krijgt een nutteloze superkracht.',a:'Je voelt precies wanneer pasta gaar is',b:'Je kunt met planten praten, maar alleen over het weer'},
+    {id:'OO-004',v:'Je moet een week lang één kledingstijl dragen.',a:'Volledig middeleeuws',b:'Volledig jaren 80 fitness-outfit'},
+    {id:'OO-005',v:'Je moet een restaurant binnenkomen op één manier.',a:'Alsof je een koning(in) bent',b:'Alsof je net een geheime missie hebt voltooid'},
+    {id:'OO-006',v:'Je telefoon krijgt een rare functie.',a:'Hij applaudisseert hardop na elk bericht',b:'Hij zegt \'spannend...\' voordat je elk bericht opent'},
+    {id:'OO-007',v:'Je moet op elke foto voortaan hetzelfde doen.',a:'Duim omhoog met overdreven serieuze blik',b:'Doen alsof je een onzichtbare vogel vasthoudt'},
+    {id:'OO-008',v:'Je wordt beroemd om iets kleins.',a:'De beste boterham-smeerder van Nederland',b:'De snelste sokkenzoeker van Europa'},
+    {id:'OO-009',v:'Je kiest een huisdier dat overal mee naartoe gaat.',a:'Een dramatische papegaai die alles herhaalt',b:'Een chille geit die iedereen negeert'},
+    {id:'OO-010',v:'Je krijgt een persoonlijke soundtrack.',a:'Trompetmuziek elke keer dat je binnenkomt',b:'Filmische vioolmuziek elke keer dat je wegloopt'},
+    {id:'OO-011',v:'Je moet één gênante eigenschap kiezen.',a:'Je struikelt altijd nét als je cool probeert te lopen',b:'Je lacht altijd nét iets te hard in stille ruimtes'},
+    {id:'OO-012',v:'Je mag één klein wereldprobleem oplossen.',a:'Nooit meer sokken kwijt',b:'Nooit meer een dopje dat niet past'},
+    {id:'OO-013',v:'Je moet een bijnaam kiezen voor één week.',a:'Kapitein Kroket',b:'Professor Pannenkoek'},
+    {id:'OO-014',v:'Je krijgt een robot-assistent die maar één taak kan.',a:'Je thee precies goed laten afkoelen',b:'Altijd zeggen waar je sleutels liggen'},
+    {id:'OO-015',v:'Je moet een entree maken op een feest.',a:'Door een rookmachine heen lopen',b:'Opkomen met een klein koortje dat je naam zingt'},
+    {id:'OO-016',v:'Je moet elke dag één geluid maken als begroeting.',a:'Een plechtig tromgeroffel nadoen',b:'Een zachte geitenmekker'},
+    {id:'OO-017',v:'Je krijgt een magisch kledingstuk.',a:'Schoenen die dramatisch piepen bij elke stap',b:'Een jas die zachtjes juicht als je hem aantrekt'},
+    {id:'OO-018',v:'Je moet één jaar lang één vervoermiddel gebruiken.',a:'Een step met gouden bel',b:'Een bakfiets met vlaggetjes'},
+    {id:'OO-019',v:'Je mag één dierentaal verstaan.',a:'Duiven op stations',b:'Katten die je vanaf vensterbanken beoordelen'},
+    {id:'OO-020',v:'Je moet elke vergadering beginnen met één ritueel.',a:'Iedereen noemt zijn favoriete snack',b:'Iedereen doet een koninklijk knikje'},
+    {id:'OO-021',v:'Je moet één ding altijd overdreven serieus doen.',a:'Een banaan schillen',b:'Je schoenen aantrekken'},
+    {id:'OO-022',v:'Je krijgt een persoonlijke waarschuwingstune die automatisch afspeelt.',a:'Als je hongerig wordt — sirene met drumrol',b:'Als je te lang bij een menu twijfelt — aftellende klok'},
+    {id:'OO-023',v:'Je moet een week lang op één manier afscheid nemen.',a:'Met een diepe buiging',b:'Met: ik verdwijn in de mist'},
+    {id:'OO-024',v:'Je moet in een talentenshow meedoen met één act.',a:'Dramatisch een boodschappenlijst voordragen',b:'Een dans doen met alleen je wenkbrauwen'},
+    {id:'OO-025',v:'Je mag één voorwerp altijd laten zweven.',a:'Je koffiekopje',b:'Je afstandsbediening'},
+    {id:'OO-026',v:'Je wordt achtervolgd door iets ongevaarlijks.',a:'Een fanclub van drie kippen',b:'Een wolk confetti'},
+    {id:'OO-027',v:'Je moet één maaltijd voor altijd een andere naam geven.',a:'Ontbijt heet voortaan startfeest',b:'Avondeten heet voortaan eindceremonie'},
+    {id:'OO-028',v:'Je krijgt een klein draakje als huisgenoot.',a:'Hij roostert brood perfect',b:'Hij steekt altijd kaarsen aan als je serieus wilt praten'},
+    {id:'OO-029',v:'Je moet elke dag één kleine prestatie vieren.',a:'Met een mini-polonaise',b:'Met een plechtige medaille van papier'},
+    {id:'OO-030',v:'Je krijgt één absurde professionele titel.',a:'Hoofd Kleine Ongemakken',b:'Minister van Gezellige Pauzes'},
+    {id:'OO-031',v:'Je moet altijd één accessoire dragen.',a:'Een detectivehoed',b:'Een sjaal die veel te lang is'},
+    {id:'OO-032',v:'Je moet op elke trap één ding doen.',a:'Tellen alsof het een expeditie is',b:'Bij de laatste trede fluisteren: we hebben het gehaald'},
+    {id:'OO-033',v:'Je mag één ongemakkelijk moment automatisch oplossen.',a:'Stiltes vullen met zachte liftmuziek',b:'Iemand zegt altijd precies tegelijk: thee?'},
+    {id:'OO-034',v:'Je moet één dagelijks object als trofee behandelen.',a:'De afstandsbediening',b:'De kaasschaaf'},
+    {id:'OO-035',v:'Je moet elk compliment op één manier ontvangen.',a:'Met: ik draag deze eer met waardigheid',b:'Met een stille vuist in de lucht'},
+    {id:'OO-036',v:'Je mag één weerfenomeen op commando oproepen.',a:'Dramatische zonnestraal precies op jou gericht',b:'Filmische wind die je haar perfect doet waaien'},
+    {id:'OO-037',v:'Je moet één soort grap altijd grappig vinden.',a:'Slechte woordgrappen',b:'Overdreven droge opmerkingen'},
+    {id:'OO-038',v:'Je mag één apparaat een persoonlijkheid geven.',a:'Een koelkast die bezorgd is',b:'Een waterkoker die filosofeert'},
+    {id:'OO-039',v:'Je moet elke dag één willekeurige zin gebruiken.',a:'Dat klinkt als een taak voor pannenkoeken',b:'Ik raadpleeg eerst mijn innerlijke egel'},
+    {id:'OO-040',v:'Je krijgt één magisch datingvoorwerp.',a:'Een kompas dat ongemakkelijke stiltes aanwijst',b:'Een belletje dat rinkelt als iemand te serieus wordt'},
+  ],
+  stellingen: [
+    {id:'GS-001',v:'Iemand die hardop tegen zijn fiets praat, is waarschijnlijk best gezellig.',a:'Eens',b:'Oneens'},
+    {id:'GS-002',v:'Een goede pannenkoek kan een slechte dag redden.',a:'Eens',b:'Oneens'},
+    {id:'GS-003',v:'"Ik ben er over vijf minuten" betekent eigenlijk: ik heb mijn schoenen nog niet aan.',a:'Eens',b:'Oneens'},
+    {id:'GS-004',v:'Een picknick is 40% eten, 40% sfeer en 20% mierenmanagement.',a:'Eens',b:'Oneens'},
+    {id:'GS-005',v:'Wie zonder reden een cape draagt, verdient eigenlijk respect.',a:'Eens',b:'Oneens'},
+    {id:'GS-006',v:'Een eerste date in een dierentuin zegt meer over iemand dan in een restaurant.',a:'Eens',b:'Oneens'},
+    {id:'GS-007',v:'Een hond die je niet mag, is een serieus waarschuwingssignaal.',a:'Eens',b:'Oneens'},
+    {id:'GS-008',v:'Iemand die zijn patat telt voordat hij begint, is te georganiseerd voor deze wereld.',a:'Eens',b:'Oneens'},
+    {id:'GS-009',v:'Een goede lach is belangrijker dan perfecte smalltalk.',a:'Eens',b:'Oneens'},
+    {id:'GS-010',v:'Er bestaat geen neutrale manier om een banaan te eten in het openbaar.',a:'Eens',b:'Oneens'},
+    {id:'GS-011',v:'Mensen die altijd snacks bij zich hebben, zijn de ruggengraat van de samenleving.',a:'Eens',b:'Oneens'},
+    {id:'GS-012',v:'Een paraplu vergeten is geen fout, maar een karaktertest.',a:'Eens',b:'Oneens'},
+    {id:'GS-013',v:'Iedereen heeft minstens één lied dat hij veel te dramatisch meezingt.',a:'Eens',b:'Oneens'},
+    {id:'GS-014',v:'Een sok met een gat erin mag nog één dag als hij emotionele waarde heeft.',a:'Eens',b:'Oneens'},
+    {id:'GS-015',v:'Wie de laatste friet opeet zonder te vragen, laat iets van zijn ziel zien.',a:'Eens',b:'Oneens'},
+    {id:'GS-016',v:'Hoe iemand reageert op een winkelwagen met een koppig wiel zegt alles over wie ze zijn.',a:'Eens',b:'Oneens'},
+    {id:'GS-017',v:'Koffie is soms gewoon een sociaal excuus om ergens te zitten.',a:'Eens',b:'Oneens'},
+    {id:'GS-018',v:'Wie rustig blijft bij een vastgelopen printer, is bijna verlicht.',a:'Eens',b:'Oneens'},
+    {id:'GS-019',v:'Een wandeling zonder doel is vaak beter dan een gesprek met doel.',a:'Eens',b:'Oneens'},
+    {id:'GS-020',v:'Een slechte mop wordt beter als je hem met volledige overtuiging vertelt.',a:'Eens',b:'Oneens'},
+    {id:'GS-021',v:'Mensen die planten namen geven, zijn waarschijnlijk trouw in vriendschap.',a:'Eens',b:'Oneens'},
+    {id:'GS-022',v:'De beste gesprekken ontstaan vlak voordat iemand eigenlijk naar huis moet.',a:'Eens',b:'Oneens'},
+    {id:'GS-023',v:'Een tafel vol kleine hapjes is gezelliger dan één indrukwekkend gerecht.',a:'Eens',b:'Oneens'},
+    {id:'GS-024',v:'Wie in de regen danst, heeft ofwel wijsheid ofwel slechte schoenen.',a:'Eens',b:'Oneens'},
+    {id:'GS-025',v:'Een goede bijnaam ontstaat nooit als je hem probeert te bedenken.',a:'Eens',b:'Oneens'},
+    {id:'GS-026',v:'Er is altijd één persoon die bij een groepsfoto zegt: nog eentje voor de zekerheid.',a:'Eens',b:'Oneens'},
+    {id:'GS-027',v:'Een spontaan ijsje kan een dag officieel verbeteren.',a:'Eens',b:'Oneens'},
+    {id:'GS-028',v:'Wie de weg kwijt is maar vrolijk blijft, is goed reisgezelschap.',a:'Eens',b:'Oneens'},
+    {id:'GS-029',v:'Een bankje met uitzicht is een onderschatte vorm van luxe.',a:'Eens',b:'Oneens'},
+    {id:'GS-030',v:'Mensen die hard lachen om hun eigen grap zijn soms irritant maar vaak heerlijk.',a:'Eens',b:'Oneens'},
+    {id:'GS-031',v:'Een supermarktbezoek kan voelen als een klein levensavontuur.',a:'Eens',b:'Oneens'},
+    {id:'GS-032',v:'Wie altijd de route wil plannen, moet soms verplicht verdwalen.',a:'Eens',b:'Oneens'},
+    {id:'GS-033',v:'Een goed broodje kan tijdelijk alle wereldproblemen relativeren.',a:'Eens',b:'Oneens'},
+    {id:'GS-034',v:'"Even snel" is een mythe, net als "bijna thuis" en "nog één glaasje".',a:'Eens',b:'Oneens'},
+    {id:'GS-035',v:'Er zijn weinig dingen zo hoopgevend als onverwacht taart aantreffen.',a:'Eens',b:'Oneens'},
+    {id:'GS-036',v:'Wie een dier op straat groet, is waarschijnlijk geen slecht mens.',a:'Eens',b:'Oneens'},
+    {id:'GS-037',v:'Een rommelige tas vertelt soms meer dan een nette biografie.',a:'Eens',b:'Oneens'},
+    {id:'GS-038',v:'De beste mensen hebben minstens één totaal onpraktische gewoonte.',a:'Eens',b:'Oneens'},
+    {id:'GS-039',v:'Een dag zonder kleine dwaasheid is eigenlijk niet helemaal af.',a:'Eens',b:'Oneens'},
+    {id:'GS-040',v:'Als iemand je laatste hapje aanbiedt, moet je die persoon serieus nemen.',a:'Eens',b:'Oneens'},
+  ],
+  scenarios: [
+    {id:'WZJD-001',v:'Jullie zitten op een terras en een duif steelt jouw koekje. Wat doe je?',a:'Je accepteert je nederlaag waardig',b:'Je begint een juridisch conflict met de duif'},
+    {id:'WZJD-002',v:'Je date komt aan met een rugzak vol snacks "voor noodgevallen". Wat denk je?',a:'Verstandig mens',b:'Rode vlag, maar wel een lekkere rode vlag'},
+    {id:'WZJD-003',v:'Je mag één absurde regel invoeren voor alle eerste dates.',a:'Iedereen noemt eerst zijn favoriete dinosaurus',b:'Iedereen vertelt binnen tien minuten een slechte mop'},
+    {id:'WZJD-004',v:'Je verdwaalt samen tijdens een wandeling. Wat is jouw rol?',a:'Ik doe alsof ik weet waar we zijn',b:'Ik roep: dit is avontuur!'},
+    {id:'WZJD-005',v:'Er loopt ineens een fanfare achter jullie aan. Wat doe je?',a:'Strak doorlopen alsof dit normaal is',b:'Zwaaien naar onbekenden alsof je beroemd bent'},
+    {id:'WZJD-006',v:'Jullie moeten samen een talentenshow doen. Wat kies je?',a:'Dramatisch voorlezen uit een menukaart',b:'Synchroon ongemakkelijk dansen'},
+    {id:'WZJD-007',v:'Je krijgt een menukaart met alleen rare gerechten. Wat bestel je?',a:'Mysterieuze soep van de dag',b:'Verrassingsbroodje met karakter'},
+    {id:'WZJD-008',v:'Jullie moeten een teamnaam kiezen voor deze route.',a:'Team Voorzichtig Optimistisch',b:'Team Twee Mensen en Veel Vragen'},
+    {id:'WZJD-009',v:'Je moet een nieuwe feestdag bedenken.',a:'Nationale Pyjamawandeldag',b:'Internationale Tweede-Ontbijtdag'},
+    {id:'WZJD-010',v:'Je mag één gadget uitvinden speciaal voor dates.',a:'Een kompas dat ongemakkelijke stiltes detecteert en er dramatisch naartoe wijst',b:'Een knopje dat zacht "boing" doet als iemand te diep wordt'},
+    {id:'WZJD-011',v:'Jullie bestellen hetzelfde maar krijgen allebei iets totaal anders. Wat doe je?',a:'Proeven en doen alsof dit de bedoeling was',b:'Een onderzoek starten naar het mysterie'},
+    {id:'WZJD-012',v:'Een onbekende hond kiest jou als beste vriend en loopt mee. Wat doe je?',a:'Je voelt je vereerd',b:'Je benoemt hem tijdelijk tot reisleider'},
+    {id:'WZJD-013',v:'Jullie moeten samen een picknick redden van oprukkende mieren.',a:'Onderhandelen met de mierenkoningin',b:'Alles hoger zetten en doen alsof je rustig bent'},
+    {id:'WZJD-014',v:'Je krijgt per ongeluk een veel te grote paraplu mee. Wat doe je?',a:'Je gebruikt hem trots als mobiel dak',b:'Je noemt hem "ons tiny house"'},
+    {id:'WZJD-015',v:'Jullie staan in de rij en iemand begint spontaan te zingen. Wat doe je?',a:'Zacht meeneuriën',b:'Alsof het normaal is het refrein zoeken'},
+    {id:'WZJD-016',v:'Een ober vraagt "jullie gebruikelijke tafel?" terwijl jullie daar nooit zijn geweest.',a:'Je speelt mee',b:'Je fluistert: onze reputatie is ons vooruitgesneld'},
+    {id:'WZJD-017',v:'Jullie vinden een briefje met "volg de eend". Wat doe je?',a:'Uiteraard de eend zoeken',b:'Eerst bespreken of dit ethisch verantwoord is'},
+    {id:'WZJD-018',v:'Je moet samen een mascotte kiezen voor jullie wandeling.',a:'Een dennenappel met charisma',b:'Een takje dat duidelijk leiderschap uitstraalt'},
+    {id:'WZJD-019',v:'Je schoenen maken bij elke stap een raar geluid. Wat doe je?',a:'Je loopt ritmisch verder',b:'Je noemt het je persoonlijke beat'},
+    {id:'WZJD-020',v:'Jullie moeten samen een taart beoordelen — maar praten mag niet.',a:'Alleen gezichtsuitdrukkingen: alsof je een Oscar-jury bent',b:'Alleen handgebaren: alsof je een land koopt op een veiling'},
+    {id:'WZJD-021',v:'Je ziet iemand zwaaien en zwaait terug maar het was voor iemand achter je.',a:'Je zwaait nog trotser',b:'Je doet alsof je net je arm strekte'},
+    {id:'WZJD-022',v:'Jullie komen bij een bordje "geheim pad". Wat doe je?',a:'Nieuwsgierig kijken waar het heen gaat',b:'Eerst plechtig verklaren dat dit avontuur is'},
+    {id:'WZJD-023',v:'Een kind vraagt of jullie beroemde avonturiers zijn.',a:'Je zegt: nog niet officieel',b:'Je vraagt of hij een queeste heeft'},
+    {id:'WZJD-024',v:'Jullie moeten een foto maken maar mogen niet normaal poseren.',a:'Heldhaftig in de verte kijken',b:'Doen alsof je een kaart leest die ondersteboven is'},
+    {id:'WZJD-025',v:'Je krijgt een gratis ballon maar hij is enorm. Wat doe je?',a:'Trots meenemen',b:'Hem benoemen tot derde wiel'},
+    {id:'WZJD-026',v:'20 seconden. Jullie moeten samen een slechte mop verzinnen. Nu.',a:'Vol vertrouwen beginnen — ook als het niks wordt',b:'Eerst 19 seconden paniek, dan vol gas iets met kaas'},
+    {id:'WZJD-027',v:'Een kat zit naast jullie en kijkt alsof hij jullie beoordeelt.',a:'Je probeert zijn goedkeuring te winnen',b:'Je accepteert dat je waarschijnlijk gezakt bent'},
+    {id:'WZJD-028',v:'Jullie krijgen de opdracht een geheime handdruk te maken.',a:'Kort en stijlvol',b:'Veel te ingewikkeld en dus perfect'},
+    {id:'WZJD-029',v:'Je moet ineens namens jullie beiden een ijssmaak kiezen.',a:'Veilig en klassiek',b:'Iets raars, want dit is onderzoek'},
+    {id:'WZJD-030',v:'Jullie moeten één minuut lang doen alsof jullie gidsen zijn in een museum.',a:'Je verzint historische feiten',b:'Je doet alsof alles diep symbolisch is'},
+    {id:'WZJD-031',v:'De wind blaast je haar of jas precies dramatisch de goede kant op.',a:'Even filmisch stilstaan',b:'Doen alsof je dit gepland had'},
+    {id:'WZJD-032',v:'Jullie vinden een bankje met perfect uitzicht maar het piept enorm.',a:'Blijven zitten en het karakter noemen',b:'Ritmisch meebewegen met het gepiep'},
+    {id:'WZJD-033',v:'Je moet één klein voorwerp tot gelukssymbool van de date verklaren.',a:'Een steentje',b:'Een servetje met potentie'},
+    {id:'WZJD-034',v:'Jullie moeten samen een denkbeeldige zaak openen.',a:'Koffie en slechte moppen',b:'Wafels en levensadvies'},
+    {id:'WZJD-035',v:'Je mag één ongemakkelijk moment van vandaag opnieuw doen.',a:'Ja graag — dit keer nonchalant, als een James Bond',b:'Nee — ongemak is de ziel van een goed verhaal later'},
+    {id:'WZJD-036',v:'Een straatmuzikant speelt precies jullie heldhaftige wandelmuziek.',a:'Langzamer lopen voor effect',b:'Een missie verzinnen'},
+    {id:'WZJD-037',v:'Jullie moeten een bijnaam kiezen voor een irritante regenbui.',a:'Motregen met mening',b:'Hemelse sproeistand'},
+    {id:'WZJD-038',v:'Je date zegt per ongeluk een woord verkeerd. Wat doe je?',a:'Het liefdevol bewaren voor later',b:'Het meteen benoemen tot officieel nieuw woord'},
+    {id:'WZJD-039',v:'Jullie krijgen één minuut om een klein ritueel voor toekomstige dates te bedenken.',a:'Eerst proosten op moed',b:'Altijd één belachelijke vraag starten'},
+    {id:'WZJD-040',v:'Een meeuw kijkt alsof hij jullie friet wil overnemen.',a:'Beschermen met waardigheid',b:'Hem streng toespreken als volwassen vogel'},
+  ]
+};
+
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+let S = {
+  player: null, adminMode: false, code: null,
+  questions: [],      // 15 voor deze sessie
+  idx: 0,             // huidige vraagindex
+  myAnswer: null,     // 'a' of 'b'
+  themAnswer: null,
+};
+
+// ══════════════════════════════════════════════════════════
+// SCREENS
+// ══════════════════════════════════════════════════════════
+function goScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function backToMap() { window.location.href = 'world.html'; }
+
+// ══════════════════════════════════════════════════════════
+// PROFIEL-GEHEUGEN (per koppelcode)
+// ══════════════════════════════════════════════════════════
+function geheugKey(code) { return 'ls_gezien_' + code; }
+function getGezien(code) {
+  try { return JSON.parse(localStorage.getItem(geheugKey(code)) || '[]'); } catch { return []; }
+}
+function saveGezien(code, ids) {
+  localStorage.setItem(geheugKey(code), JSON.stringify(ids));
+}
+const ALL_IDS = [...DATA.of_of, ...DATA.stellingen, ...DATA.scenarios].map(q => q.id);
+
+function pickSession(code) {
+  let gezien = getGezien(code);
+  // Als alles gezien: reset
+  const remaining_oo   = DATA.of_of.filter(q => !gezien.includes(q.id));
+  const remaining_gs   = DATA.stellingen.filter(q => !gezien.includes(q.id));
+  const remaining_wzjd = DATA.scenarios.filter(q => !gezien.includes(q.id));
+  if (remaining_oo.length < 5 || remaining_gs.length < 5 || remaining_wzjd.length < 5) {
+    gezien = []; // reset
+    saveGezien(code, []);
+  }
+  const fresh_oo   = DATA.of_of.filter(q => !gezien.includes(q.id));
+  const fresh_gs   = DATA.stellingen.filter(q => !gezien.includes(q.id));
+  const fresh_wzjd = DATA.scenarios.filter(q => !gezien.includes(q.id));
+
+  const pick = (arr, n) => shuffle([...arr]).slice(0, n);
+  const sel_oo   = pick(fresh_oo,   5);
+  const sel_gs   = pick(fresh_gs,   5);
+  const sel_wzjd = pick(fresh_wzjd, 5);
+
+  // Interleave: oo, gs, wzjd, oo, gs, wzjd, ...
+  const mixed = [];
+  for (let i = 0; i < 5; i++) {
+    mixed.push({...sel_oo[i],   cat:'oo'});
+    mixed.push({...sel_gs[i],   cat:'gs'});
+    mixed.push({...sel_wzjd[i], cat:'wzjd'});
+  }
+  // Mark as seen
+  const newGezien = [...gezien, ...mixed.map(q => q.id)];
+  saveGezien(code, newGezien);
+  return mixed;
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ══════════════════════════════════════════════════════════
+// KOPPEL
+// ══════════════════════════════════════════════════════════
+function saveSession(code, player) {
+  localStorage.setItem('ls_code', code);
+  localStorage.setItem('ls_player', player);
+  localStorage.setItem('ls_ts', Date.now());
+}
+function loadSession() {
+  const code = localStorage.getItem('ls_code');
+  const player = localStorage.getItem('ls_player');
+  const age = Date.now() - parseInt(localStorage.getItem('ls_ts') || '0');
+  if (!code || age > 86400000) return null;
+  return { code, player };
+}
+function clearSession() {
+  ['ls_code','ls_player','ls_ts'].forEach(k => localStorage.removeItem(k));
+}
+
+(function initKoppel() {
+  const saved = loadSession();
+  if (saved && saved.code !== ADMIN) {
+    document.getElementById('saved-block').style.display = 'block';
+    document.getElementById('saved-code').textContent = saved.code;
+    document.getElementById('new-block').style.display = 'none';
+  }
+})();
+
+function setupCallbacks() {
+  console.log('[LS] setupCallbacks registered');
+  KoppelClient.on('both_connected', (d) => { console.log('[LS] both_connected fired', d); showConnected(); });
+  KoppelClient.on('partner_progress', ({ progress }) => onPartnerProgress(progress));
+  KoppelClient.on('chat_message', ({ player, text }) => onChatMsg(player, text));
+  KoppelClient.on('typing', showTyping);
+  KoppelClient.on('error', ({ message }) => showErr(message));
+}
+
+function lsCreate() {
+  const btn = document.getElementById('btn-create');
+  btn.textContent = 'Verbinden...'; btn.disabled = true;
+  setStatus('Verbinding maken...', false);
+  setupCallbacks();
+  KoppelClient.on('session_created', ({ code, player }) => {
+    S.player = player; S.code = code;
+    saveSession(code, player);
+    document.getElementById('code-text').textContent = code;
+    document.getElementById('code-display').style.display = 'block';
+    btn.textContent = 'Maak koppelcode +'; btn.disabled = false;
+    setStatus('', false);
+  });
+  KoppelClient.create('lach_samen');
+  setTimeout(() => {
+    if (!KoppelClient.isActive()) {
+      btn.textContent = 'Maak koppelcode +'; btn.disabled = false;
+      setStatus('Geen verbinding. Draait de backend?', true);
+    }
+  }, 6000);
+}
+
+function lsJoin() {
+  const code = document.getElementById('code-input').value.trim().toUpperCase();
+  if (!code) return showErr('Voer een code in.');
+  if (code === ADMIN) {
+    S.player = '1'; S.adminMode = true; S.code = ADMIN;
+    saveSession(ADMIN, '1');
+    showConnected(); return;
+  }
+  setStatus('Verbinden...', false);
+  setupCallbacks();
+  KoppelClient.on('session_joined', ({ player }) => {
+    S.player = player; S.code = code;
+    saveSession(code, player);
+    hideErr(); setStatus('', false);
+  });
+  KoppelClient.join(code, 'lach_samen');
+}
+
+function lsReconnect() {
+  const saved = loadSession();
+  if (!saved) return lsForget();
+  if (saved.code === ADMIN) { S.player='1'; S.adminMode=true; S.code=ADMIN; showConnected(); return; }
+  S.player = saved.player; S.code = saved.code;
+  setStatus('Opnieuw verbinden...', false);
+  setupCallbacks();
+  KoppelClient.on('session_joined', ({ player }) => {
+    S.player = player; saveSession(saved.code, player); setStatus('',false);
+  });
+  KoppelClient.join(saved.code, 'lach_samen');
+}
+
+function lsForget() {
+  clearSession();
+  document.getElementById('saved-block').style.display = 'none';
+  document.getElementById('new-block').style.display = 'block';
+}
+
+function showConnected() {
+  console.log('[LS] showConnected player=', S.player, 'code=', S.code);
+  if (localStorage.getItem('comm_code')) { lsStart(); return; }
+  document.getElementById('connected-box').style.display = 'block';
+}
+
+function lsStart() {
+  console.log('[LS] lsStart code=', S.code, 'player=', S.player);
+  try {
+    S.questions = pickSession(S.code);
+    S.idx = 0;
+    console.log('[LS] goScreen screen-spel, questions=', S.questions?.length);
+    goScreen('screen-spel');
+    renderQuestion();
+  } catch(e) {
+    console.error('[LS] lsStart ERROR:', e);
+  }
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err-msg');
+  el.textContent = msg; el.style.display = 'block';
+}
+function hideErr() { document.getElementById('err-msg').style.display = 'none'; }
+function setStatus(msg, isErr) {
+  const el = document.getElementById('status-bar');
+  if (!msg) { el.style.display='none'; return; }
+  el.textContent = msg;
+  el.style.cssText = `display:block; background:${isErr?'rgba(248,113,113,.1)':'rgba(63,207,180,.07)'}; color:${isErr?'#f87171':'#6a9a6a'}; border:1px solid ${isErr?'#f8717144':'#3fcfb444'}; border-radius:8px; font-size:.78rem; text-align:center; padding:6px 14px; margin:0 0 8px;`;
+}
+
+// ══════════════════════════════════════════════════════════
+// SPEL
+// ══════════════════════════════════════════════════════════
+function renderQuestion() {
+  const q = S.questions[S.idx];
+  S.myAnswer = null; S.themAnswer = null;
+
+  // Progress
+  const n = S.idx + 1;
+  document.getElementById('progress-text').textContent = `${n} / 15`;
+  document.getElementById('progress-fill').style.width = `${(n/15)*100}%`;
+
+  // Category badge
+  const badge = document.getElementById('cat-badge');
+  const cats = { oo:'Of — of', gs:'Stelling', wzjd:'Wat zou jij doen?' };
+  const cls  = { oo:'badge-oo', gs:'badge-gs', wzjd:'badge-wzjd' };
+  badge.textContent = cats[q.cat];
+  badge.className = 'category-badge ' + cls[q.cat];
+
+  // Question
+  document.getElementById('question-text').textContent = q.v;
+
+  // Buttons
+  document.getElementById('label-a').textContent = q.a;
+  document.getElementById('label-b').textContent = q.b;
+  const btnA = document.getElementById('btn-a');
+  const btnB = document.getElementById('btn-b');
+  btnA.className = 'choice-btn'; btnA.disabled = false;
+  btnB.className = 'choice-btn'; btnB.disabled = false;
+
+  document.getElementById('waiting-dots').style.display = 'none';
+  document.getElementById('reveal-strip').classList.remove('show');
+
+  // Scroll top
+  document.getElementById('question-area').scrollTop = 0;
+}
+
+function choose(choice) {
+  if (S.myAnswer) return; // already chose
+  S.myAnswer = choice;
+
+  const btnA = document.getElementById('btn-a');
+  const btnB = document.getElementById('btn-b');
+  btnA.disabled = true; btnB.disabled = true;
+  (choice === 'a' ? btnA : btnB).classList.add('chosen-me');
+
+  document.getElementById('waiting-dots').style.display = 'flex';
+
+  // Send to partner
+  const q = S.questions[S.idx];
+  if (S.adminMode) {
+    // Simulate partner after short delay
+    setTimeout(() => onPartnerProgress({ type:'answer', qid: q.id, idx: S.idx, choice: Math.random() < .5 ? 'a' : 'b' }), 700);
+  } else {
+    KoppelClient.progress({ type:'answer', qid: q.id, idx: S.idx, choice });
+  }
+
+  maybeReveal();
+}
+
+function onPartnerProgress(progress) {
+  if (progress.type !== 'answer') return;
+  if (progress.idx !== S.idx) return;
+  S.themAnswer = progress.choice;
+  maybeReveal();
+}
+
+function maybeReveal() {
+  if (!S.myAnswer || !S.themAnswer) return;
+  showReveal();
+}
+
+function showReveal() {
+  document.getElementById('waiting-dots').style.display = 'none';
+
+  const q = S.questions[S.idx];
+  const myLabel   = S.myAnswer   === 'a' ? q.a : q.b;
+  const themLabel = S.themAnswer === 'a' ? q.a : q.b;
+
+  // Highlight buttons
+  const btnA = document.getElementById('btn-a');
+  const btnB = document.getElementById('btn-b');
+  if (S.myAnswer === 'a')   btnA.classList.add('chosen-me');
+  if (S.myAnswer === 'b')   btnB.classList.add('chosen-me');
+  if (S.themAnswer === 'a') btnA.classList.add('chosen-them');
+  if (S.themAnswer === 'b') btnB.classList.add('chosen-them');
+
+  document.getElementById('reveal-me').textContent   = myLabel;
+  document.getElementById('reveal-them').textContent = themLabel;
+
+  const matchEl = document.getElementById('match-msg');
+  if (S.myAnswer === S.themAnswer) {
+    matchEl.textContent = '🎉 Jullie kozen hetzelfde!';
+    matchEl.className = 'match-msg same';
+  } else {
+    matchEl.textContent = 'Jullie kozen anders — vertel waarom!';
+    matchEl.className = 'match-msg';
+  }
+
+  // Show last button text
+  const isLast = S.idx >= 14;
+  document.getElementById('next-btn').textContent = isLast ? 'Klaar! →' : 'Volgende vraag →';
+
+  document.getElementById('reveal-strip').classList.add('show');
+}
+
+function nextQuestion() {
+  S.idx++;
+  if (S.idx >= 15) {
+    goScreen('screen-done');
+    return;
+  }
+  renderQuestion();
+}
+
+// ══════════════════════════════════════════════════════════
+// CHAT
+// ══════════════════════════════════════════════════════════
+function toggleChat() {
+  document.getElementById('chat-panel').classList.toggle('open');
+}
+
+let typingTimer = null;
+function onType() { KoppelClient.sendTyping && KoppelClient.sendTyping(); }
+function showTyping() {
+  const el = document.getElementById('typing-hint');
+  if (!el) return;
+  el.style.display = 'block';
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(() => el.style.display = 'none', 2000);
+}
+
+function sendChat() {
+  const inp = document.getElementById('chat-input');
+  const text = inp.value.trim(); if (!text) return;
+  inp.value = '';
+  appendChat('me', text);
+  if (S.adminMode) return;
+  window.CommLayer?.sendBoardChat(text);
+}
+// Ontvang via CommLayer
+window.CommLayer?.onChatMessage(({ text, side }) => {
+  if (side === 'them') appendChat('them', text);
+});
+
+function appendChat(side, text) {
+  const wrap = document.getElementById('chat-messages');
+  if (!wrap) return;
+  const empty = wrap.querySelector('[data-empty]');
+  if (empty) empty.remove();
+  const msg = document.createElement('div');
+  msg.className = 'chat-msg ' + side;
+  msg.textContent = text;
+  wrap.appendChild(msg);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+// ── AUTO-START ─────────────────────────────────────────────────
+(function(){
+  const gc=localStorage.getItem('comm_code');
+  if(!gc) return;
+
+  if(gc==='1111'){
+    S.player='1';S.adminMode=true;S.code=ADMIN;
+    showConnected();
+    return;
+  }
+
+  // Hide entire lobby — show spinner
+  document.getElementById('screen-koppel').innerHTML =
+    '<style>@keyframes spin{to{transform:rotate(360deg)}}</style>' +
+    '<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">' +
+    '<div style="width:40px;height:40px;border:3px solid rgba(63,207,180,.15);border-top-color:#3fcfb4;border-radius:50%;animation:spin 1s linear infinite"></div>' +
+    '<div style="color:#6a9a6a;font-size:.88rem;font-family:Segoe UI,sans-serif">Even verbinden…</div></div>';
+
+  setupCallbacks();
+  SDClient.on('session_created', ({ code, player }) => {
+    S.player = player; S.code = code;
+    SDClient.announceGame('lach_samen', 'Lach Samen');
+    console.log('[LS] session_created, player=', player, 'code=', code);
+  });
+  SDClient.on('session_joined', ({ code, player }) => {
+    S.player = player; S.code = code;
+    console.log('[LS] session_joined, player=', player, 'code=', code);
+  });
+  SDClient.joinOrCreate(gc + '.L', 'lach_samen');
+})();
+</script>
+</body>
+</html>

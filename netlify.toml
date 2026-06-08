@@ -1,0 +1,21 @@
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+
+# Stuur / door naar de wereldkaart (home)
+[[redirects]]
+  from = "/"
+  to = "/world.html"
+  status = 200
+
+# Fallback voor SPA 404s
+[[redirects]]
+  from = "/*"
+  to = "/world.html"
+  status = 200
+  conditions = {Role = ["404"]}

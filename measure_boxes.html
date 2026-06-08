@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Box Measure</title>
+<style>
+body { margin: 0; background: #222; color: #fff; font-family: monospace; font-size: 12px; }
+canvas { display: block; }
+#out { position: fixed; top: 8px; right: 8px; background: rgba(0,0,0,.85); padding: 12px; border-radius: 8px; max-width: 340px; white-space: pre-wrap; line-height: 1.6; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="out">Loading…</div>
+<script>
+const IMG = 'images/cards/empty_card1.webp';
+const out = document.getElementById('out');
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const img = new Image();
+img.onload = function() {
+  const W = img.width, H = img.height;
+  canvas.width = W; canvas.height = H;
+  ctx.drawImage(img, 0, 0);
+  const data = ctx.getImageData(0, 0, W, H).data;
+
+  function px(x, y) {
+    const i = (y * W + x) * 4;
+    return [data[i], data[i+1], data[i+2], data[i+3]];
+  }
+  function lightness(x, y) {
+    const [r,g,b] = px(x, y);
+    return (r + g + b) / 3;
+  }
+
+  // Scan vertically in center of image to find box tops/bottoms
+  // Boxes are lighter than their surrounding (cream vs card background)
+  const cx = Math.floor(W * 0.35); // center of left column
+  const cx2 = Math.floor(W * 0.65); // center of right column
+
+  let result = `Image: ${W} × ${H}\n\n`;
+
+  // Find horizontal bands by scanning column
+  // Look for sudden lightness changes (box borders are slightly different)
+  // Let's scan and find rows where the pixel is "very light" (box interior ~245+)
+  // vs slightly darker (box border or gap ~230 or below)
+
+  // Find box rows by scanning left-col center x for dark border pixels
+  const threshold = 215; // border pixels are darker than interior
+  let inBox = false;
+  let boxRows = [];
+  let startY = -1;
+
+  for (let y = Math.floor(H*0.45); y < Math.floor(H*0.95); y++) {
+    const l = lightness(cx, y);
+    if (!inBox && l > 232) { inBox = true; startY = y; }
+    else if (inBox && l < 225) { inBox = false; boxRows.push([startY, y-1]); }
+  }
+  if (inBox) boxRows.push([startY, Math.floor(H*0.95)]);
+
+  result += `Box rows (from left-col scan at x=${cx}):\n`;
+  boxRows.forEach((r, i) => {
+    result += `  Row ${i+1}: y=${r[0]}–${r[1]}  (${(r[0]/H*100).toFixed(1)}%–${(r[1]/H*100).toFixed(1)}%)\n`;
+  });
+
+  // Find box columns by scanning a row in the middle of first box
+  if (boxRows.length > 0) {
+    const midY = Math.floor((boxRows[0][0] + boxRows[0][1]) / 2);
+    let inCol = false;
+    let colStart = -1;
+    let cols = [];
+    for (let x = Math.floor(W*0.05); x < Math.floor(W*0.95); x++) {
+      const l = lightness(x, midY);
+      if (!inCol && l > 232) { inCol = true; colStart = x; }
+      else if (inCol && l < 225) { inCol = false; cols.push([colStart, x-1]); }
+    }
+    if (inCol) cols.push([colStart, Math.floor(W*0.95)]);
+
+    result += `\nBox columns (from row scan at y=${midY}):\n`;
+    cols.forEach((c, i) => {
+      result += `  Col ${i+1}: x=${c[0]}–${c[1]}  (${(c[0]/W*100).toFixed(1)}%–${(c[1]/W*100).toFixed(1)}%)\n`;
+    });
+
+    if (cols.length >= 2 && boxRows.length >= 4) {
+      result += `\n=== CSS overlay values ===\n`;
+      result += `top: ${(boxRows[0][0]/H*100).toFixed(1)}%\n`;
+      result += `bottom: ${((H - boxRows[boxRows.length-1][1])/H*100).toFixed(1)}%\n`;
+      result += `left: ${(cols[0][0]/W*100).toFixed(1)}%\n`;
+      result += `right: ${((W - cols[cols.length-1][1])/W*100).toFixed(1)}%\n`;
+      // gap between rows
+      if (boxRows.length >= 2) {
+        const gap = boxRows[1][0] - boxRows[0][1];
+        const rowH = boxRows[0][1] - boxRows[0][0];
+        result += `row height: ${rowH}px (${(rowH/H*100).toFixed(1)}%)\n`;
+        result += `row gap: ${gap}px (${(gap/H*100).toFixed(1)}%)\n`;
+      }
+      // gap between cols
+      if (cols.length >= 2) {
+        const cgap = cols[1][0] - cols[0][1];
+        result += `col gap: ${cgap}px (${(cgap/W*100).toFixed(1)}%)\n`;
+      }
+    }
+  }
+
+  out.textContent = result;
+
+  // Draw scan lines for visual verification
+  ctx.strokeStyle = 'rgba(255,0,0,0.5)';
+  ctx.lineWidth = 1;
+  boxRows.forEach(r => {
+    ctx.beginPath(); ctx.moveTo(0, r[0]); ctx.lineTo(W, r[0]); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, r[1]); ctx.lineTo(W, r[1]); ctx.stroke();
+  });
+};
+img.src = IMG;
+</script>
+</body>
+</html>

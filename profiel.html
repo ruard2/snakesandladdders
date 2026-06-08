@@ -1,0 +1,888 @@
+﻿<!DOCTYPE html>
+<html lang="nl">
+<head>`n<script src="config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Jouw Profiel</title>
+<script src="profiel.js"></script>
+<script src="toon-helper.js"></script>
+<style>
+/* ── Reset + base ──────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:        #faf8f4;
+  --surface:   #ffffff;
+  --border:    #e8e0d4;
+  --text:      #2c2416;
+  --muted:     #9a8e7c;
+  --accent:    #c0543a;
+  --accent-bg: #fdf1ee;
+  --gold:      #b87c2a;
+  --gold-bg:   #fdf5e8;
+  --groen:     #3a7c54;
+  --groen-bg:  #eef7f2;
+  --blauw:     #2a5c8a;
+  --blauw-bg:  #eef4fb;
+  --paars:     #6a4c93;
+  --paars-bg:  #f3eefb;
+  --radius:    14px;
+  --radius-sm: 9px;
+  --shadow:    0 2px 12px rgba(44,36,22,0.07);
+}
+
+html, body {
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Georgia', serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ── Header ────────────────────────────────────────────── */
+.profiel-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(250,248,244,0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.back-btn {
+  background: none; border: none; color: var(--muted);
+  font-size: 1.2rem; cursor: pointer; padding: 4px 8px;
+  border-radius: 8px; transition: background 0.2s;
+}
+.back-btn:hover { background: var(--border); }
+.header-titel { font-size: 1.05rem; font-weight: 700; font-family: Georgia, serif; }
+.header-sub    { font-size: 0.72rem; color: var(--muted); margin-top: 1px; }
+
+/* ── Pagina layout ─────────────────────────────────────── */
+.pagina { max-width: 520px; margin: 0 auto; padding: 20px 16px 60px; }
+
+/* ── Lege staat ────────────────────────────────────────── */
+.leeg-staat {
+  text-align: center; padding: 40px 20px;
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--border); box-shadow: var(--shadow);
+}
+.leeg-staat .leeg-icon { font-size: 3rem; margin-bottom: 16px; }
+.leeg-staat h2 { font-size: 1.2rem; margin-bottom: 8px; font-family: Georgia, serif; }
+.leeg-staat p  { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+.leeg-staat .leeg-modules {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-top: 20px;
+}
+.leeg-module {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+  text-decoration: none; color: var(--text);
+  font-size: 0.82rem; font-weight: 500; transition: background 0.2s;
+}
+.leeg-module:hover { background: var(--border); }
+
+/* ── Sectie-label ──────────────────────────────────────── */
+.sectie-label {
+  font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); font-family: -apple-system, sans-serif;
+  font-weight: 600; margin-bottom: 10px;
+}
+
+/* ── Samenvatting kaart ────────────────────────────────── */
+.samenvatting-kaart {
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--border); box-shadow: var(--shadow);
+  padding: 22px 20px; margin-bottom: 16px;
+}
+.samenvatting-naam {
+  font-size: 0.7rem; color: var(--muted); font-family: -apple-system, sans-serif;
+  letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px;
+}
+.samenvatting-tekst {
+  font-size: 1.05rem; line-height: 1.65; font-style: italic; color: var(--text);
+}
+.samenvatting-footer {
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);
+  display: flex; gap: 16px; flex-wrap: wrap;
+}
+.samenvatting-stat {
+  font-size: 0.75rem; color: var(--muted); font-family: -apple-system, sans-serif;
+}
+.samenvatting-stat strong { color: var(--text); }
+
+/* ── Sectie-kaart ──────────────────────────────────────── */
+.sectie-kaart {
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--border); box-shadow: var(--shadow);
+  margin-bottom: 12px; overflow: hidden;
+}
+.sectie-kaart-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px 14px;
+  cursor: pointer; user-select: none;
+}
+.sectie-kaart-header:hover { background: var(--bg); }
+.sectie-kaart-header .sk-links {
+  display: flex; align-items: center; gap: 10px;
+}
+.sectie-kaart-header .sk-icon { font-size: 1.3rem; }
+.sectie-kaart-header .sk-titel {
+  font-size: 0.9rem; font-weight: 700; font-family: -apple-system, sans-serif;
+}
+.sectie-kaart-header .sk-preview {
+  font-size: 0.75rem; color: var(--muted); margin-top: 2px;
+  font-family: -apple-system, sans-serif;
+}
+.sectie-kaart-header .sk-chevron {
+  color: var(--muted); font-size: 0.75rem; transition: transform 0.2s;
+}
+.sectie-kaart.open .sk-chevron { transform: rotate(180deg); }
+.sectie-kaart-body { display: none; padding: 0 18px 18px; }
+.sectie-kaart.open .sectie-kaart-body { display: block; }
+
+/* ── Tag chips ─────────────────────────────────────────── */
+.tag-rij { display: flex; flex-wrap: wrap; gap: 7px; }
+.tag {
+  font-family: -apple-system, sans-serif;
+  font-size: 0.78rem; padding: 5px 12px;
+  border-radius: 20px; font-weight: 500; line-height: 1;
+}
+.tag-beh   { background: var(--blauw-bg);  color: var(--blauw);  border: 1px solid rgba(42,92,138,0.15); }
+.tag-besch { background: var(--gold-bg);   color: var(--gold);   border: 1px solid rgba(184,124,42,0.15); }
+.tag-gev   { background: var(--paars-bg);  color: var(--paars);  border: 1px solid rgba(106,76,147,0.15); }
+.tag-skill { background: var(--groen-bg);  color: var(--groen);  border: 1px solid rgba(58,124,84,0.15); }
+.tag-patr  { background: var(--accent-bg); color: var(--accent); border: 1px solid rgba(192,84,58,0.15); }
+.tag-dom   { background: #f5f0e8; color: #7a5c2a; border: 1px solid rgba(122,92,42,0.15); }
+
+/* ── Behoefte bars ─────────────────────────────────────── */
+.behoefte-rij {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px; font-family: -apple-system, sans-serif;
+}
+.behoefte-naam { font-size: 0.85rem; font-weight: 600; min-width: 120px; }
+.behoefte-bar-wrap { flex: 1; background: var(--border); border-radius: 4px; height: 6px; }
+.behoefte-bar { height: 6px; border-radius: 4px; background: var(--blauw); transition: width 0.8s ease; }
+.behoefte-bar.besch { background: var(--gold); }
+.behoefte-bar.gev   { background: var(--paars); }
+.behoefte-confidence {
+  font-size: 0.7rem; color: var(--muted); font-style: italic;
+  margin-top: 4px; font-family: -apple-system, sans-serif;
+}
+
+/* ── DISC kleurenblokken ────────────────────────────────── */
+.disc-blokken { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.disc-blok {
+  border-radius: var(--radius-sm); padding: 12px 14px;
+  font-family: -apple-system, sans-serif;
+}
+.disc-blok .db-label { font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.7; }
+.disc-blok .db-waarde { font-size: 1.05rem; font-weight: 700; margin-top: 2px; }
+.disc-blok .db-sub    { font-size: 0.72rem; opacity: 0.75; margin-top: 2px; }
+
+/* ── Kwaliteiten lijst ──────────────────────────────────── */
+.kwaliteit-rij {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+  font-family: -apple-system, sans-serif;
+}
+.kwaliteit-rij:last-child { border-bottom: none; }
+.kw-naam { font-size: 0.88rem; font-weight: 600; flex: 1; }
+.kw-score {
+  font-size: 0.72rem; color: var(--muted);
+  background: var(--bg); padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* ── Patronen tabel ─────────────────────────────────────── */
+.patroon-rij {
+  padding: 9px 0; border-bottom: 1px solid var(--border);
+  font-family: -apple-system, sans-serif;
+}
+.patroon-rij:last-child { border-bottom: none; }
+.pr-label { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; }
+.pr-waarde { font-size: 0.88rem; margin-top: 2px; }
+
+/* ── Inzichten ──────────────────────────────────────────── */
+.inzicht-item {
+  background: var(--bg); border-radius: var(--radius-sm);
+  padding: 11px 13px; margin-bottom: 8px;
+  font-size: 0.85rem; line-height: 1.55;
+  font-family: -apple-system, sans-serif;
+  border-left: 3px solid var(--accent);
+}
+
+/* ── Domein-badges ──────────────────────────────────────── */
+.domein-badge-rij { display: flex; flex-wrap: wrap; gap: 7px; }
+.domein-badge {
+  display: flex; align-items: center; gap: 5px;
+  font-family: -apple-system, sans-serif; font-size: 0.78rem;
+  padding: 5px 10px; border-radius: 20px; font-weight: 500;
+}
+.domein-badge.sterk { background: var(--groen-bg); color: var(--groen); border: 1px solid rgba(58,124,84,0.15); }
+.domein-badge.groei { background: var(--gold-bg); color: var(--gold); border: 1px solid rgba(184,124,42,0.15); }
+
+/* ── Progress naar compleet ─────────────────────────────── */
+.profiel-compleetheid {
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--border); padding: 16px 18px;
+  margin-bottom: 16px; font-family: -apple-system, sans-serif;
+}
+.compleet-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+.compleet-stappen { display: flex; flex-direction: column; gap: 7px; }
+.compleet-stap {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem;
+}
+.stap-check { font-size: 0.9rem; width: 20px; text-align: center; }
+.stap-naam  { flex: 1; }
+.stap-link  { font-size: 0.75rem; color: var(--accent); text-decoration: none; }
+
+/* ── Knoppen ────────────────────────────────────────────── */
+.btn {
+  display: block; width: 100%; padding: 13px 20px;
+  border: none; border-radius: var(--radius-sm);
+  font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  transition: all 0.2s; text-align: center;
+  font-family: -apple-system, sans-serif; text-decoration: none;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-secondary {
+  background: transparent; color: var(--text);
+  border: 1.5px solid var(--border);
+}
+.btn-secondary:hover { background: var(--border); }
+
+/* ── Enneagram signalen ──────────────────────────────────── */
+.enn-disclaimer {
+  font-size: 0.75rem; color: var(--muted); font-style: italic;
+  background: var(--bg); border-radius: var(--radius-sm);
+  padding: 8px 12px; margin-bottom: 12px;
+  font-family: -apple-system, sans-serif;
+}
+.enn-signaal {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0; border-bottom: 1px solid var(--border);
+  font-family: -apple-system, sans-serif;
+}
+.enn-signaal:last-child { border-bottom: none; }
+
+/* ── Laad-indicator ─────────────────────────────────────── */
+.laad-indicator {
+  text-align: center; padding: 40px;
+  color: var(--muted); font-family: -apple-system, sans-serif;
+  font-size: 0.88rem;
+}
+
+/* ── Waarden sectie ─────────────────────────────────────── */
+.waarden-rij { display: flex; flex-wrap: wrap; gap: 7px; }
+.waarde-chip {
+  font-family: -apple-system, sans-serif;
+  background: var(--gold-bg); color: var(--gold);
+  border: 1px solid rgba(184,124,42,0.2);
+  font-size: 0.78rem; padding: 4px 12px;
+  border-radius: 20px; font-weight: 500;
+}
+.waarde-chip.ontvangen {
+  background: var(--groen-bg); color: var(--groen);
+  border-color: rgba(58,124,84,0.2);
+}
+</style>
+</head>
+<body>
+
+<!-- ── Header ────────────────────────────────────────────── -->
+<div class="profiel-header">
+  <a href="world.html"><button class="back-btn">←</button></a>
+  <div>
+    <div class="header-titel">Jouw profiel</div>
+    <div class="header-sub" id="header-sub">Bouwt op met elke module</div>
+  </div>
+</div>
+
+<!-- ── Pagina ────────────────────────────────────────────── -->
+<div class="pagina">
+
+  <!-- Laad-staat -->
+  <div id="laad-sectie" class="laad-indicator">Profiel laden...</div>
+
+  <!-- Alles verborgen tot data geladen is -->
+  <div id="profiel-inhoud" style="display:none;">
+
+    <!-- Samenvatting kaart -->
+    <div class="samenvatting-kaart" id="samenvatting-kaart" style="margin-bottom:16px;">
+      <div class="samenvatting-naam">Jouw spiegel</div>
+      <div class="samenvatting-tekst" id="samenvatting-tekst"></div>
+      <div class="samenvatting-footer" id="samenvatting-footer"></div>
+    </div>
+
+    <!-- Voortgang — welke modules zijn gedaan -->
+    <div class="profiel-compleetheid" id="compleetheid-kaart">
+      <div class="compleet-label">Profiel in opbouw</div>
+      <div class="compleet-stappen" id="compleet-stappen"></div>
+    </div>
+
+    <!-- 1. Behoeften (uit rondes) -->
+    <div class="sectie-kaart" id="sk-behoeften">
+      <div class="sectie-kaart-header" onclick="toggleSectie('sk-behoeften')">
+        <div class="sk-links">
+          <span class="sk-icon">💙</span>
+          <div>
+            <div class="sk-titel">Wat jij nodig hebt</div>
+            <div class="sk-preview" id="sk-beh-preview">—</div>
+          </div>
+        </div>
+        <span class="sk-chevron">▼</span>
+      </div>
+      <div class="sectie-kaart-body" id="body-behoeften"></div>
+    </div>
+
+    <!-- 2. Beschermingen -->
+    <div class="sectie-kaart" id="sk-beschermingen">
+      <div class="sectie-kaart-header" onclick="toggleSectie('sk-beschermingen')">
+        <div class="sk-links">
+          <span class="sk-icon">🛡️</span>
+          <div>
+            <div class="sk-titel">Wat jij beschermt</div>
+            <div class="sk-preview" id="sk-besch-preview">—</div>
+          </div>
+        </div>
+        <span class="sk-chevron">▼</span>
+      </div>
+      <div class="sectie-kaart-body" id="body-beschermingen"></div>
+    </div>
+
+    <!-- 3. Gevoelige plekken -->
+    <div class="sectie-kaart" id="sk-gevoelig">
+      <div class="sectie-kaart-header" onclick="toggleSectie('sk-gevoelig')">
+        <div class="sk-links">
+          <span class="sk-icon">🌿</span>
+          <div>
+            <div class="sk-titel">Gevoelige plekken</div>
+            <div class="sk-preview" id="sk-gev-preview">—</div>
+          </div>
+        </div>
+        <span class="sk-chevron">▼</span>
+      </div>
+      <div class="sectie-kaart-body" id="body-gevoelig"></div>
+    </div>
+
+    <!-- 4. Vaardigheden -->
+    <div class="sectie-kaart" id="sk-skills" style="display:none;">
+      <div class="sectie-kaart-header" onclick="toggleSectie('sk-skills')">
+        <div class="sk-links">
+          <span class="sk-icon">✓</span>
+          <div>
+            <div class="sk-titel">Jouw vaardigheden</div>
+            <div class="sk-preview" id="sk-skills-preview">—</div>
+          </div>
+        </div>
+        <span class="sk-chevron">▼</span>
+      </div>
+      <div class="sectie-kaart-body" id="body-skills"></div>
+    </div>
+
+    <!-- 5. Domeinen -->
+    <div class="sectie-kaart" id="sk-domeinen" style="display:none;">
+      <div class="sectie-kaart-header" onclick="toggleSectie('sk-domeinen')">
+        <div class="sk-links">
+          <span class="sk-icon">🗺️</span>
+          <div>
+            <div class="sk-titel">Domeinen</div>
+            <div class="sk-preview" id="sk-dom-preview">—</div>
+          </div>
+        </div>
+        <span class="sk-chevron">▼</span>
+      </div>
+      <div class="sectie-kaart-body" id="body-domeinen"></div>
+    </div>
+
+    <!-- 6. Kleurprofiel (DISC) -->
+    <div class="sectie-kaart" id="sk-disc" style="display:none;">
+      <div class="sectie-kaart-header" onclick="toggleSectie('sk-disc')">
+        <div class="sk-links">
+          <span class="sk-icon">🎨</span>
+          <div>
+            <div class="sk-titel">Kleurprofiel</div>
+            <div class="sk-preview" id="sk-disc-preview">—</div>
+          </div>
+        </div>
+        <span class="sk-chevron">▼</span>
+      </div>
+      <div class="sectie-kaart-body" id="body-disc"></div>
+    </div>
+
+    <!-- 7. Kernkwaliteiten -->
+    <div class="sectie-kaart" id="sk-kk" style="display:none;">
+      <div class="sectie-kaart-header" onclick="toggleSectie('sk-kk')">
+        <div class="sk-links">
+          <span class="sk-icon">💎</span>
+          <div>
+            <div class="sk-titel">Kernkwaliteiten</div>
+            <div class="sk-preview" id="sk-kk-preview">—</div>
+          </div>
+        </div>
+        <span class="sk-chevron">▼</span>
+      </div>
+      <div class="sectie-kaart-body" id="body-kk"></div>
+    </div>
+
+    <!-- 8. Waarden -->
+    <div class="sectie-kaart" id="sk-waarden" style="display:none;">
+      <div class="sectie-kaart-header" onclick="toggleSectie('sk-waarden')">
+        <div class="sk-links">
+          <span class="sk-icon">🌱</span>
+          <div>
+            <div class="sk-titel">Waarden</div>
+            <div class="sk-preview" id="sk-waarden-preview">—</div>
+          </div>
+        </div>
+        <span class="sk-chevron">▼</span>
+      </div>
+      <div class="sectie-kaart-body" id="body-waarden"></div>
+    </div>
+
+    <!-- 9. Gedragsstijlen -->
+    <div class="sectie-kaart" id="sk-stijlen" style="display:none;">
+      <div class="sectie-kaart-header" onclick="toggleSectie('sk-stijlen')">
+        <div class="sk-links">
+          <span class="sk-icon">🧭</span>
+          <div>
+            <div class="sk-titel">Jouw stijlen</div>
+            <div class="sk-preview" id="sk-stijlen-preview">—</div>
+          </div>
+        </div>
+        <span class="sk-chevron">▼</span>
+      </div>
+      <div class="sectie-kaart-body" id="body-stijlen"></div>
+    </div>
+
+    <!-- 10. Inzichten -->
+    <div class="sectie-kaart" id="sk-inzichten" style="display:none;">
+      <div class="sectie-kaart-header" onclick="toggleSectie('sk-inzichten')">
+        <div class="sk-links">
+          <span class="sk-icon">✨</span>
+          <div>
+            <div class="sk-titel">Persoonlijke inzichten</div>
+            <div class="sk-preview" id="sk-inz-preview">—</div>
+          </div>
+        </div>
+        <span class="sk-chevron">▼</span>
+      </div>
+      <div class="sectie-kaart-body" id="body-inzichten"></div>
+    </div>
+
+    <!-- CTA naar De Grot als nog weinig rondes -->
+    <div id="cta-grot" style="display:none;margin-top:8px;">
+      <a href="grot.html" class="btn btn-primary">🔮 Meer rondes spelen — profiel verdiepen</a>
+    </div>
+
+    <div style="height:24px;"></div>
+    <a href="world.html" style="display:block;text-align:center;color:var(--muted);font-size:0.82rem;font-family:-apple-system,sans-serif;text-decoration:none;">← Terug naar de kaart</a>
+
+  </div><!-- /profiel-inhoud -->
+
+  <!-- Leeg staat (geen data) -->
+  <div id="leeg-sectie" style="display:none;">
+    <div class="leeg-staat">
+      <div class="leeg-icon">🌱</div>
+      <h2>Jouw profiel is nog leeg</h2>
+      <p>Doe een module om je profiel te beginnen opbouwen. Elke module voegt een nieuwe laag toe.</p>
+      <div class="leeg-modules">
+        <a href="kleurkompas.html" class="leeg-module">🎨 Kleurkompas</a>
+        <a href="kernkwadranten.html" class="leeg-module">💎 Kernkwadranten</a>
+        <a href="waarden.html" class="leeg-module">🌱 Waarden</a>
+        <a href="grot.html" class="leeg-module">🔮 De Grot</a>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /pagina -->
+
+<script>
+'use strict';
+
+// ── Tekst (i18n) ──────────────────────────────────────────
+const TEKST = {
+  // Samenvatting zinnen
+  samen_intro:   'Je profiel bouwt op uit wat je hebt gespeeld. Hier is een eerste spiegel.',
+  geen_data:     'Start met een module om je profiel op te bouwen.',
+  confidence:    { low: 'lijkt', medium: 'komt terug', high: 'duidelijk aanwezig' },
+  // Sectie introductieteksten
+  beh_intro:     'Dit zijn de behoeften die het vaakst naar voren kwamen in jouw antwoorden.',
+  besch_intro:   'Beschermingen zijn manieren waarop je jezelf probeert te beschermen. Ze zijn niet slecht — ze bewaken iets waardevols.',
+  gev_intro:     'Dit kan raken aan gevoelige plekken — momenten waarop iemand extra kwetsbaar is. Dit is geen zwakte, maar een laag die aandacht verdient.',
+  skills_intro:  'Vaardigheden die in jouw antwoorden naar voren komen.',
+  dom_intro:     'Domeinen waar je krachten en groeikansen liggen.',
+  disc_intro:    'Gebaseerd op het KleurKompas.',
+  kk_intro:      'Je meest consistente kernkwaliteiten over alle sessies.',
+  waarden_intro: 'Jouw gekozen waarden en wat je partner in jou herkende.',
+  stijlen_intro: 'Hoe jij van nature functioneert — in beslissingen, conflicten en communicatie.',
+  inzichten_intro: 'Gegenereerd op basis van al jouw modules samen.',
+  // Stijl-labels
+  beslissingen:  'Beslissingstijl',
+  conflict:      'Conflictstijl',
+  communicatie:  'Communicatiestijl',
+  stress:        'Onder stress',
+  // Domein meta
+  domein_namen: {
+    D1:'Aandacht', D2:'Verbinding', D3:'Veiligheid', D4:'Vrijheid', D5:'Waardering',
+    D6:'Communicatie', D7:'Conflict & herstel', D8:'Intimiteit', D9:'Gezin',
+    D10:'Familie', D11:'Geld', D12:'Werk', D13:'Zingeving', D14:'Toekomst', D15:'Verlies',
+  },
+  domein_emoji: {
+    D1:'👁️',D2:'🤝',D3:'🛡️',D4:'🕊️',D5:'⭐',
+    D6:'💬',D7:'🔧',D8:'❤️',D9:'🏡',D10:'🌳',
+    D11:'💰',D12:'🎯',D13:'🌟',D14:'🚀',D15:'🌊',
+  },
+  disc_kleuren: { R: 'Rood', G: 'Geel', Gr: 'Groen', B: 'Blauw' },
+  disc_hex:     { R: '#e53935', G: '#f9a825', Gr: '#43a047', B: '#1e88e5' },
+  disc_labels: {
+    primary:   'Primaire kleur',
+    secondary: 'Secundaire kleur',
+    feeling:   'Diepere behoefte',
+    stress:    'Onder stress',
+  },
+  // Compleetheid stappen
+  stappen: [
+    { key: 'disc',          label: 'KleurKompas',     href: 'kleurkompas.html',    check: p => p.disc && p.disc.sessionCount > 0 },
+    { key: 'kk',            label: 'Kernkwadranten',  href: 'kernkwadranten.html', check: p => p.kernkwadranten && p.kernkwadranten.sessionCount > 0 },
+    { key: 'waarden',       label: 'Waarden',         href: 'waarden.html',        check: p => p.waarden && p.waarden.sessionCount > 0 },
+    { key: 'rondes_5',      label: '5 rondes in De Grot', href: 'grot.html',      check: p => (p.rondeCount || 0) >= 5 },
+    { key: 'rondes_12',     label: '12 rondes samen', href: 'grot.html',           check: p => (p.rondeCount || 0) >= 12 },
+  ],
+};
+
+// ── Init ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  const userId = ProfielClient.init();
+  document.getElementById('header-sub').textContent = 'ID: ' + userId.slice(0, 8) + '...';
+
+  // Haal volledig rapport op
+  let profiel = null;
+  try {
+    const resp = await fetch(
+      (window.KOPPEL_BACKEND_URL || 'https://snakesandladdders-production.up.railway.app')
+      + '/api/profile/' + userId,
+      { headers: { 'x-user-id': userId } }
+    );
+    if (resp.ok) profiel = await resp.json();
+  } catch (e) {
+    profiel = ProfielClient.getLocal();
+  }
+
+  document.getElementById('laad-sectie').style.display = 'none';
+
+  if (!profiel || heeftGeenData(profiel)) {
+    document.getElementById('leeg-sectie').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('profiel-inhoud').style.display = 'block';
+  bouwProfiel(profiel);
+});
+
+function heeftGeenData(p) {
+  const heeftDisc   = p.disc && p.disc.sessionCount > 0;
+  const heeftKK     = p.kernkwadranten && p.kernkwadranten.sessionCount > 0;
+  const heeftWaarden = p.waarden && p.waarden.sessionCount > 0;
+  const heeftRondes = (p.rondeCount || 0) > 0;
+  return !heeftDisc && !heeftKK && !heeftWaarden && !heeftRondes;
+}
+
+// ── Sectie toggle ──────────────────────────────────────────
+function toggleSectie(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+
+// ── Hoofd builder ──────────────────────────────────────────
+function bouwProfiel(p) {
+  bouwSamenvatting(p);
+  bouwCompleetheid(p);
+  bouwBehoeften(p);
+  bouwBeschermingen(p);
+  bouwGevoelig(p);
+  bouwSkills(p);
+  bouwDomeinen(p);
+  bouwDISC(p);
+  bouwKK(p);
+  bouwWaarden(p);
+  bouwStijlen(p);
+  bouwInzichten(p);
+  bouwCTA(p);
+}
+
+// ── Samenvatting ───────────────────────────────────────────
+function bouwSamenvatting(p) {
+  const rondes = p.rondeCount || 0;
+
+  // Gebruik toon-helper als beschikbaar, anders lokale fallback
+  let tekst;
+  if (window.TOON) {
+    tekst = TOON.spiegelProfiel(p, rondes);
+  } else {
+    const conf = rondes >= 12 ? 'high' : rondes >= 8 ? 'medium' : 'low';
+    const confLabel = TEKST.confidence[conf];
+    const zinnen = [];
+    if (p.topBehoeften?.[0])
+      zinnen.push(`${confLabel === 'high' ? 'Duidelijk aanwezig' : 'Het lijkt erop dat'} jouw sterkste behoefte: ${p.topBehoeften[0].label.toLowerCase()}.`);
+    if (p.topBeschermingen?.[0])
+      zinnen.push(`Wat jij lijkt te beschermen: ${p.topBeschermingen[0].label.toLowerCase()} — dit bewaakt iets waardevols.`);
+    if (p.disc?.primary && TEKST.disc_kleuren[p.disc.primary])
+      zinnen.push(`Je kleurprofiel wijst op ${TEKST.disc_kleuren[p.disc.primary].toLowerCase()} als dominante stijl.`);
+    if (p.kernkwadranten?.topQualities?.[0])
+      zinnen.push(`Een sterke kernkwaliteit: ${p.kernkwadranten.topQualities[0].name || p.kernkwadranten.topQualities[0].id}.`);
+    tekst = zinnen.length > 0 ? zinnen.join(' ') : TEKST.samen_intro;
+  }
+
+  document.getElementById('samenvatting-tekst').textContent = tekst;
+
+  // Footer stats
+  const footer = document.getElementById('samenvatting-footer');
+  const stats = [];
+  if (rondes > 0)                       stats.push(`<span class="samenvatting-stat"><strong>${rondes}</strong> ronde${rondes!==1?'s':''}</span>`);
+  if (p.totalSessions > 0)              stats.push(`<span class="samenvatting-stat"><strong>${p.totalSessions}</strong> module${p.totalSessions!==1?'s':''}</span>`);
+  if (p.disc && p.disc.sessionCount>0)  stats.push(`<span class="samenvatting-stat">Kleur: <strong>${TEKST.disc_kleuren[p.disc.primary]||'?'}</strong></span>`);
+  footer.innerHTML = stats.join('');
+}
+
+// ── Compleetheid ───────────────────────────────────────────
+function bouwCompleetheid(p) {
+  const stappen = document.getElementById('compleet-stappen');
+  stappen.innerHTML = '';
+  TEKST.stappen.forEach(stap => {
+    const gedaan = stap.check(p);
+    stappen.innerHTML += `
+      <div class="compleet-stap">
+        <span class="stap-check">${gedaan ? '✅' : '◻'}</span>
+        <span class="stap-naam" style="${gedaan ? '' : 'color:var(--muted);'}">${stap.label}</span>
+        ${!gedaan ? `<a href="${stap.href}" class="stap-link">Start →</a>` : ''}
+      </div>`;
+  });
+  const gedaan = TEKST.stappen.filter(s => s.check(p)).length;
+  if (gedaan === TEKST.stappen.length) {
+    document.getElementById('compleetheid-kaart').style.display = 'none';
+  }
+}
+
+// ── Helper: maak bar HTML ──────────────────────────────────
+function maakBar(items, klasse, maxScore) {
+  if (!items || items.length === 0) return '<p style="color:var(--muted);font-size:0.85rem;">Nog geen data — speel rondes in De Grot.</p>';
+  const topScore = maxScore || (items[0]?.score || 1);
+  return items.map(item => `
+    <div class="behoefte-rij">
+      <div class="behoefte-naam">${item.label}</div>
+      <div class="behoefte-bar-wrap">
+        <div class="behoefte-bar ${klasse}" style="width:${Math.round((item.score/topScore)*100)}%"></div>
+      </div>
+    </div>`).join('');
+}
+
+// ── Behoeften ──────────────────────────────────────────────
+function bouwBehoeften(p) {
+  const items = p.topBehoeften || [];
+  if (items.length === 0) {
+    document.getElementById('sk-beh-preview').textContent = 'Nog geen data';
+    document.getElementById('body-behoeften').innerHTML = `<p style="color:var(--muted);font-size:0.85rem;">${TEKST.beh_intro}<br><br><a href="grot.html" style="color:var(--accent);">Speel rondes in De Grot →</a></p>`;
+    return;
+  }
+  const rondes = p.rondeCount || 0;
+  const conf = TEKST.confidence[rondes >= 12 ? 'high' : rondes >= 8 ? 'medium' : 'low'];
+  document.getElementById('sk-beh-preview').textContent = items.slice(0,2).map(i=>i.label).join(' · ');
+  document.getElementById('body-behoeften').innerHTML = `
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;font-family:-apple-system,sans-serif;">${TEKST.beh_intro}</p>
+    ${maakBar(items, '', items[0]?.score)}
+    <p class="behoefte-confidence">Dit ${conf === TEKST.confidence.high ? 'staat duidelijk in' : 'lijkt aanwezig in'} jouw antwoorden.</p>`;
+  document.getElementById('sk-behoeften').classList.add('open');
+}
+
+// ── Beschermingen ──────────────────────────────────────────
+function bouwBeschermingen(p) {
+  const items = p.topBeschermingen || [];
+  if (items.length === 0) {
+    document.getElementById('sk-besch-preview').textContent = 'Nog geen data';
+    document.getElementById('body-beschermingen').innerHTML = `<p style="color:var(--muted);font-size:0.85rem;">${TEKST.besch_intro}</p>`;
+    return;
+  }
+  document.getElementById('sk-besch-preview').textContent = items.slice(0,2).map(i=>i.label).join(' · ');
+  document.getElementById('body-beschermingen').innerHTML = `
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;font-family:-apple-system,sans-serif;">${TEKST.besch_intro}</p>
+    ${maakBar(items, 'besch', items[0]?.score)}`;
+}
+
+// ── Gevoelige plekken ──────────────────────────────────────
+function bouwGevoelig(p) {
+  const items = p.topGevoeligePlekken || [];
+  if (items.length === 0) {
+    document.getElementById('sk-gev-preview').textContent = 'Nog geen data';
+    document.getElementById('body-gevoelig').innerHTML = `<p style="color:var(--muted);font-size:0.85rem;">${TEKST.gev_intro}</p>`;
+    return;
+  }
+  document.getElementById('sk-gev-preview').textContent = items.slice(0,2).map(i=>`"${i.label}"`).join(', ');
+  // Gevoelige plekken altijd zacht formuleren
+  const chips = items.map(i => `<span class="tag tag-gev">${i.label}</span>`).join('');
+  document.getElementById('body-gevoelig').innerHTML = `
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;font-family:-apple-system,sans-serif;">${TEKST.gev_intro}</p>
+    <div class="tag-rij">${chips}</div>`;
+}
+
+// ── Vaardigheden ───────────────────────────────────────────
+function bouwSkills(p) {
+  const items = p.topSkills || [];
+  if (items.length === 0) return;
+  document.getElementById('sk-skills').style.display = 'block';
+  document.getElementById('sk-skills-preview').textContent = items.slice(0,2).map(i=>i.label).join(' · ');
+  const chips = items.map(i => `<span class="tag tag-skill">${i.label}</span>`).join('');
+  document.getElementById('body-skills').innerHTML = `
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;font-family:-apple-system,sans-serif;">${TEKST.skills_intro}</p>
+    <div class="tag-rij">${chips}</div>`;
+}
+
+// ── Domeinen ───────────────────────────────────────────────
+function bouwDomeinen(p) {
+  const sterk = p.sterkeDomainen || [];
+  const groei = p.groeiDomainen  || [];
+  if (sterk.length === 0 && groei.length === 0) return;
+  document.getElementById('sk-domeinen').style.display = 'block';
+
+  const preview = sterk.length > 0
+    ? 'Sterk: ' + sterk.slice(0,2).map(d => TEKST.domein_namen[d]||d).join(', ')
+    : 'Groei: ' + groei.slice(0,2).map(d => TEKST.domein_namen[d]||d).join(', ');
+  document.getElementById('sk-dom-preview').textContent = preview;
+
+  let html = `<p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;font-family:-apple-system,sans-serif;">${TEKST.dom_intro}</p>`;
+  if (sterk.length > 0) {
+    html += `<div class="sectie-label" style="margin-bottom:8px;">Krachten</div>
+      <div class="domein-badge-rij" style="margin-bottom:14px;">
+        ${sterk.map(d => `<span class="domein-badge sterk">${TEKST.domein_emoji[d]||''} ${TEKST.domein_namen[d]||d}</span>`).join('')}
+      </div>`;
+  }
+  if (groei.length > 0) {
+    html += `<div class="sectie-label" style="margin-bottom:8px;">Groeikansen</div>
+      <div class="domein-badge-rij">
+        ${groei.map(d => `<span class="domein-badge groei">${TEKST.domein_emoji[d]||''} ${TEKST.domein_namen[d]||d}</span>`).join('')}
+      </div>`;
+  }
+  document.getElementById('body-domeinen').innerHTML = html;
+}
+
+// ── DISC ───────────────────────────────────────────────────
+function bouwDISC(p) {
+  if (!p.disc || !p.disc.primary) return;
+  document.getElementById('sk-disc').style.display = 'block';
+
+  const kl = TEKST.disc_kleuren;
+  const hex = TEKST.disc_hex;
+  const d = p.disc;
+
+  document.getElementById('sk-disc-preview').textContent =
+    (kl[d.primary]||'?') + (d.secondary ? ' / ' + (kl[d.secondary]||'?') : '');
+
+  const blokken = [
+    { label: TEKST.disc_labels.primary,   waarde: kl[d.primary]||'?',    sub: 'Dominante stijl',     kleur: hex[d.primary] },
+    d.secondary   ? { label: TEKST.disc_labels.secondary, waarde: kl[d.secondary]||'?',  sub: 'Secundaire stijl',    kleur: hex[d.secondary]+'88' } : null,
+    d.feelingColor ? { label: TEKST.disc_labels.feeling,   waarde: kl[d.feelingColor]||'?', sub: 'Diepe behoefte',   kleur: hex[d.feelingColor]+'55' } : null,
+    d.stressColor  ? { label: TEKST.disc_labels.stress,    waarde: kl[d.stressColor]||'?',  sub: 'Stijl onder druk', kleur: hex[d.stressColor]+'44' } : null,
+  ].filter(Boolean);
+
+  document.getElementById('body-disc').innerHTML = `
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;font-family:-apple-system,sans-serif;">${TEKST.disc_intro}</p>
+    <div class="disc-blokken">
+      ${blokken.map(b => `
+        <div class="disc-blok" style="background:${b.kleur}22;border:1px solid ${b.kleur}44;">
+          <div class="db-label">${b.label}</div>
+          <div class="db-waarde" style="color:${b.kleur};">${b.waarde}</div>
+          <div class="db-sub">${b.sub}</div>
+        </div>`).join('')}
+    </div>
+    ${d.confidence ? `<p style="font-size:0.75rem;color:var(--muted);margin-top:12px;font-family:-apple-system,sans-serif;">Betrouwbaarheid: ${Math.round(d.confidence*100)}% over ${d.sessionCount} sessie${d.sessionCount!==1?'s':''}.</p>` : ''}`;
+}
+
+// ── Kernkwadranten ─────────────────────────────────────────
+function bouwKK(p) {
+  if (!p.kernkwadranten || !p.kernkwadranten.topQualities || p.kernkwadranten.topQualities.length === 0) return;
+  document.getElementById('sk-kk').style.display = 'block';
+
+  const top = p.kernkwadranten.topQualities.slice(0,5);
+  document.getElementById('sk-kk-preview').textContent = top.slice(0,2).map(q=>q.name||q.id).join(' · ');
+
+  document.getElementById('body-kk').innerHTML = `
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:12px;font-family:-apple-system,sans-serif;">${TEKST.kk_intro}</p>
+    ${top.map(q => `
+      <div class="kwaliteit-rij">
+        <span class="kw-naam">${q.name||q.id}</span>
+        ${q.avgScore ? `<span class="kw-score">score ${q.avgScore}</span>` : ''}
+      </div>`).join('')}`;
+}
+
+// ── Waarden ────────────────────────────────────────────────
+function bouwWaarden(p) {
+  if (!p.waarden) return;
+  const zelf     = p.waarden.topZelf     || [];
+  const ontvangen = p.waarden.topOntvangen || [];
+  if (zelf.length === 0 && ontvangen.length === 0) return;
+  document.getElementById('sk-waarden').style.display = 'block';
+
+  document.getElementById('sk-waarden-preview').textContent = zelf.slice(0,2).map(w=>w.naam).join(' · ');
+
+  let html = `<p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;font-family:-apple-system,sans-serif;">${TEKST.waarden_intro}</p>`;
+  if (zelf.length > 0) {
+    html += `<div class="sectie-label" style="margin-bottom:8px;">Jouw keuzes</div>
+      <div class="waarden-rij" style="margin-bottom:14px;">
+        ${zelf.slice(0,6).map(w => `<span class="waarde-chip">${w.naam}</span>`).join('')}
+      </div>`;
+  }
+  if (ontvangen.length > 0) {
+    html += `<div class="sectie-label" style="margin-bottom:8px;">Herkend door partner</div>
+      <div class="waarden-rij">
+        ${ontvangen.slice(0,6).map(w => `<span class="waarde-chip ontvangen">${w.naam}</span>`).join('')}
+      </div>`;
+  }
+  document.getElementById('body-waarden').innerHTML = html;
+}
+
+// ── Gedragsstijlen ─────────────────────────────────────────
+function bouwStijlen(p) {
+  const pt = p.patterns;
+  if (!pt || !pt.decisionStyle) return;
+  document.getElementById('sk-stijlen').style.display = 'block';
+  document.getElementById('sk-stijlen-preview').textContent = pt.decisionStyle;
+
+  const rijen = [
+    { label: TEKST.beslissingen,  waarde: pt.decisionStyle },
+    { label: TEKST.conflict,      waarde: pt.conflictStyle },
+    { label: TEKST.communicatie,  waarde: pt.communicationStyle },
+    { label: TEKST.stress,        waarde: pt.stressPattern },
+  ].filter(r => r.waarde);
+
+  document.getElementById('body-stijlen').innerHTML = `
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;font-family:-apple-system,sans-serif;">${TEKST.stijlen_intro}</p>
+    ${rijen.map(r => `
+      <div class="patroon-rij">
+        <div class="pr-label">${r.label}</div>
+        <div class="pr-waarde">${r.waarde}</div>
+      </div>`).join('')}`;
+}
+
+// ── Inzichten ──────────────────────────────────────────────
+function bouwInzichten(p) {
+  const inzichten = p.insights || [];
+  if (inzichten.length === 0) return;
+  document.getElementById('sk-inzichten').style.display = 'block';
+  document.getElementById('sk-inz-preview').textContent = inzichten.length + ' inzicht' + (inzichten.length!==1?'en':'');
+
+  document.getElementById('body-inzichten').innerHTML = `
+    <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;font-family:-apple-system,sans-serif;">${TEKST.inzichten_intro}</p>
+    ${inzichten.map(i => `<div class="inzicht-item">${i}</div>`).join('')}`;
+}
+
+// ── CTA ────────────────────────────────────────────────────
+function bouwCTA(p) {
+  const rondes = p.rondeCount || 0;
+  if (rondes < 5) {
+    document.getElementById('cta-grot').style.display = 'block';
+  }
+}
+</script>
+</body>
+</html>

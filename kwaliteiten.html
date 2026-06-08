@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<script src="config.js"></script>
+<script src="sd-client.js"></script>
+<script src="comm.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Jij in twee woorden</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #3d4e28;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#app {
+  /* Phone-width on desktop, full-screen on mobile */
+  width: 100%;
+  max-width: 480px;
+  height: 100%;
+  max-height: 900px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 60px rgba(0,0,0,.5);
+}
+
+/* ── Screen switching ── */
+.screen { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+.screen.active { display: block; }
+
+/* ══ FULL-SCREEN CARD BACKGROUND ══════════════════════════ */
+.card-fullbg {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  display: block;
+  position: absolute; top: 0; left: 0;
+}
+
+/* Invisible real back button (over the drawn back arrow) */
+.real-back {
+  position: absolute;
+  top: 1.8%; left: 3%;
+  width: 10vw; height: 7vh;
+  cursor: pointer;
+  z-index: 20;
+  background: transparent;
+  border: none;
+}
+
+/* ══ CARD STAGE — single card, animated transition ════════ */
+.card-stage {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  overflow: hidden;
+}
+
+.c-slide {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  transition: opacity .32s ease, transform .32s ease;
+  opacity: 1; transform: none;
+}
+.c-slide.hidden {
+  opacity: 0; transform: scale(.97);
+  pointer-events: none;
+}
+
+/* Swipe hint arrows */
+.swipe-prev, .swipe-next {
+  position: absolute;
+  top: 54%; bottom: 12%;
+  width: 13%;
+  z-index: 15;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  color: rgba(120,100,70,.5);
+  opacity: 0;
+  transition: opacity .2s;
+}
+.swipe-prev { left: 0; }
+.swipe-next { right: 0; }
+.card-stage:hover .swipe-prev,
+.card-stage:hover .swipe-next { opacity: 1; }
+
+/* ── Tile grid — CSS fallback, refined by positionGrid() JS ── */
+.tile-grid {
+  position: absolute;
+  /* Exact values from pixel scan of 941×1672 source images */
+  top:    50.5%;    /* y=877px → shifted up slightly */
+  left:   16.47%;   /* x=155px  */
+  right:  17.32%;   /* x=778px  */
+  bottom: 12.92%;   /* y=1456px */
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(4, 1fr);
+  gap: 1.02% 2.02%;
+}
+
+/* ── Single tile ── */
+.q-tile {
+  border: 2.5px solid transparent;
+  border-radius: 13px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  padding: 3px;
+  -webkit-tap-highlight-color: transparent;
+}
+.q-tile .t-icon {
+  font-size: 1.55rem;
+  line-height: 1;
+  filter: saturate(.8);
+}
+.q-tile .t-word {
+  font-size: .64rem;
+  font-weight: 700;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: #4a3820;
+  text-align: center;
+  line-height: 1.15;
+  letter-spacing: .01em;
+}
+.q-tile:active { background: rgba(200,155,60,.1); }
+.q-tile.selected {
+  border-color: #c8a060;
+  background: rgba(200,155,60,.22);
+}
+.q-tile.selected .t-word { color: #7a4a10; }
+.q-tile.selected .t-icon { filter: none; }
+.q-tile.dimmed { opacity: .38; cursor: default; pointer-events: none; }
+.q-tile.selected.dimmed { opacity: 1; pointer-events: auto; }
+.q-tile.ghost { visibility: hidden; pointer-events: none; }
+
+/* ── Question strip — TOP of card, above illustration ── */
+.card-strip {
+  position: absolute;
+  top: 5.5%;
+  left: 14%;
+  right: 14%;
+  text-align: center;
+  font-size: .78rem;
+  font-family: 'Georgia', serif;
+  color: #5a4a35;
+  font-style: italic;
+  pointer-events: none;
+  line-height: 1.3;
+  text-shadow: 0 1px 3px rgba(255,250,240,.8);
+}
+
+/* ── Real navigation dots (cover the decorative ones) ── */
+.real-dots {
+  position: absolute;
+  bottom: 5.8%;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 8px;
+  z-index: 10;
+  pointer-events: none;
+}
+.rdot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(160,140,100,.45);
+  transition: background .25s, transform .2s;
+}
+.rdot.active { background: #c8a060; transform: scale(1.25); }
+
+/* ── Continue button (between boxes and nav dots) ── */
+.continue-overlay {
+  position: absolute;
+  top: 88.5%;
+  left: 16%;
+  right: 16%;
+  height: 4%;
+  background: #c8a060;
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: .82rem;
+  font-weight: 700;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  letter-spacing: .03em;
+  transition: background .2s;
+}
+.continue-overlay.show { display: flex; }
+.continue-overlay:hover { background: #b8903a; }
+
+/* ── Left/Right tap zones ── */
+.tap-left, .tap-right {
+  position: absolute;
+  top: 54%; bottom: 12%;
+  width: 8%;
+  z-index: 9;
+  cursor: pointer;
+}
+.tap-left { left: 0; }
+.tap-right { right: 0; }
+
+/* ══ FULL SCREEN CONTENT OVERLAY (wait / vragen / presentatie) ═ */
+.overlay-content {
+  position: absolute;
+  top: 50.5%;
+  left: 10%;
+  right: 10%;
+  bottom: 11%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  overflow-y: auto;
+}
+
+.spinner {
+  width: 42px; height: 42px;
+  border: 3px solid rgba(180,150,90,.3);
+  border-top-color: #c8a060;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.ov-title {
+  font-family: 'Georgia', serif;
+  font-size: 1.2rem;
+  font-weight: 400;
+  color: #2e1f0e;
+  line-height: 1.3;
+}
+.ov-sub {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: .82rem;
+  color: #7a6a55;
+  line-height: 1.6;
+  max-width: 260px;
+}
+.ov-chip {
+  background: rgba(200,160,80,.18);
+  border: 1.5px solid #c8a060;
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: .82rem;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: #5a3a10;
+}
+
+/* ══ VRAAGFASE ═════════════════════════════════════════════ */
+.vraag-slide-content {
+  /* Match card box area — symmetric left/right (avg of 16.47 & 17.32) */
+  position: absolute;
+  top: 50.5%;     /* shifted up to match tile-grid */
+  left: 17%;
+  right: 17%;
+  bottom: 12.92%; /* y=1456px */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  overflow: hidden;
+}
+.vf-label {
+  font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+  color: #8a6a3a; font-family: 'Segoe UI', sans-serif; text-align: center;
+  flex-shrink: 0;
+}
+.vf-word {
+  font-size: 1.35rem; font-family: 'Georgia', serif;
+  color: #2e1f0e; text-align: center; margin-bottom: 2px;
+  flex-shrink: 0;
+}
+.vf-instr {
+  font-size: .64rem; color: #9a8a75; font-family: 'Segoe UI', sans-serif;
+  text-align: center; font-style: italic;
+  flex-shrink: 0;
+}
+.vf-opts { display: flex; flex-direction: column; gap: 4px; width: 100%; flex: 1; min-height: 0; }
+.vf-opt {
+  background: transparent;
+  border: 1.5px solid rgba(180,150,90,.5);
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: .74rem;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: #3a2f22;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.35;
+  transition: all .15s;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+.vf-opt:hover { background: rgba(200,155,60,.12); border-color: #c8a060; }
+.vf-opt.picked {
+  background: rgba(160,210,140,.35);
+  border-color: #7aaa50;
+  color: #1a3a0a;
+  pointer-events: none;
+  font-weight: 600;
+}
+.vf-opt.picked::before { content: '✓ '; }
+.vf-opt.faded { opacity: .25; pointer-events: none; }
+
+/* ══ PRESENTATIE ═══════════════════════════════════════════ */
+/* Full-screen like other screens; chat bar absolute at bottom */
+#screen-presentatie { display: none; }
+#screen-presentatie.active { display: block; }
+
+/* Content in the card box area, above the chat bar */
+.pres-content {
+  position: absolute;
+  top: 50.5%;           /* CSS fallback — refined by positionPresContent() */
+  left: 17%;
+  right: 17%;
+  bottom: 200px;        /* leaves room for normal chat bar; updated by JS */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* hide scrollbar but keep scroll */
+  scrollbar-width: none;
+}
+.pres-content::-webkit-scrollbar { display: none; }
+
+.rc-label {
+  font-size: .65rem; letter-spacing: .12em; text-transform: uppercase;
+  font-family: 'Segoe UI', sans-serif; color: #8a6a3a; flex-shrink: 0;
+}
+.rc-word {
+  font-size: 1.7rem; font-family: 'Georgia', serif; color: #2e1f0e;
+  line-height: 1.15; flex-shrink: 0;
+}
+.rc-q-box {
+  background: rgba(255,252,245,.88);
+  border: 1.5px solid rgba(200,170,100,.55);
+  border-radius: 12px;
+  padding: 10px 12px;
+  flex-shrink: 0;
+}
+.rc-q-lbl {
+  font-size: .65rem; letter-spacing: .1em; text-transform: uppercase;
+  color: #b08a5a; font-family: 'Segoe UI', sans-serif; margin-bottom: 4px;
+}
+.rc-q-text {
+  font-size: .85rem; font-family: 'Segoe UI', sans-serif;
+  color: #3a2f22; line-height: 1.45; font-style: italic;
+}
+.rc-hint {
+  font-size: .73rem; color: #9a8a75; font-family: 'Segoe UI', sans-serif;
+  line-height: 1.5; flex-shrink: 0;
+}
+.rc-nav-row {
+  display: flex; gap: 8px; flex-shrink: 0;
+}
+.rc-btn {
+  flex: 1; padding: 10px; border-radius: 12px; border: none;
+  font-size: .8rem; font-weight: 600; font-family: 'Segoe UI', sans-serif;
+  cursor: pointer; transition: all .15s;
+}
+.rc-prev { background: rgba(240,232,216,.9); color: #7a6a55; }
+.rc-next { background: #c8a060; color: white; }
+.rc-next:hover { background: #b8903a; }
+.rc-finish { background: #7aaa50; color: white; }
+
+/* Progress dots — between illustration and box area */
+.pres-dots {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex; gap: 7px;
+  pointer-events: none;
+  z-index: 5;
+}
+.pdot { width: 7px; height: 7px; border-radius: 50%; background: rgba(180,150,90,.4); transition: all .25s; }
+.pdot.done { background: #c8a060; }
+.pdot.active { background: #3a2f22; transform: scale(1.3); }
+
+/* ══ CHAT BAR — absolute at bottom, 3 states ══════════════ */
+.chat-bar {
+  position: absolute;
+  bottom: 8px; left: 10px; right: 10px;  /* side margins so card edges stay visible */
+  background: rgba(248,242,230,.96);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(210,185,130,.55);
+  border-radius: 18px;
+  display: flex; flex-direction: column;
+  height: 44px;           /* starts mini */
+  transition: height .35s cubic-bezier(.4,0,.2,1);
+  overflow: hidden;
+  z-index: 30;
+  box-shadow: 0 4px 24px rgba(100,75,30,.18);
+}
+.chat-bar.normal { height: 210px; }
+.chat-bar.full   { height: calc(100% - 16px); }
+
+/* Drag handle strip */
+.chat-handle {
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 14px;
+  height: 44px;
+  cursor: pointer;
+  user-select: none;
+  /* NO border-bottom — clean */
+}
+.chat-handle-pill {
+  width: 32px; height: 4px;
+  background: rgba(180,150,90,.4); border-radius: 3px;
+}
+.chat-handle-label {
+  font-size: .72rem; font-weight: 600; color: #8a6a3a;
+  font-family: 'Segoe UI', sans-serif;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.chat-handle-btns { display: flex; gap: 4px; }
+.chat-size-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 1rem; color: #a08050; padding: 0 2px;
+  line-height: 1; transition: color .15s;
+}
+.chat-size-btn:hover { color: #6a3e10; }
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 14px 6px;
+  display: flex; flex-direction: column; gap: 6px;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200,160,80,.3) transparent;
+}
+.chat-messages::-webkit-scrollbar { width: 3px; }
+.chat-messages::-webkit-scrollbar-thumb { background: rgba(200,160,80,.4); border-radius: 2px; }
+.chat-messages:empty::before {
+  content: 'Antwoord hier op de vraag van je partner…';
+  font-size: .76rem; color: #c0a870; font-family: 'Segoe UI', sans-serif;
+  font-style: italic; display: block; padding: 4px 0;
+}
+.chat-bubble {
+  max-width: 82%;
+  padding: 8px 12px;
+  border-radius: 16px;
+  font-size: .83rem; font-family: 'Segoe UI', sans-serif;
+  line-height: 1.45; word-break: break-word;
+}
+.chat-bubble.me {
+  background: linear-gradient(135deg, #feebd6, #fbd9aa);
+  border: 1px solid rgba(220,170,90,.5);
+  color: #3a2f22;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+.chat-bubble.them {
+  background: linear-gradient(135deg, #eaf2e0, #d8eccc);
+  border: 1px solid rgba(140,190,100,.45);
+  color: #2a4a1a;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+.chat-input-row {
+  display: flex; gap: 8px; padding: 8px 12px 10px;
+  flex-shrink: 0;
+}
+.chat-input {
+  flex: 1;
+  border: 1.5px solid rgba(210,185,130,.7);
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: .85rem; font-family: 'Segoe UI', sans-serif;
+  color: #3a2f22;
+  background: rgba(255,252,245,.95);
+  outline: none;
+}
+.chat-input:focus { border-color: #c8a060; background: #fff; }
+.chat-send {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, #d4a850, #b8843a);
+  color: white; border: none; font-size: 1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; box-shadow: 0 2px 6px rgba(180,130,40,.35);
+  transition: all .15s;
+}
+.chat-send:hover { transform: scale(1.06); }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══ SCREEN: WACHT ════════════════════════════════════════ -->
+<div class="screen active" id="screen-wait">
+  <img class="card-fullbg" src="images/cards/empty3.webp">
+  <button class="real-back" onclick="window.location.href='world.html'"></button>
+  <div class="overlay-content">
+    <div class="spinner"></div>
+    <div class="ov-title">Verbinden…</div>
+    <div class="ov-sub" id="status-txt">Even geduld</div>
+  </div>
+</div>
+
+<!-- ══ SCREEN: KWALITEITEN ═══════════════════════════════════ -->
+<div class="screen" id="screen-kwaliteiten">
+  <div class="card-stage" id="stage-k"
+       ontouchstart="touchStart(event,'k')" ontouchend="touchEnd(event,'k')">
+    <div class="c-slide" id="slide-k"><!-- built by JS --></div>
+    <button class="swipe-prev" onclick="prevCard('k')">‹</button>
+    <button class="swipe-next" onclick="nextCard('k')">›</button>
+  </div>
+  <div class="real-dots" id="dots-k"></div>
+  <button class="continue-overlay" id="btn-next-k" onclick="goToAllergie()">Kwaliteiten gekozen — verder →</button>
+  <button class="real-back" onclick="window.location.href='world.html'"></button>
+</div>
+
+<!-- ══ SCREEN: ALLERGIE ══════════════════════════════════════ -->
+<div class="screen" id="screen-allergie">
+  <div class="card-stage" id="stage-a"
+       ontouchstart="touchStart(event,'a')" ontouchend="touchEnd(event,'a')">
+    <div class="c-slide" id="slide-a"><!-- built by JS --></div>
+    <button class="swipe-prev" onclick="prevCard('a')">‹</button>
+    <button class="swipe-next" onclick="nextCard('a')">›</button>
+  </div>
+  <div class="real-dots" id="dots-a"></div>
+  <button class="continue-overlay" id="btn-share" onclick="shareChoices()">Allergie gekozen — delen ✦</button>
+  <button class="real-back" onclick="show('screen-kwaliteiten')"></button>
+</div>
+
+<!-- ══ SCREEN: WACHT OP PARTNER ═════════════════════════════ -->
+<div class="screen" id="screen-waiting-partner">
+  <img class="card-fullbg" src="images/cards/empty2.webp">
+  <button class="real-back" onclick="show('screen-allergie')"></button>
+  <div class="overlay-content">
+    <div class="spinner"></div>
+    <div class="ov-title">Jij bent klaar</div>
+    <div class="ov-sub">Je partner kiest nog…</div>
+    <div class="ov-chip" id="own-summary-chip"></div>
+  </div>
+</div>
+
+<!-- ══ SCREEN: VRAAGFASE ════════════════════════════════════ -->
+<div class="screen" id="screen-vragen">
+  <div class="card-stage" id="stage-v"
+       ontouchstart="touchStart(event,'v')" ontouchend="touchEnd(event,'v')">
+    <div class="c-slide" id="slide-v"><!-- built by JS --></div>
+    <button class="swipe-prev" onclick="prevCard('v')">‹</button>
+    <button class="swipe-next" onclick="nextCard('v')">›</button>
+  </div>
+  <div class="real-dots" id="dots-v"></div>
+  <button class="continue-overlay" id="btn-klaar-v" onclick="submitVragen()">Klaar — start gesprek →</button>
+  <button class="real-back" onclick="show('screen-waiting-partner')"></button>
+</div>
+
+<!-- ══ SCREEN: WACHT VRAGEN ══════════════════════════════════ -->
+<div class="screen" id="screen-waiting-vragen">
+  <img class="card-fullbg" src="images/cards/empty5.webp">
+  <div class="overlay-content">
+    <div class="spinner"></div>
+    <div class="ov-title">Vragen gekozen</div>
+    <div class="ov-sub">Wacht even — partner kiest ook zijn vragen. Het gesprek start zodra jullie beiden klaar zijn.</div>
+  </div>
+</div>
+
+<!-- ══ SCREEN: PRESENTATIE ══════════════════════════════════ -->
+<div class="screen" id="screen-presentatie">
+  <img class="card-fullbg" id="pres-bg-img" src="images/cards/empty4.webp">
+  <div class="pres-dots" id="pres-dots"></div>
+  <div class="pres-content" id="pres-scroll"></div>
+  <div class="chat-bar" id="chat-bar">
+    <div class="chat-handle" onclick="cycleChat()">
+      <div class="chat-handle-pill"></div>
+      <span class="chat-handle-label" id="chat-handle-lbl">Chat</span>
+      <div class="chat-handle-btns">
+        <button class="chat-size-btn" id="chat-size-btn" onclick="cycleChat(); event.stopPropagation();">⌃</button>
+      </div>
+    </div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chat-input" placeholder="Schrijf iets…" onkeydown="if(event.key==='Enter')sendChat()">
+      <button class="chat-send" onclick="sendChat()">↑</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+'use strict';
+
+// ══ DATA ═══════════════════════════════════════════════════════
+
+const ICONS = {
+  'Zorgzaam':'🌿','Eerlijk':'🕊️','Enthousiast':'✨','Geduldig':'🌸',
+  'Empathisch':'💗','Betrouwbaar':'🔒','Creatief':'🎨','Nieuwsgierig':'🔭',
+  'Loyaal':'🤝','Doorzetter':'⛰️','Optimistisch':'☀️','Directief':'🧭',
+  'Daadkrachtig':'⚡','Spontaan':'🎈','Sensitief':'🍃','Gedreven':'🔥',
+  'Bescheiden':'🌼','Rustig':'🌊','Humoristisch':'🎭','Onafhankelijk':'🦋',
+  'Hartelijk':'💛','Analytisch':'🔍','Flexibel':'🌿','Organisatietalent':'🗂️',
+  'Rechtvaardig':'⚖️','Perfectionistisch':'💎','Avontuurlijk':'🗺️',
+  'Behulpzaam':'🌻','Nuchter':'🪨','Inspirerend':'💫',
+  'Passiviteit':'🛋️','Oneerlijkheid':'🎭','Onverschilligheid':'🌫️',
+  'Onbetrouwbaarheid':'🔓','Negativiteit':'🌧️','Chaos':'🌀',
+  'Oppervlakkigheid':'🪞','Arrogantie':'👑','Onrechtvaardigheid':'⚡',
+  'Starheid':'🪨','Onduidelijkheid':'❓','Afstandelijkheid':'🧊',
+  'Veeleisendheid':'📋','Omslachtigheid':'🌀','Luiheid':'😴',
+  'Regelzucht':'📏','Klagen':'😔','Eigenwijsheid':'🔴','Neerbuigendheid':'👆',
+  'Ongeduld':'⏰','Wantrouwen':'🔐','Onvolwassenheid':'🎪',
+  'Bemoeizucht':'👁️','Egoïsme':'🪞','Dramatisch':'🎬',
+  'Bangheid':'😨','Gierigheid':'💰','Ongeduldigheid':'⏰',
+  'Klagerigheid':'😞','Onbezonnenheid':'🎲',
+};
+
+const KWALITEITEN_ALL = [
+  'Zorgzaam','Eerlijk','Enthousiast','Geduldig','Empathisch',
+  'Betrouwbaar','Creatief','Nieuwsgierig','Loyaal','Doorzetter',
+  'Optimistisch','Directief','Daadkrachtig','Spontaan','Sensitief',
+  'Gedreven','Bescheiden','Rustig','Humoristisch','Onafhankelijk',
+  'Hartelijk','Analytisch','Flexibel','Organisatietalent','Rechtvaardig',
+  'Perfectionistisch','Avontuurlijk','Behulpzaam','Nuchter','Inspirerend'
+];
+
+const ALLERGIEËN_ALL = [
+  'Passiviteit','Oneerlijkheid','Onverschilligheid','Onbetrouwbaarheid','Negativiteit',
+  'Chaos','Oppervlakkigheid','Arrogantie','Onrechtvaardigheid','Starheid',
+  'Onduidelijkheid','Afstandelijkheid','Veeleisendheid','Omslachtigheid','Luiheid',
+  'Regelzucht','Klagen','Eigenwijsheid','Neerbuigendheid','Ongeduld',
+  'Wantrouwen','Onvolwassenheid','Bemoeizucht','Egoïsme','Dramatisch',
+  'Bangheid','Gierigheid','Ongeduldigheid','Klagerigheid','Onbezonnenheid'
+];
+
+// Card images to rotate across slides
+const CARD_IMGS    = [1,2,3,4,5,6,7,8].map(n => `images/cards/empty_card${n}.webp`);
+const EMPTY_IMGS   = [1,2,3,4,5,6,7,8].map(n => `images/cards/empty${n}.webp`);
+
+const VRAGEN = {
+  'Zorgzaam':['Voor wie zorg jij het meest graag?','Hoe laat jij anderen merken dat je om ze geeft?','Is er iemand die écht voor jou zorgt?'],
+  'Eerlijk':['Was er een moment dat eerlijkheid jou iets kostte?','Hoe reageer jij als iemand je niet de waarheid vertelt?','Waarover zou jij nooit liegen?'],
+  'Enthousiast':['Waar word jij echt enthousiast van?','Hoe merk je dat jouw enthousiasme anderen raakt?','Wat miste je vroeger dat je nu omarmt?'],
+  'Geduldig':['In welke situatie test iemand jouw geduld het meest?','Op wie heb je lang gewacht — en was het het waard?','Hoe leer jij jezelf te vertragen?'],
+  'Empathisch':['Voel jij mee met vreemden, of alleen mensen die je kent?','Was er een moment dat jouw empathie een verschil maakte?','Wanneer is te veel meevoelen ook een last?'],
+  'Betrouwbaar':['Op wie kan jij zelf altijd rekenen?','Wat betekent betrouwbaarheid voor jou in een relatie?','Is er iemand die jou écht verraste met trouw?'],
+  'Creatief':['Hoe uit jouw creativiteit zich het meest?','Wanneer was je voor het laast echt creatief?','Maak je liever iets nieuws of verbeter je het bestaande?'],
+  'Nieuwsgierig':['Wat ben je op dit moment het meest nieuwsgierig naar?','Welk onderwerp zou jij eindeloos kunnen verkennen?','Wanneer heeft nieuwsgierigheid je ergens naartoe geleid?'],
+  'Loyaal':['Hoe ver ga jij voor iemand aan wie jij loyaal bent?','Is loyaliteit voor jou onvoorwaardelijk?','Wie is de meest loyale persoon die jij kent?'],
+  'Doorzetter':['Wat heeft jou de meeste doorzettingskracht gekost?','Wanneer stop je ook echt met iets?','Wie of wat geeft jou energie om door te gaan?'],
+  'Optimistisch':['Waar put jij jouw optimisme uit?','Is er iets waar zelfs jij niet positief over kunt zijn?','Hoe reageer je op mensen die veel negatiever zijn dan jij?'],
+  'Directief':['Wanneer neem jij graag de leiding?','Hoe reageer jij als iemand anders de regie pakt?','Is leidinggeven voor jou een taak of een plezier?'],
+  'Daadkrachtig':['Wanneer was jij voor het laast echt beslissend?','Heb je ooit spijt van een snelle beslissing?','Wat helpt jou om in actie te komen?'],
+  'Spontaan':['Vertel een avontuur dat je spontaan aanging','Hoe reageer jij als plannen veranderen?','Wat was jouw meest spontane keuze ooit?'],
+  'Sensitief':['Waar ben jij gevoelig voor dat anderen misschien niet opmerken?','Hoe ga jij om met intense emoties van anderen?','Wanneer is jouw gevoeligheid een kracht?'],
+  'Gedreven':['Waar haal jij jouw drive vandaan?','Wat wil jij bereiken — en waarom?','Is er iets dat jou méér drijft dan succes?'],
+  'Bescheiden':['Hoe ga jij om met complimenten?','Wanneer is bescheidenheid voor jou te veel?','Wat heeft jou geleerd jezelf bescheiden op te stellen?'],
+  'Rustig':['Hoe zoek jij rust als het druk is?','Wat brengt jou het meest tot rust?','Kan jij ook genieten van drukte?'],
+  'Humoristisch':['Maak jij grappiger om moeilijke dingen te verlichten?','Wat maakt jou echt hardop lachen?','Is er iets waar jij nooit grappen over maakt?'],
+  'Onafhankelijk':['Wanneer heb jij écht iemand nodig?','Hoe zorg jij voor jezelf in moeilijke tijden?','Is onafhankelijkheid voor jou soms ook eenzaamheid?'],
+  'Hartelijk':['Hoe laat jij anderen voelen dat je ze ziet?','Wie uit jouw leven heeft jou het meest warmte gegeven?','Wanneer vind jij het makkelijk om je hart te openen?'],
+  'Analytisch':['Wat analyseer jij liever dan voelen?','Is er iets dat jij nooit rationeel kunt verklaren?','Hoe maak jij belangrijke beslissingen?'],
+  'Flexibel':['Wat heeft jou geleerd om je aan te passen?','Is er iets waar jij echt niet flexibel in bent?','Wanneer is teveel meegaan ook een nadeel?'],
+  'Organisatietalent':['Hoe ziet jouw ideale georganiseerde dag eruit?','Wat doe jij als de planning uitvalt?','Wie profiteert het meest van jouw organisatietalent?'],
+  'Rechtvaardig':['Wanneer kom jij op voor rechtvaardigheid?','Is er iets onrechtvaardigs dat jij niet kunt loslaten?','Hoe ga jij om met oneerlijkheid in jouw omgeving?'],
+  'Perfectionistisch':['Wanneer is jouw perfectionisme een kracht?','Waar heeft het jou ook belemmerd?','Hoe leer jij loslaten?'],
+  'Avontuurlijk':['Wat was jouw meest avontuurlijke ervaring?','Waarheen wil jij absoluut nog naartoe?','Doe jij liever iets nieuws of het vertrouwde?'],
+  'Behulpzaam':['Wanneer help jij zelfs als het je iets kost?','Is er iemand die altijd op jou kan rekenen?','Hoe help jij het liefst — pratend of dóend?'],
+  'Nuchter':['Hoe helpt jouw nuchterheid anderen?','Is er iets waarbij jij jezelf wil laten gaan?','Worden mensen rustiger of gefrustreerder van jouw nuchterheid?'],
+  'Inspirerend':['Wanneer heb jij iemand echt geïnspireerd?','Wie inspireert jou het meest?','Wat wil jij dat mensen onthouden van jou?'],
+};
+const ALLERGIE_VRAGEN = {
+  'Passiviteit':['Wanneer ergert passiviteit jou het meest?','Hoe reageer jij als iemand niets onderneemt?','Was er een moment dat jij iemand wakker schudde?'],
+  'Oneerlijkheid':['Hoe merk jij het als iemand niet eerlijk is?','Heb je ooit iemand betrapt op een leugen — wat deed je?','Is er een situatie waar kleine leugens oké zijn voor jou?'],
+  'Onverschilligheid':['Wanneer voelt onverschilligheid van iemand het pijnlijkst?','Hoe reageer jij als iemand nergens om lijkt te geven?','Wat helpt jou om niet zelf onverschillig te worden?'],
+  'Onbetrouwbaarheid':['Hoe herstel jij vertrouwen als iemand het heeft geschonden?','Geef je snel tweede kansen?','Wat is de grootste daad van onbetrouwbaarheid die jij meemaakte?'],
+  'Negativiteit':['Hoe ga jij om met chronisch negatieve mensen?','Waar trek jij de grens?','Hoe bescherm jij jouw energie?'],
+  'Chaos':['Beschrijf jouw ideale geordende omgeving','Hoe reageer jij als het om je heen chaos is?','Is er iets waarbij chaos voor jou oké is?'],
+  'Oppervlakkigheid':['Wat verlang jij écht in een goed gesprek?','Wanneer voel jij je echt gehoord?','Hoe lok jij diepere gesprekken uit?'],
+  'Arrogantie':['Wat maakt arrogantie voor jou ondraaglijk?','Hoe ga jij om met mensen die zichzelf groter maken?','Wat is het verschil tussen arrogantie en zelfvertrouwen voor jou?'],
+  'Onrechtvaardigheid':['Wanneer kom jij echt in opstand?','Hoe ga jij om met iets wat je oneerlijk vindt maar niet kunt veranderen?','Voor wie vecht jij het meest?'],
+  'Starheid':['Hoe probeer jij vastgelopen mensen in beweging te krijgen?','Is er iets waarbij jij zelf ook star bent?','Wanneer is doorzetten ook starheid?'],
+  'Onduidelijkheid':['Hoe zoek jij duidelijkheid in een vaag gesprek?','Is er iemand die jij soms niet goed begrijpt?','Wat helpt jou om onduidelijkheid te verdragen?'],
+  'Afstandelijkheid':['Hoe reageer jij als iemand muren opzet?','Is er een moment dat afstand ook ruimte was?','Wanneer geef jij iemand de ruimte versus wanneer trek jij ze naar je toe?'],
+  'Veeleisendheid':['Wat doe jij als iemand te veel van jou vraagt?','Hoe stel jij grenzen?','Is er een moment dat je eigen veeleisendheid jou opviel?'],
+  'Omslachtigheid':['Hoe bewaar jij geduld bij omslachtige communicatie?','Hoe geef jij zelf duidelijk je punt?','Is directheid altijd beter voor jou?'],
+  'Luiheid':['Wat triggert jou meer: niets doen of verkeerd doen?','Hoe motiveer jij iemand die stilstaat?','Wat doe jij zelf als je even geen energie hebt?'],
+  'Regelzucht':['Wanneer wordt controle voor jou te veel?','Hoe reageer jij als iemand alles wil regelen?','Is er iets waarbij jij zelf ook graag de touwtjes in handen houdt?'],
+  'Klagen':['Hoe lang luister jij naar iemand die klaagt?','Wat doe jij als klagen nergens toe leidt?','Is klagen soms ook een manier van verwerken voor jou?'],
+  'Eigenwijsheid':['Hoe overtuig jij iemand die altijd gelijk denkt te hebben?','Is er iets waarbij jij zelf ook moeilijk van mening verandert?','Wanneer is eigenwijs zijn eigenlijk sterk?'],
+  'Neerbuigendheid':['Wanneer voelde jij je het meest neerbuigend behandeld?','Hoe reageer jij als iemand jou onderschat?','Is er iets waarmee jij onbewust ook neerbuigend kunt overkomen?'],
+  'Ongeduld':['Hoe ga jij om met mensen die alles langzaam doen?','Is jouw ongeduld ook gedrevenheid?','Wanneer kost ongeduld jou relaties?'],
+  'Wantrouwen':['Hoe bouw jij vertrouwen op met iemand die wantrouwig is?','Is er een moment dat wantrouwen jou ook beschermde?','Wanneer geef jij iemand het voordeel van de twijfel?'],
+  'Onvolwassenheid':['Wat maakt gedrag onvolwassen voor jou?','Hoe reageer jij als iemand niet zijn verantwoordelijkheid neemt?','Is er iets waarbij jij zelf ook speels of onvolwassen bent?'],
+  'Bemoeizucht':['Wanneer is betrokkenheid voor jou te veel?','Hoe zeg jij iemand dat ze zich er niet mee moeten bemoeien?','Is er een verschil tussen zorgen en bemoeien voor jou?'],
+  'Egoïsme':['Wanneer voelde jij je het meest genegeerd door iemand?','Hoe reageer jij als jij altijd de gevende bent?','Wanneer mag je ook voor jezelf kiezen?'],
+  'Dramatisch':['Hoe reageer jij op overdreven reacties?','Is drama soms ook aandacht vragen?','Wanneer ben jij zelf ook wel eens dramatisch?'],
+  'Bangheid':['Hoe help jij iemand die bang is?','Is er iets waarbij jij zelf ook bang voor bent?','Wanneer beschermt bangheid je?'],
+  'Gierigheid':['Hoe ga jij om met iemand die nooit geeft?','Is er een verschil tussen spaarzaam en gierig voor jou?','Wanneer is voorzichtigheid met geld terecht?'],
+  'Ongeduldigheid':['Hoe bewaar jij geduld bij ongeduld van anderen?','Is er iets waarmee jij zelf ook ongeduldig bent?','Wat helpt jou om te vertragen?'],
+  'Klagerigheid':['Hoe lang luister jij naar iemand die altijd klaagt?','Hoe onderscheid jij klagen van verwerken?','Wat doe jij om uit een klaagspiraal te komen?'],
+  'Onbezonnenheid':['Wanneer heeft iemands roekeloosheid jou geraakt?','Wanneer is avontuur onbezonnenheid?','Is er iets waarbij jij zelf ook onbezonnen was?'],
+};
+
+// ══ STATE ══════════════════════════════════════════════════════
+
+const S = {
+  player: '1', adminMode: false, sessionCode: null,
+  ownKwaliteiten: [], ownAllergie: null,
+  ownData: null, partnerData: null,
+  gekozenVragen: {}, vragenPicked: 0, partnerVragen: null,
+  presCards: [], presIdx: 0,
+};
+
+// ══ UTIL ═══════════════════════════════════════════════════════
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function setStatus(msg) {
+  const el = document.getElementById('status-txt');
+  if (el) el.textContent = msg;
+}
+function el(id) { return document.getElementById(id); }
+
+function seededShuffle(arr, seed) {
+  const a = [...arr]; let s = seed >>> 0;
+  for (let i = a.length - 1; i > 0; i--) {
+    s = Math.imul(s ^ (s >>> 17), 0x45d9f3b);
+    s = s ^ (s >>> 16);
+    const j = Math.abs(s) % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ══ PIXEL-PERFECT GRID POSITIONING ═══════════════════════════
+// Box positions measured in image pixels (941×1672 source)
+const IMG_W = 941, IMG_H = 1672;
+const BOX = { top: 844, left: 155, bottom: 1454, right: 778 };
+// Column gap in image pixels (between col1 right and col2 left: 477-458=19px)
+const COL_GAP_IMG = 19;
+// Row gap in image pixels (~17px avg)
+const ROW_GAP_IMG = 17;
+
+function positionGrid(slideEl) {
+  const grid = slideEl?.querySelector('.tile-grid');
+  const img  = slideEl?.querySelector('.card-fullbg');
+  if (!grid || !img) return;
+
+  const cW = slideEl.offsetWidth;
+  const cH = slideEl.offsetHeight;
+  if (!cW || !cH) return;
+
+  // object-fit: cover; object-position: center center
+  const scaleX = cW / IMG_W;
+  const scaleY = cH / IMG_H;
+  const scale  = Math.max(scaleX, scaleY);
+
+  // Display size after scaling
+  const dispW = IMG_W * scale;
+  const dispH = IMG_H * scale;
+
+  // Center-center crop offset
+  const offX = (dispW - cW) / 2;
+  const offY = (dispH - cH) / 2;
+
+  // Convert box corners from image px → display px → CSS px
+  const top    = BOX.top    * scale - offY;
+  const left   = BOX.left   * scale - offX;
+  const bottom = BOX.bottom * scale - offY;
+  const right  = BOX.right  * scale - offX;
+
+  // Gaps
+  const colGap = COL_GAP_IMG * scale;
+  const rowGap = ROW_GAP_IMG * scale;
+
+  // Only apply if values look sane (sanity check)
+  const gridTop    = Math.max(0, top);
+  const gridLeft   = Math.max(0, left);
+  const gridRight  = Math.max(0, cW - right);
+  const gridBottom = Math.max(0, cH - bottom);
+  const gridH      = cH - gridTop - gridBottom;
+  const gridW      = cW - gridLeft - gridRight;
+
+  // Sanity: grid should be at least 20% of container
+  if (gridH < cH * 0.15 || gridW < cW * 0.1) {
+    console.warn('positionGrid: sanity check failed, skipping', {cW,cH,gridH,gridW});
+    return;
+  }
+
+  grid.style.top       = gridTop    + 'px';
+  grid.style.left      = gridLeft   + 'px';
+  grid.style.right     = gridRight  + 'px';
+  grid.style.bottom    = gridBottom + 'px';
+  grid.style.columnGap = colGap + 'px';
+  grid.style.rowGap    = rowGap + 'px';
+}
+
+// Position vraag-slide-content using same box math (no background, fits card boxes)
+function positionVraagContent(contentEl, slideEl) {
+  if (!contentEl || !slideEl) return;
+  const cW = slideEl.offsetWidth, cH = slideEl.offsetHeight;
+  if (!cW || !cH) return;
+  const scaleX = cW / IMG_W, scaleY = cH / IMG_H;
+  const scale  = Math.max(scaleX, scaleY);
+  const dispW  = IMG_W * scale, dispH = IMG_H * scale;
+  const offX   = (dispW - cW) / 2, offY = (dispH - cH) / 2;
+  // Use symmetric horizontal margins (average of left & right box margins)
+  const boxCenterX = (BOX.left + BOX.right) / 2;  // 466.5px
+  const halfW      = (BOX.right - BOX.left) / 2;  // 311.5px
+  const top    = Math.max(0, BOX.top    * scale - offY);
+  const left   = Math.max(0, (boxCenterX - halfW) * scale - offX);
+  const right  = Math.max(0, cW - (boxCenterX + halfW) * scale + offX);
+  const bottom = Math.max(0, cH - BOX.bottom * scale + offY);
+  if ((cH - top - bottom) < cH * 0.15) return; // sanity
+  contentEl.style.top    = top    + 'px';
+  contentEl.style.left   = left   + 'px';
+  contentEl.style.right  = right  + 'px';
+  contentEl.style.bottom = bottom + 'px';
+}
+
+// Re-position on resize
+window.addEventListener('resize', () => {
+  document.querySelectorAll('.c-slide').forEach(positionGrid);
+  const vc = document.querySelector('.vraag-slide-content');
+  if (vc) positionVraagContent(vc, vc.closest('.c-slide'));
+  updatePresContentBottom();
+});
+
+// ══ CARD STAGE STATE ════════════════════════════════════════
+
+const STAGE = { k: { idx:0, pages:0, words:[], sel:[], max:2, label:'', onToggle:null },
+                a: { idx:0, pages:0, words:[], sel:[], max:1, label:'', onToggle:null },
+                v: { idx:0, pages:0, slides:[] } };
+let touchX0 = 0;
+
+function touchStart(e, type) { touchX0 = e.touches[0].clientX; }
+function touchEnd(e, type) {
+  const dx = e.changedTouches[0].clientX - touchX0;
+  if (Math.abs(dx) < 40) return;
+  dx < 0 ? nextCard(type) : prevCard(type);
+}
+
+function prevCard(type) {
+  const st = STAGE[type];
+  if (st.idx <= 0) return;
+  st.idx--;
+  if (type === 'v') renderVraagSlide(st.idx);
+  else renderTileSlide(type, st.idx);
+  updateDots(type);
+}
+function nextCard(type) {
+  const st = STAGE[type];
+  if (st.idx >= st.pages - 1) return;
+  st.idx++;
+  if (type === 'v') renderVraagSlide(st.idx);
+  else renderTileSlide(type, st.idx);
+  updateDots(type);
+}
+
+function updateDots(type) {
+  const st = STAGE[type];
+  el('dots-' + type).querySelectorAll('.rdot').forEach((d, i) => {
+    d.className = 'rdot' + (i === st.idx ? ' active' : '');
+  });
+}
+
+// Build dots once
+function buildDots(type, count) {
+  const wrap = el('dots-' + type);
+  wrap.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const d = document.createElement('div');
+    d.className = 'rdot' + (i === 0 ? ' active' : '');
+    wrap.appendChild(d);
+  }
+}
+
+// Render one page of tiles with fade animation
+function renderTileSlide(type, pageIdx) {
+  const st  = STAGE[type];
+  const slideEl = el('slide-' + type);
+  const perPage = 8;
+
+  slideEl.classList.add('hidden');
+  setTimeout(() => {
+    slideEl.innerHTML = '';
+
+    const imgEl = document.createElement('img');
+    imgEl.className = 'card-fullbg';
+    imgEl.src = CARD_IMGS[pageIdx % CARD_IMGS.length];
+    slideEl.appendChild(imgEl);
+
+    const strip = document.createElement('div');
+    strip.className = 'card-strip';
+    strip.textContent = st.label;
+    slideEl.appendChild(strip);
+
+    const grid = document.createElement('div');
+    grid.className = 'tile-grid';
+    const full = st.sel.length >= st.max;
+
+    for (let i = 0; i < perPage; i++) {
+      const wordIdx = pageIdx * perPage + i;
+      const tile = document.createElement('div');
+      if (wordIdx >= st.words.length) {
+        tile.className = 'q-tile ghost';
+      } else {
+        const word = st.words[wordIdx];
+        const sel  = st.sel.includes(word);
+        tile.className = 'q-tile' + (sel ? ' selected' : '') + (full && !sel ? ' dimmed' : '');
+        tile.dataset.word = word;
+        tile.innerHTML = `<div class="t-icon">${ICONS[word]||'✦'}</div><div class="t-word">${word}</div>`;
+        tile.addEventListener('click', () => st.onToggle(word));
+      }
+      grid.appendChild(tile);
+    }
+    slideEl.appendChild(grid);
+    slideEl.classList.remove('hidden');
+    // Position after paint so offsetWidth is available
+    requestAnimationFrame(() => positionGrid(slideEl));
+  }, 160);
+}
+
+function buildTileStage(type, words, selectedSet, maxSel, label, onToggle) {
+  const st = STAGE[type];
+  st.idx = 0;
+  st.words = words;
+  st.sel = selectedSet;
+  st.max = maxSel;
+  st.label = label;
+  st.onToggle = onToggle;
+  st.pages = Math.ceil(words.length / 8);
+  buildDots(type, st.pages);
+  renderTileSlide(type, 0);
+  // Extra position call after screen is shown
+  setTimeout(() => positionGrid(el('slide-' + type)), 300);
+}
+
+function updateTileStates(type, selectedSet, maxSel) {
+  const st = STAGE[type];
+  st.sel = selectedSet;
+  // Just re-render current page (keeps position)
+  renderTileSlide(type, st.idx);
+}
+
+// ══ KWALITEITEN ════════════════════════════════════════════════
+
+function buildKGrid() {
+  buildTileStage('k', KWALITEITEN_ALL, S.ownKwaliteiten, 2, 'Welke kwaliteiten passen bij jou?', toggleK);
+}
+
+function toggleK(word) {
+  if (S.ownKwaliteiten.includes(word)) {
+    S.ownKwaliteiten = S.ownKwaliteiten.filter(w => w !== word);
+  } else if (S.ownKwaliteiten.length < 2) {
+    S.ownKwaliteiten.push(word);
+  } else { return; }
+  updateTileStates('k', S.ownKwaliteiten, 2);
+  el('btn-next-k').classList.toggle('show', S.ownKwaliteiten.length >= 2);
+}
+
+// ══ ALLERGIE ═══════════════════════════════════════════════════
+
+function buildAGrid() {
+  buildTileStage('a', ALLERGIEËN_ALL, S.ownAllergie ? [S.ownAllergie] : [], 1, 'Wat irriteert jou het meest in anderen?', toggleA);
+}
+
+function toggleA(word) {
+  if (S.ownAllergie === word) { S.ownAllergie = null; }
+  else { S.ownAllergie = word; }
+  updateTileStates('a', S.ownAllergie ? [S.ownAllergie] : [], 1);
+  el('btn-share').classList.toggle('show', !!S.ownAllergie);
+}
+
+function goToAllergie() {
+  buildAGrid();
+  show('screen-allergie');
+}
+
+// ══ FASE 1: DELEN ══════════════════════════════════════════════
+
+function shareChoices() {
+  const data = { type:'kwaliteiten', kwaliteiten: S.ownKwaliteiten, allergie: S.ownAllergie };
+  el('own-summary-chip').textContent = S.ownKwaliteiten.join(' · ') + ' · ' + S.ownAllergie;
+  show('screen-waiting-partner');
+
+  if (S.adminMode) {
+    const fake = { type:'kwaliteiten', kwaliteiten:['Creatief','Empathisch'], allergie:'Oneerlijkheid' };
+    setTimeout(() => onSelectiesKlaar({ p1: S.player==='1'?data:fake, p2: S.player==='2'?data:fake }), 600);
+  } else {
+    KoppelClient.done(data);
+  }
+}
+
+function onSelectiesKlaar(state) {
+  const myKey  = 'p' + S.player;
+  const ptnKey = S.player === '1' ? 'p2' : 'p1';
+  S.ownData     = state[myKey]  || {};
+  S.partnerData = state[ptnKey] || {};
+  buildVraagSlides();
+  show('screen-vragen');
+}
+
+// ══ FASE 2: VRAGEN KIEZEN ══════════════════════════════════════
+
+function buildVraagSlides() {
+  const pd = S.partnerData;
+  const partnerWords = [...(pd.kwaliteiten||[]), ...(pd.allergie ? [pd.allergie] : [])];
+  S.gekozenVragen = {}; S.vragenPicked = 0;
+  STAGE.v.slides = partnerWords;
+  STAGE.v.idx = 0;
+  STAGE.v.pages = partnerWords.length;
+  buildDots('v', partnerWords.length);
+  renderVraagSlide(0);
+}
+
+function renderVraagSlide(idx) {
+  const pd = S.partnerData;
+  const partnerWords = STAGE.v.slides;
+  const word = partnerWords[idx];
+  const isAllergy = pd.allergie === word;
+  const allQ = (isAllergy ? ALLERGIE_VRAGEN : VRAGEN)[word] || [];
+  const qs = allQ.slice(0, 3);
+  const slideEl = el('slide-v');
+  const totalNeeded = partnerWords.length;
+
+  slideEl.classList.add('hidden');
+  setTimeout(() => {
+    slideEl.innerHTML = '';
+
+    const imgEl = document.createElement('img');
+    imgEl.className = 'card-fullbg';
+    imgEl.src = EMPTY_IMGS[idx % EMPTY_IMGS.length];
+    slideEl.appendChild(imgEl);
+
+    const content = document.createElement('div');
+    content.className = 'vraag-slide-content';
+    content.innerHTML = `
+      <div class="vf-label">${isAllergy ? 'Allergie van je partner' : 'Kwaliteit van je partner'}</div>
+      <div class="vf-word">${ICONS[word]||'✦'} ${word}</div>
+      <div class="vf-instr">Kies één vraag die jij wilt stellen:</div>
+      <div class="vf-opts"></div>
+    `;
+    const optsEl = content.querySelector('.vf-opts');
+    const already = S.gekozenVragen[word];
+    qs.forEach(q => {
+      const btn = document.createElement('button');
+      btn.className = 'vf-opt' + (already ? (already === q ? ' picked' : ' faded') : '');
+      btn.textContent = q;
+      if (!already) btn.onclick = () => pickVraag(word, q, optsEl, btn, totalNeeded);
+      optsEl.appendChild(btn);
+    });
+    slideEl.appendChild(content);
+    // Apply pixel-perfect positioning (same box math as tile-grid)
+    requestAnimationFrame(() => positionVraagContent(content, slideEl));
+    slideEl.classList.remove('hidden');
+  }, 160);
+}
+
+function pickVraag(word, question, optsEl, btn, totalNeeded) {
+  optsEl.querySelectorAll('.vf-opt').forEach(b => { b.classList.remove('picked'); b.classList.add('faded'); });
+  btn.classList.remove('faded'); btn.classList.add('picked');
+  S.gekozenVragen[word] = question;
+  el('btn-klaar-v').classList.toggle('show', Object.keys(S.gekozenVragen).length >= totalNeeded);
+  // Auto-advance to next slide after 600ms
+  const nextIdx = STAGE.v.idx + 1;
+  if (nextIdx < STAGE.v.pages) {
+    setTimeout(() => { nextCard('v'); }, 700);
+  }
+}
+
+function submitVragen() {
+  show('screen-waiting-vragen');
+  if (S.adminMode) {
+    const fakeVragen = {};
+    const myWords = [...(S.ownData.kwaliteiten||[]), ...(S.ownData.allergie ? [S.ownData.allergie] : [])];
+    myWords.forEach(w => {
+      const isA = S.ownData.allergie === w;
+      const qs = (isA ? ALLERGIE_VRAGEN : VRAGEN)[w] || [];
+      fakeVragen[w] = qs[0] || '?';
+    });
+    setTimeout(() => onVragenKlaar(fakeVragen), 500);
+  } else {
+    window._commSocket?.emit('player_progress', {
+      code: S.sessionCode, player: S.player,
+      progress: { type:'kwaliteiten_vragen', vragen: S.gekozenVragen }
+    });
+    if (S.partnerVragen !== null) onVragenKlaar(S.partnerVragen);
+  }
+}
+
+function onVragenKlaar(partnerVragenVoorMij) {
+  const myWords = [
+    ...(S.ownData.kwaliteiten||[]).map(w => ({ word:w, isAllergy:false })),
+    ...(S.ownData.allergie ? [{ word:S.ownData.allergie, isAllergy:true }] : [])
+  ];
+  const ptnWords = [
+    ...(S.partnerData.kwaliteiten||[]).map(w => ({ word:w, isAllergy:false })),
+    ...(S.partnerData.allergie ? [{ word:S.partnerData.allergie, isAllergy:true }] : [])
+  ];
+  const myCards  = myWords.map(({ word, isAllergy }) => ({ owner:'jij', word, isAllergy, question: partnerVragenVoorMij[word]||null }));
+  const ptnCards = ptnWords.map(({ word, isAllergy }) => ({ owner:'partner', word, isAllergy, question: S.gekozenVragen[word]||null }));
+
+  const all = [];
+  for (let i = 0; i < Math.max(myCards.length, ptnCards.length); i++) {
+    if (myCards[i])  all.push(myCards[i]);
+    if (ptnCards[i]) all.push(ptnCards[i]);
+  }
+  const seed = [...myWords,...ptnWords].map(x=>x.word).join('').split('').reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,0);
+  S.presCards = seededShuffle(all, seed);
+  S.presCards.push({ owner:'done' });
+  S.presIdx = 0;
+
+  buildPresDots();
+  renderPresCard(0);
+  show('screen-presentatie');
+  setChatState('mini');
+  requestAnimationFrame(() => updatePresContentBottom());
+
+  if (!S.adminMode) {
+    window.CommLayer?.onChatMessage(({ text, side }) => {
+      addBubble(text, side);
+    });
+  }
+}
+
+// ══ PRESENTATIE ════════════════════════════════════════════════
+
+function buildPresDots() {
+  const wrap = el('pres-dots');
+  wrap.innerHTML = '';
+  const total = S.presCards.length - 1;
+  for (let i = 0; i < total; i++) {
+    const d = document.createElement('div');
+    d.className = 'pdot' + (i === 0 ? ' active' : '');
+    wrap.appendChild(d);
+  }
+}
+
+function updatePresDots() {
+  const idx = S.presIdx;
+  el('pres-dots').querySelectorAll('.pdot').forEach((d, i) => {
+    d.className = 'pdot' + (i < idx ? ' done' : i === idx ? ' active' : '');
+  });
+}
+
+function renderPresCard(idx) {
+  const card = S.presCards[idx];
+  const scroll = el('pres-scroll');
+  scroll.scrollTop = 0;
+  scroll.innerHTML = '';
+
+  if (!card || card.owner === 'done') {
+    el('pres-bg-img').src = EMPTY_IMGS[0];
+    const done = document.createElement('div');
+    done.style.cssText = 'text-align:center;padding:10px 0;';
+    done.innerHTML =
+      '<div style="font-size:2.2rem;margin-bottom:10px">🌿</div>' +
+      '<div class="rc-word" style="font-size:1.4rem">Dank voor het spelen</div>' +
+      '<div class="rc-hint" style="margin-top:10px">Er valt nog veel meer te ontdekken over elkaar.<br>We hebben jullie kaarten onthouden — bij kaart 2 komen we erop terug.</div>' +
+      '<button class="rc-btn rc-finish" style="margin-top:18px;width:100%" onclick="window.location.href=\'world.html\'">Terug naar de kaart ✓</button>';
+    scroll.appendChild(done);
+    updatePresDots();
+    return;
+  }
+
+  // Pick a different background image per card
+  el('pres-bg-img').src = EMPTY_IMGS[idx % EMPTY_IMGS.length];
+
+  const isOwn    = card.owner === 'jij';
+  const isAllerg = card.isAllergy;
+
+  const lbl = document.createElement('div');
+  lbl.className = 'rc-label';
+  lbl.textContent = (isOwn ? 'Jouw kaart' : 'Kaart van je partner') + (isAllerg ? ' · allergie' : '');
+  scroll.appendChild(lbl);
+
+  const wordEl = document.createElement('div');
+  wordEl.className = 'rc-word';
+  wordEl.innerHTML = (ICONS[card.word]||'✦') + ' ' + card.word;
+  scroll.appendChild(wordEl);
+
+  if (card.question) {
+    const qbox = document.createElement('div');
+    qbox.className = 'rc-q-box';
+    qbox.innerHTML = `<div class="rc-q-lbl">${isOwn ? 'Vraag van je partner' : 'Jouw vraag'}</div><div class="rc-q-text">${card.question}</div>`;
+    scroll.appendChild(qbox);
+  }
+
+  const hint = document.createElement('div');
+  hint.className = 'rc-hint';
+  hint.textContent = isOwn ? 'Antwoord hierop in de chat.' : 'Luister en reageer in de chat.';
+  scroll.appendChild(hint);
+
+  const nav = document.createElement('div');
+  nav.className = 'rc-nav-row';
+  if (idx > 0) {
+    const prev = document.createElement('button');
+    prev.className = 'rc-btn rc-prev'; prev.textContent = '← Vorige';
+    prev.onclick = () => goPresCard(idx - 1);
+    nav.appendChild(prev);
+  } else nav.appendChild(document.createElement('span'));
+
+  const next = document.createElement('button');
+  next.className = 'rc-btn rc-next'; next.textContent = 'Volgende →';
+  next.onclick = () => goPresCard(idx + 1);
+  nav.appendChild(next);
+  scroll.appendChild(nav);
+
+  updatePresDots();
+}
+
+function goPresCard(idx) {
+  if (idx < 0 || idx >= S.presCards.length) return;
+  S.presIdx = idx;
+  renderPresCard(idx);
+}
+
+// ══ CHAT ═══════════════════════════════════════════════════════
+
+// States: 'mini' → 'normal' → 'full' → 'mini'
+let chatState = 'mini';
+const CHAT_HEIGHTS = { mini: 44, normal: 210, full: null }; // null = 100%
+
+function updatePresContentBottom() {
+  const content = el('pres-scroll');
+  if (!content) return;
+  const appH   = el('app')?.offsetHeight || window.innerHeight;
+  const barEl  = el('chat-bar');
+  const barH   = barEl ? barEl.offsetHeight : CHAT_HEIGHTS.normal;
+  // Add bottom offset (8px margin) + actual bar height
+  content.style.bottom = (barH + 16) + 'px';
+  positionPresContent(content);
+}
+
+function positionPresContent(contentEl) {
+  if (!contentEl) return;
+  const screen = el('screen-presentatie');
+  if (!screen) return;
+  const cW = screen.offsetWidth, cH = screen.offsetHeight;
+  if (!cW || !cH) return;
+  const scaleX = cW / IMG_W, scaleY = cH / IMG_H;
+  const scale  = Math.max(scaleX, scaleY);
+  const dispW  = IMG_W * scale, dispH = IMG_H * scale;
+  const offX   = (dispW - cW) / 2, offY = (dispH - cH) / 2;
+  const top    = Math.max(0, BOX.top * scale - offY);
+  const halfW  = (BOX.right - BOX.left) / 2;
+  const centerX = (BOX.left + BOX.right) / 2;
+  const left   = Math.max(0, (centerX - halfW) * scale - offX);
+  const right  = Math.max(0, cW - (centerX + halfW) * scale + offX);
+  if (top < cH * 0.15 || top > cH * 0.75) return; // sanity
+  contentEl.style.top   = top  + 'px';
+  contentEl.style.left  = left + 'px';
+  contentEl.style.right = right + 'px';
+}
+
+function setChatState(state) {
+  chatState = state;
+  const bar = el('chat-bar');
+  const btn = el('chat-size-btn');
+  bar.classList.remove('normal','full');
+  if (state === 'normal') { bar.classList.add('normal'); btn.textContent = '⌄'; }
+  else if (state === 'full') { bar.classList.add('full'); btn.textContent = '⌄'; }
+  else { btn.textContent = '⌃'; } // mini — no extra class
+  setTimeout(updatePresContentBottom, 360);
+}
+
+function cycleChat() {
+  if (chatState === 'mini')   setChatState('normal');
+  else if (chatState === 'normal') setChatState('full');
+  else                        setChatState('mini');
+}
+
+function addBubble(text, side) {
+  // Auto-expand if minimized and a partner message arrives
+  // Auto-expand when first message arrives
+  if (chatState === 'mini') setChatState('normal');
+  const msgs = el('chat-messages');
+  const b = document.createElement('div');
+  b.className = 'chat-bubble ' + side;
+  b.textContent = text;
+  msgs.appendChild(b);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function sendChat() {
+  const inp = el('chat-input');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  addBubble(text, 'me');
+  if (!S.adminMode) window.CommLayer?.sendBoardChat(text);
+}
+
+// ══ INIT ═══════════════════════════════════════════════════════
+
+(function init() {
+  const gc = localStorage.getItem('comm_code');
+  const gp = localStorage.getItem('comm_player');
+
+  buildKGrid();
+
+  if (!gc || gc === '1111') {
+    S.adminMode = true; S.player = '1';
+    if (gc === '1111') { S.sessionCode='1111.K'; localStorage.setItem('comm_code','1111'); localStorage.setItem('comm_player','1'); }
+    show('screen-kwaliteiten');
+    return;
+  }
+
+  S.player = gp || '1';
+  S.sessionCode = gc + '.K';
+  setStatus('Verbinden…');
+
+  KoppelClient.on('both_connected',  () => { setStatus(''); show('screen-kwaliteiten'); });
+  KoppelClient.on('complete',        ({ state }) => onSelectiesKlaar(state));
+  KoppelClient.on('error',           ({ message }) => setStatus('Fout: ' + message));
+  KoppelClient.on('disconnected',    () => setStatus('Verbinding verbroken'));
+  KoppelClient.on('session_created', ({ code, player }) => { S.player=player; SDClient.announceGame('kwaliteiten','Je Kwaliteiten'); });
+  KoppelClient.on('session_joined',  ({ code, player }) => { S.player=player; });
+
+  // Partner question picks
+  KoppelClient.on('partner_progress', ({ progress }) => {
+    if (progress?.type === 'kwaliteiten_vragen') {
+      S.partnerVragen = progress.vragen;
+      if (el('screen-waiting-vragen').classList.contains('active')) onVragenKlaar(S.partnerVragen);
+    }
+  });
+
+  KoppelClient.joinOrCreate(S.sessionCode, 'kwaliteiten');
+
+  setTimeout(() => {
+    if (!KoppelClient.isActive()) { S.adminMode=true; setStatus('Geen verbinding'); show('screen-kwaliteiten'); }
+  }, 5000);
+})();
+</script>
+</body>
+</html>

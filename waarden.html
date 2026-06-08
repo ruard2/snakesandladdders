@@ -1,0 +1,550 @@
+﻿﻿<!DOCTYPE html>
+<html lang="nl">
+<head>
+<script src="config.js"></script>
+<script src="sd-client.js"></script>
+<script src="comm.js"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Waarden · Slow Dating</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:#0f0820;color:#f0e6d3;font-family:'Inter',sans-serif;overflow:hidden;}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse at 20% 30%,#2d1050 0%,transparent 55%),
+             radial-gradient(ellipse at 80% 70%,#102840 0%,transparent 55%),#0a0618;z-index:0;}
+.screen{display:none;position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;z-index:1;
+  -webkit-overflow-scrolling:touch;}
+.screen.active{display:flex;flex-direction:column;align-items:center;}
+.pad{padding:20px;width:100%;max-width:440px;}
+h1{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:700;text-align:center;
+  background:linear-gradient(135deg,#d4af37,#f5e070,#d4af37);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.2;}
+h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#f0e6d3;text-align:center;}
+.sub{color:#9080a8;font-size:0.85rem;text-align:center;line-height:1.6;}
+.btn{display:block;width:100%;padding:14px 20px;border:none;border-radius:14px;
+  font-size:1rem;font-weight:600;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif;}
+.btn-gold{background:linear-gradient(135deg,#d4af37,#f0d060);color:#1a0a2e;}
+.btn-gold:disabled{opacity:0.4;pointer-events:none;}
+.btn-outline{background:transparent;border:1.5px solid #d4af3766;color:#d4af37;}
+.btn-ghost{background:rgba(255,255,255,0.07);color:#f0e6d3;border:1px solid rgba(255,255,255,0.1);}
+.gap{display:flex;flex-direction:column;gap:12px;}
+.divider{height:1px;background:rgba(255,255,255,0.08);margin:6px 0;}
+.back-btn{position:fixed;top:10px;left:10px;z-index:9999;
+  background:rgba(0,0,0,0.45);color:#d4af37;border:1px solid #d4af3755;
+  border-radius:20px;padding:5px 12px;font-size:0.75rem;text-decoration:none;
+  font-family:serif;backdrop-filter:blur(6px);}
+.big-code{font-size:2.2rem;letter-spacing:0.4em;font-weight:700;color:#f0d060;
+  font-family:'Playfair Display',serif;text-align:center;}
+.code-input{text-align:center;font-size:1.6rem;letter-spacing:0.3em;text-transform:uppercase;
+  font-weight:700;background:rgba(255,255,255,0.08);border:2px solid rgba(212,175,55,0.4);
+  border-radius:14px;padding:16px;color:#f0d060;width:100%;font-family:'Inter',sans-serif;}
+.dots span{display:inline-block;animation:bounce 1.2s infinite;}
+.dots span:nth-child(2){animation-delay:.2s;}
+.dots span:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
+.chips-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
+  width:100%;max-width:420px;padding:0 16px;}
+.chip{border-radius:16px;padding:12px 6px;cursor:pointer;transition:all .18s;
+  background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.1);
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  -webkit-tap-highlight-color:transparent;user-select:none;}
+.chip:active{transform:scale(0.93);}
+.chip.gekozen{background:rgba(212,175,55,0.2);border-color:#d4af37;
+  box-shadow:0 0 14px rgba(212,175,55,0.3);}
+.chip-emoji{font-size:1.5rem;line-height:1;}
+.chip-naam{font-size:0.62rem;font-weight:600;color:#c8b090;text-align:center;line-height:1.2;}
+.chip.gekozen .chip-naam{color:#f0d060;}
+.slots{display:flex;gap:8px;justify-content:center;padding:4px 0;}
+.slot{width:36px;height:36px;border-radius:10px;border:1.5px dashed rgba(212,175,55,0.35);
+  display:flex;align-items:center;justify-content:center;font-size:0.75rem;
+  color:rgba(255,255,255,0.25);transition:all .2s;}
+.slot.vol{background:rgba(212,175,55,0.2);border-color:#d4af37;border-style:solid;font-size:1rem;}
+.reveal-section{width:100%;max-width:420px;padding:0 16px 4px;}
+.label-small{font-size:0.65rem;letter-spacing:0.13em;text-transform:uppercase;
+  margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.reveal-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;}
+.rev-chip{border-radius:20px;padding:7px 14px;font-size:0.82rem;font-weight:600;
+  display:flex;align-items:center;gap:6px;border:1.5px solid;}
+.rev-chip.overlap{background:rgba(212,175,55,0.22);border-color:#d4af37;color:#f0d060;}
+.rev-chip.jij{background:rgba(122,196,122,0.12);border-color:rgba(122,196,122,0.5);color:#a0dca0;}
+.rev-chip.partner{background:rgba(160,120,210,0.12);border-color:rgba(160,120,210,0.5);color:#c8a8f0;}
+.vraag-kaart{border-radius:18px;padding:18px 20px;
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+  font-family:'Playfair Display',serif;font-size:0.98rem;font-style:italic;
+  color:#f0e6d3;line-height:1.65;}
+.vraag-nr{font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;
+  color:#d4af37;font-style:normal;font-family:'Inter',sans-serif;margin-bottom:8px;}
+.chat-box{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:440px;z-index:100;
+  padding-top:20px;}
+.chat-toggle{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px;cursor:pointer;user-select:none;}
+.chat-toggle-label{font-size:0.8rem;color:#d4af37;display:flex;align-items:center;gap:8px;}
+.chat-msgs{height:0;overflow:hidden;transition:height .3s;padding:0 12px;}
+.chat-msgs.open{height:160px;overflow-y:auto;}
+.chat-msg{padding:5px 10px;margin:3px 0;border-radius:10px;font-size:0.82rem;max-width:80%;}
+.chat-msg.me{background:rgba(212,175,55,0.18);color:#f0d060;margin-left:auto;text-align:right;}
+.chat-msg.them{background:rgba(255,255,255,0.08);color:#d0c8e8;}
+.chat-input-row{display:flex;gap:8px;padding:8px 12px 12px;}
+.chat-input{flex:1;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
+  border-radius:20px;padding:8px 14px;color:#f0e6d3;font-size:0.85rem;outline:none;}
+.chat-send{background:#d4af37;color:#1a0a2e;border:none;border-radius:50%;
+  width:34px;height:34px;font-size:1rem;cursor:pointer;flex-shrink:0;}
+.mic-btn{display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:13px 20px;border-radius:14px;border:none;cursor:pointer;font-size:0.92rem;
+  font-weight:600;font-family:'Inter',sans-serif;transition:all .2s;width:100%;max-width:390px;margin:0 auto;}
+.mic-btn.idle{background:rgba(122,196,122,0.1);border:1.5px solid rgba(122,196,122,0.4);color:#7ac47a;}
+.mic-btn.active{background:rgba(200,80,80,0.15);border:1.5px solid rgba(200,80,80,0.5);color:#e07070;}
+.mic-status{font-size:0.72rem;color:#9080a8;text-align:center;margin-top:4px;padding:0 20px;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.fade-up{animation:fadeUp .3s ease forwards;}
+</style>
+</head>
+<body>
+<a href="world.html" class="back-btn">← Kaart</a>
+
+<div id="s-start" class="screen active">
+  <div class="pad gap" style="padding-top:70px;">
+    <div style="text-align:center;">
+      <div style="font-size:3rem;margin-bottom:10px;">🧭</div>
+      <h1>Waarden</h1>
+      <p class="sub" style="margin-top:8px;">Kies elk 3 waarden.<br>Ontdek wat jullie deelt — en wat verschilt.</p>
+    </div>
+    <div class="divider"></div>
+    <button class="btn btn-gold" onclick="startKoppel('create')">✦ Begin samen</button>
+    <button class="btn btn-outline" onclick="startKoppel('join')">Doe mee met koppelcode</button>
+    <button class="btn btn-ghost" onclick="startSolo()">Solo verkennen</button>
+  </div>
+</div>
+
+<div id="s-koppel" class="screen">
+  <div class="pad gap" style="padding-top:70px;">
+    <h2 id="koppel-titel">Sessie aanmaken</h2>
+    <div id="koppel-maak" style="display:none;" class="gap">
+      <p class="sub">Jouw koppelcode:</p>
+      <div class="big-code" id="display-code">···</div>
+      <div id="wacht-p"><p class="sub dots">Wachten op partner<span>.</span><span>.</span><span>.</span></p></div>
+      <div id="beide-ok" style="display:none;" class="gap">
+        <p style="color:#7ac47a;text-align:center;">✓ Beide verbonden!</p>
+        <button class="btn btn-gold" onclick="startKiezen()">Begin →</button>
+      </div>
+    </div>
+    <div id="koppel-join" style="display:none;" class="gap">
+      <input class="code-input" id="join-input" maxlength="6" placeholder="ABCDE"
+             oninput="this.value=this.value.toUpperCase()"/>
+      <button class="btn btn-gold" onclick="doJoin()">Verbinden →</button>
+      <div id="join-wacht" style="display:none;text-align:center;">
+        <p class="sub dots">Verbinden<span>.</span><span>.</span><span>.</span></p>
+      </div>
+    </div>
+    <p id="koppel-err" style="color:#e07070;text-align:center;display:none;font-size:.85rem;"></p>
+    <button class="btn btn-ghost" style="font-size:.85rem;padding:10px;" onclick="showScreen('s-start')">← Terug</button>
+  </div>
+</div>
+
+<div id="s-kies" class="screen">
+  <div style="width:100%;max-width:440px;padding:50px 0 120px;">
+    <div class="pad" style="padding-bottom:12px;text-align:center;">
+      <h2>Wat telt voor jou?</h2>
+      <p class="sub" style="margin:6px 0 12px;">Kies precies 3 waarden</p>
+      <div class="slots" id="slots">
+        <div class="slot" id="sl0">1</div>
+        <div class="slot" id="sl1">2</div>
+        <div class="slot" id="sl2">3</div>
+      </div>
+    </div>
+    <div class="chips-grid" id="chips-grid"></div>
+    <div class="pad" style="padding-top:16px;">
+      <button class="btn btn-gold" id="kies-btn" disabled onclick="submitKeuze()">Dit zijn mijn 3 →</button>
+    </div>
+  </div>
+</div>
+
+<div id="s-wacht" class="screen">
+  <div class="pad gap" style="padding-top:140px;text-align:center;align-items:center;">
+    <div style="font-size:3rem;">✨</div>
+    <h2>Keuze ingediend</h2>
+    <p class="sub dots">Wachten op partner<span>.</span><span>.</span><span>.</span></p>
+    <p class="sub" style="margin-top:16px;font-style:italic;">"De mooiste ontdekkingen vragen een moment van stilte."</p>
+  </div>
+</div>
+
+<div id="s-reveal" class="screen">
+  <div style="width:100%;max-width:440px;padding:50px 0 220px;">
+    <div class="pad" style="padding-bottom:16px;text-align:center;">
+      <h1 style="font-size:1.55rem;">De onthulling</h1>
+    </div>
+    <div class="reveal-section" id="rev-overlap-sect" style="display:none;">
+      <div class="label-small" style="color:#d4af37;">✨ Jullie kozen allebei</div>
+      <div class="reveal-chips" id="rev-overlap"></div>
+    </div>
+    <div class="reveal-section">
+      <div class="label-small" style="color:#7ac47a;">🌱 Jouw waarden</div>
+      <div class="reveal-chips" id="rev-jij"></div>
+    </div>
+    <div class="reveal-section" id="rev-partner-sect" style="display:none;">
+      <div class="label-small" style="color:#c8a8f0;">💌 Waarden van je partner</div>
+      <div class="reveal-chips" id="rev-partner"></div>
+    </div>
+    <div class="reveal-section" style="margin-top:4px;">
+      <div class="label-small" style="color:#d4af37;">💬 Beginvragen</div>
+      <div class="gap" id="vragen-lijst"></div>
+    </div>
+    <div class="pad gap" style="padding-top:20px;">
+      <button class="mic-btn idle" onclick="CommLayer.toggleCall()" style="background:none;border:1.5px solid rgba(212,175,55,0.3);color:#d4af37;border-radius:14px;padding:11px 20px;font-size:.9rem;cursor:pointer;width:100%;font-family:inherit;">
+        <span data-comm-call>📵</span> Bellen via CommLayer
+      </button>
+    </div>
+  </div>
+
+  <div class="chat-box" id="chat-box">
+    <div class="chat-toggle" onclick="toggleChat()">
+      <span class="chat-toggle-label">💬 Chat <span id="chat-badge" style="display:none;background:#e07070;color:#fff;border-radius:10px;padding:1px 6px;font-size:0.65rem;">nieuw</span></span>
+      <span id="chat-arrow" style="color:#9080a8;font-size:0.75rem;">▲ open</span>
+    </div>
+    <div class="chat-msgs" id="chat-msgs"></div>
+    <div class="chat-input-row" id="chat-input-row" style="display:none;">
+      <input class="chat-input" id="chat-input" placeholder="Schrijf iets..." onkeydown="if(event.key==='Enter')sendChat()"/>
+      <button class="chat-send" onclick="sendChat()">↑</button>
+    </div>
+  </div>
+</div>
+
+<div id="s-eind" class="screen">
+  <div class="pad gap" style="padding-top:100px;text-align:center;align-items:center;">
+    <div style="font-size:3rem;">🌟</div>
+    <h1 style="font-size:1.55rem;">Goed gedaan</h1>
+    <p class="sub">Jullie waarden zijn opgeslagen in jullie profiel.</p>
+    <div class="divider" style="width:100%;"></div>
+    <button class="btn btn-outline" onclick="location.href='world.html'">← Terug naar de kaart</button>
+    <button class="btn btn-ghost" style="font-size:.85rem;padding:10px;" onclick="location.reload()">Opnieuw spelen</button>
+  </div>
+</div>
+
+<script>
+// ── DATA: 16 meest voorkomende relatiewaarden (Schwartz + Gottman + eHarmony research)
+// Level 1 / Kaart 1. Diepere levels komen op Kaart 2+
+const W16 = [
+  {id:'eerlijkheid', naam:'Eerlijkheid',  emoji:'🤝'},
+  {id:'trouw',       naam:'Trouw',        emoji:'💛'},
+  {id:'familie',     naam:'Familie',      emoji:'🏠'},
+  {id:'humor',       naam:'Humor',        emoji:'😄'},
+  {id:'respect',     naam:'Respect',      emoji:'🌿'},
+  {id:'avontuur',    naam:'Avontuur',     emoji:'🧭'},
+  {id:'geloof',      naam:'Geloof',       emoji:'✝️'},
+  {id:'warmte',      naam:'Warmte',       emoji:'☀️'},
+  {id:'vrijheid',    naam:'Vrijheid',     emoji:'🦋'},
+  {id:'groei',       naam:'Groei',        emoji:'🌱'},
+  {id:'rust',        naam:'Rust',         emoji:'🌊'},
+  {id:'vriendschap', naam:'Vriendschap',  emoji:'🤗'},
+  {id:'ambitie',     naam:'Ambitie',      emoji:'🔥'},
+  {id:'verbinding',  naam:'Verbinding',   emoji:'🫂'},
+  {id:'dankbaarheid',naam:'Dankbaarheid', emoji:'🙏'},
+  {id:'creativiteit',naam:'Creativiteit', emoji:'🎨'},
+];
+
+const VRAGEN = {
+  eerlijkheid: 'Wanneer was het moeilijkst om eerlijk te zijn — maar ben je blij dat je het deed?',
+  trouw:       'Voor wie zou jij alles laten vallen als ze je nu belden?',
+  familie:     'Hoe zag jouw thuis eruit toen je opgroeide — wat wil je hetzelfde doen, wat anders?',
+  humor:       'Wanneer lach jij het hardst — en wie brengt dat in jou naar boven?',
+  respect:     'Wat respecteer jij in anderen dat je zelden uitspreekt?',
+  avontuur:    'Wat is de meest avontuurlijke keuze die je ooit hebt gemaakt?',
+  geloof:      'Wat geeft jouw leven richting — waar haal jij betekenis uit?',
+  warmte:      'Voor wie zorg jij het meest spontaan — zonder dat het je moeite kost?',
+  vrijheid:    'Wat heb je ooit opgegeven voor vrijheid — en was dat de moeite waard?',
+  groei:       'Wanneer kijk je terug en denk je: ik ben echt anders geworden?',
+  rust:        'Waar of bij wie voel jij je het meest thuis — en wat maakt dat zo?',
+  vriendschap: 'Wie kent jou het beste — en wat weten zij dat anderen niet weten?',
+  ambitie:     'Wat is een droom die je nog niet hardop hebt uitgesproken?',
+  verbinding:  'In welk gezelschap hoef jij jezelf niet te filteren?',
+  dankbaarheid:'Waar ben jij dankbaar voor dat je zelden uitspreekt?',
+  creativiteit:'Wanneer voel jij je het meest creatief — en wat maak of doe jij dan?',
+};
+
+// Spanningsvragen als keuzes botsen — geeft rijker gesprek
+const SPANNINGEN = {
+  'vrijheid+familie':   'Jij koos Vrijheid, de ander koos Familie — hoe houd jij die twee in evenwicht?',
+  'ambitie+rust':       'Ambitie wil vooruit, Rust wil stilstaan. Wanneer geef jij gas — en wanneer rem je?',
+  'geloof+avontuur':    'Geloof geeft richting, Avontuur zoekt het onbekende. Hoe werken die twee in jou?',
+  'vrijheid+trouw':     'Vrijheid en Trouw kunnen botsen. Hoe ben jij trouw zonder jezelf te verliezen?',
+  'ambitie+vriendschap':'Ambitie vraagt tijd, Vriendschap ook. Hoe kies jij wanneer beide roepen?',
+  'verbinding+vrijheid':'Verbinding wil nabij, Vrijheid wil ruimte. Hoe doe jij dat in een relatie?',
+  'familie+avontuur':   'Familie geeft wortels, Avontuur geeft vleugels. Hoe leven die twee in jou?',
+  'rust+ambitie':       'Rust en Ambitie — soms moet je kiezen. Wanneer kies jij voor welke?',
+};
+
+const S = {
+  code: null, player: '1', solo: false,
+  gekozen: [], partnerGekozen: [],
+};
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('active'); el.scrollTop = 0; }
+}
+function wById(id) { return W16.find(x => x.id === id); }
+
+// ── CHIPS
+function buildChips() {
+  const grid = document.getElementById('chips-grid');
+  grid.innerHTML = '';
+  W16.forEach(waarde => {
+    const el = document.createElement('div');
+    el.className = 'chip' + (S.gekozen.includes(waarde.id) ? ' gekozen' : '');
+    el.dataset.id = waarde.id;
+    el.innerHTML = '<span class="chip-emoji">' + waarde.emoji + '</span><span class="chip-naam">' + waarde.naam + '</span>';
+    el.addEventListener('click', () => toggleChip(waarde.id));
+    grid.appendChild(el);
+  });
+  updateSlots();
+}
+
+function toggleChip(id) {
+  const idx = S.gekozen.indexOf(id);
+  if (idx > -1) {
+    S.gekozen.splice(idx, 1);
+  } else {
+    if (S.gekozen.length >= 3) return;
+    S.gekozen.push(id);
+  }
+  document.querySelectorAll('.chip').forEach(el => {
+    el.classList.toggle('gekozen', S.gekozen.includes(el.dataset.id));
+  });
+  updateSlots();
+}
+
+function updateSlots() {
+  for (let i = 0; i < 3; i++) {
+    const sl = document.getElementById('sl' + i);
+    const wid = S.gekozen[i];
+    if (wid) { sl.classList.add('vol'); sl.textContent = wById(wid).emoji; }
+    else      { sl.classList.remove('vol'); sl.textContent = i + 1; }
+  }
+  document.getElementById('kies-btn').disabled = S.gekozen.length < 3;
+}
+
+// ── KOPPEL
+function loadKoppelScript(cb) {
+  if (window.KoppelClient) { cb(); return; }
+  const s = document.createElement('script');
+  cb(); // sd-client.js already loaded
+  document.head.appendChild(s);
+}
+
+function startKoppel(mode) {
+  showScreen('s-koppel');
+  document.getElementById('koppel-maak').style.display = 'none';
+  document.getElementById('koppel-join').style.display = 'none';
+  loadKoppelScript(() => {
+    setupListeners();
+    if (mode === 'create') {
+      document.getElementById('koppel-titel').textContent = 'Sessie aanmaken';
+      document.getElementById('koppel-maak').style.display = 'block';
+      S.player = '1'; KoppelClient.create('waarden');
+    } else {
+      document.getElementById('koppel-titel').textContent = 'Code invoeren';
+      document.getElementById('koppel-join').style.display = 'block';
+      S.player = '2';
+    }
+  });
+}
+
+function setupListeners() {
+  KoppelClient.on('session_created', ({ code }) => { window.CommLayer?.setSession(code,'1');
+    S.code = code;
+    document.getElementById('display-code').textContent = code;
+  });
+  KoppelClient.on('both_connected', () => {
+    document.getElementById('wacht-p').style.display = 'none';
+    document.getElementById('beide-ok').style.display = 'flex';
+    document.getElementById('beide-ok').style.flexDirection = 'column';
+  });
+  KoppelClient.on('session_joined', () => {
+    document.getElementById('join-wacht').style.display = 'none';
+    startKiezen();
+  });
+  KoppelClient.on('session_error', ({ message }) => {
+    document.getElementById('koppel-err').textContent = message;
+    document.getElementById('koppel-err').style.display = 'block';
+    document.getElementById('join-wacht').style.display = 'none';
+  });
+  KoppelClient.on('session_complete', ({ state }) => {
+    const pk = S.player === '1' ? 'p2' : 'p1';
+    if (state[pk] && state[pk].waarden) {
+      S.partnerGekozen = state[pk].waarden;
+      buildReveal(); showScreen('s-reveal');
+    }
+  });
+  // session_update = één speler klaar, wacht op allebei via session_complete
+}
+
+function doJoin() {
+  const code = document.getElementById('join-input').value.trim().toUpperCase();
+  if (code === '1111') { S.code = '1111'; S.solo = false; startKiezen(); return; }
+  if (code.length < 4) return;
+  S.code = code;
+  document.getElementById('join-wacht').style.display = 'block';
+  document.getElementById('koppel-err').style.display = 'none';
+  KoppelClient.join(code, 'waarden');
+}
+
+function startSolo() { S.solo = true; S.code = null; startKiezen(); }
+function startKiezen() { buildChips(); showScreen('s-kies'); }
+
+// ── SUBMIT
+function submitKeuze() {
+  if (S.gekozen.length < 3) return;
+  if (S.solo) { S.partnerGekozen = []; buildReveal(); showScreen('s-reveal'); return; }
+  if (S.code === '1111') {
+    showScreen('s-wacht');
+    setTimeout(() => {
+      // Admin: simuleer partner met deels andere keuzes
+      const pool = W16.map(x => x.id).filter(id => !S.gekozen.includes(id));
+      const shuffle = arr => { for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];} return arr; };
+      const partner = shuffle(pool).slice(0, 2);
+      partner.push(S.gekozen[Math.floor(Math.random() * 3)]); // 1 overlap
+      S.partnerGekozen = shuffle(partner);
+      buildReveal(); showScreen('s-reveal');
+    }, 1500);
+    return;
+  }
+  showScreen('s-wacht');
+  KoppelClient.done({ waarden: S.gekozen });
+}
+
+// ── REVEAL
+function buildReveal() {
+  const overlap    = S.gekozen.filter(id => S.partnerGekozen.includes(id));
+  const jijUniek   = S.gekozen.filter(id => !overlap.includes(id));
+  const partnerUniek = S.partnerGekozen.filter(id => !overlap.includes(id));
+
+  const overlapSect = document.getElementById('rev-overlap-sect');
+  if (overlap.length > 0) {
+    overlapSect.style.display = 'block';
+    document.getElementById('rev-overlap').innerHTML = overlap.map(id => chipHTML(id,'overlap')).join('');
+  } else {
+    overlapSect.style.display = 'none';
+  }
+
+  document.getElementById('rev-jij').innerHTML =
+    [...overlap.map(id => chipHTML(id,'overlap')), ...jijUniek.map(id => chipHTML(id,'jij'))].join('');
+
+  const partnerSect = document.getElementById('rev-partner-sect');
+  if (S.partnerGekozen.length > 0) {
+    partnerSect.style.display = 'block';
+    document.getElementById('rev-partner').innerHTML =
+      [...overlap.map(id => chipHTML(id,'overlap')), ...partnerUniek.map(id => chipHTML(id,'partner'))].join('');
+  } else {
+    partnerSect.style.display = 'none';
+  }
+
+  buildVragen(overlap, jijUniek, partnerUniek);
+}
+
+function chipHTML(id, type) {
+  const waarde = wById(id);
+  if (!waarde) return '';
+  return '<div class="rev-chip ' + type + '">' + waarde.emoji + ' ' + waarde.naam + '</div>';
+}
+
+function buildVragen(overlap, jijUniek, partnerUniek) {
+  const container = document.getElementById('vragen-lijst');
+  container.innerHTML = '';
+  const vragen = [];
+
+  if (overlap.length > 0) vragen.push(VRAGEN[overlap[0]]);
+
+  const allIds = [...S.gekozen, ...S.partnerGekozen];
+  for (const [key, vraag] of Object.entries(SPANNINGEN)) {
+    const [a, b] = key.split('+');
+    if (allIds.includes(a) && allIds.includes(b) && !vragen.includes(vraag) && vragen.length < 2) {
+      vragen.push(vraag);
+    }
+  }
+  if (vragen.length < 2 && partnerUniek.length > 0) vragen.push(VRAGEN[partnerUniek[0]]);
+  if (vragen.length < 2 && jijUniek.length > 0) vragen.push(VRAGEN[jijUniek[0]]);
+  if (vragen.length === 0) vragen.push(VRAGEN[S.gekozen[0]]);
+
+  vragen.slice(0, 2).forEach((v, i) => {
+    const el = document.createElement('div');
+    el.className = 'vraag-kaart fade-up';
+    el.style.animationDelay = (i * 0.12) + 's';
+    el.innerHTML = '<div class="vraag-nr">Vraag ' + (i+1) + '</div>' + v;
+    container.appendChild(el);
+  });
+}
+
+// ── CHAT
+let chatOpen = false;
+function toggleChat() {
+  chatOpen = !chatOpen;
+  document.getElementById('chat-msgs').classList.toggle('open', chatOpen);
+  document.getElementById('chat-input-row').style.display = chatOpen ? 'flex' : 'none';
+  document.getElementById('chat-arrow').textContent = chatOpen ? '▼ sluit' : '▲ open';
+  document.getElementById('chat-badge').style.display = 'none';
+  if (chatOpen) document.getElementById('chat-input').focus();
+}
+
+function sendChat() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  addChatMsg(text, 'me');
+  input.value = '';
+  if (S.code === '1111') {
+    setTimeout(() => addChatMsg('Interessant! Vertel meer...', 'them'), 900);
+    return;
+  }
+  window.CommLayer?.sendBoardChat(text);
+}
+// Ontvang chat van globale socket (gebruik CommLayer's 'side' om dubbele berichten te voorkomen)
+window.CommLayer?.onChatMessage(({ text, side }) => {
+  if (side === 'them') addChatMsg(text, 'them');
+});
+
+function addChatMsg(text, type) {
+  const msgs = document.getElementById('chat-msgs');
+  const el = document.createElement('div');
+  el.className = 'chat-msg ' + type;
+  el.textContent = text;
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+  if (!chatOpen && type === 'them') document.getElementById('chat-badge').style.display = 'inline';
+}
+
+// Bellen gaat via CommLayer (geen lokale WebRTC meer)
+
+// ── AUTO-START: sla start/koppel over als al globaal gekoppeld ──
+(function() {
+  const gc = localStorage.getItem('comm_code');
+  if (!gc) return; // niet gekoppeld: normale flow
+
+  if (gc === '1111') { S.code='1111'; S.player='1'; startKiezen(); return; }
+
+  showScreen('s-wacht');
+
+  function go() {
+    KoppelClient.on('session_created', ({ code, player }) => {
+      S.code=code; S.player=player;
+      SDClient.announceGame('waarden', 'Je Waarden');
+    });
+    KoppelClient.on('session_joined', ({ code, player }) => {
+      S.code=code; S.player=player;
+    });
+    KoppelClient.on('both_connected', () => startKiezen());
+    KoppelClient.on('session_complete', ({ state }) => {
+      const pk = S.player==='1'?'p2':'p1';
+      if (state[pk]?.waarden) { S.partnerGekozen=state[pk].waarden; buildReveal(); showScreen('s-reveal'); }
+    });
+    // session_update = één speler klaar, maar we wachten op allebei (session_complete)
+    KoppelClient.joinOrCreate(gc + '.W', 'waarden');
+  }
+  window.KoppelClient ? go() : loadKoppelScript(go);
+})();
+</script>
+</body>
+</html>

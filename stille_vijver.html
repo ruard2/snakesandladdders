@@ -1,0 +1,1025 @@
+﻿﻿<!DOCTYPE html>
+<html lang="nl">
+<head>
+<script src="config.js"></script>
+<script src="sd-client.js"></script>
+<script src="comm.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Stille Vijver</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #0e1a1a;
+  min-height: 100vh;
+  color: #e8f0ef;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#app {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 32px;
+}
+
+/* ── Screens ── */
+.screen { display: none; flex-direction: column; flex: 1; animation: fadeIn .3s ease; }
+.screen.active { display: flex; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ── Header ── */
+.sv-header {
+  text-align: center;
+  padding: 32px 24px 20px;
+}
+.sv-header .icon { font-size: 3rem; margin-bottom: 10px; display: block; }
+.sv-header h1 { font-size: 1.6rem; font-weight: 700; color: #a8d8d0; letter-spacing: -.3px; }
+.sv-header p { font-size: .9rem; color: #7a9e9a; margin-top: 6px; line-height: 1.5; }
+
+/* ── Cards ── */
+.card {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 18px;
+  padding: 22px;
+  margin: 0 16px;
+}
+
+/* ── Buttons ── */
+.btn {
+  display: block; width: calc(100% - 32px); margin: 12px 16px 0;
+  padding: 15px; border-radius: 14px;
+  background: #2a7a6a; color: white; border: none;
+  font-size: 1rem; font-weight: 600; cursor: pointer;
+  font-family: inherit; transition: background .2s, transform .1s;
+}
+.btn:hover { background: #338a78; }
+.btn:active { transform: scale(.97); }
+.btn-ghost {
+  background: transparent; border: 1px solid rgba(255,255,255,.2); color: #a8d8d0;
+}
+.btn-ghost:hover { background: rgba(255,255,255,.06); }
+
+/* ── Mode selector ── */
+.mode-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  padding: 0 16px;
+}
+.mode-card {
+  background: rgba(255,255,255,.06); border: 2px solid rgba(255,255,255,.1);
+  border-radius: 16px; padding: 22px 12px; cursor: pointer;
+  text-align: center; transition: all .2s;
+}
+.mode-card:hover { border-color: #2a7a6a; background: rgba(42,122,106,.15); }
+.mode-card.selected { border-color: #3fcfb4; background: rgba(63,207,180,.1); }
+.mode-card .mode-icon { font-size: 2.2rem; display: block; margin-bottom: 10px; }
+.mode-card h3 { font-size: .95rem; font-weight: 700; color: #e8f0ef; }
+.mode-card p { font-size: .78rem; color: #7a9e9a; margin-top: 4px; }
+
+/* ── Pick grid ── */
+.pick-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  padding: 0 16px;
+}
+
+/* WORDS */
+.pick-word {
+  background: rgba(255,255,255,.07); border: 2px solid rgba(255,255,255,.1);
+  border-radius: 14px; padding: 16px 8px; cursor: pointer;
+  text-align: center; font-size: .9rem; font-weight: 600;
+  color: #c8e8e4; transition: all .18s; line-height: 1.3;
+}
+.pick-word:hover { border-color: #2a7a6a; background: rgba(42,122,106,.2); }
+.pick-word.selected { border-color: #3fcfb4; background: rgba(63,207,180,.15); color: #3fcfb4; }
+.pick-word.disabled { opacity: .35; cursor: default; pointer-events: none; }
+.pick-word.selected.disabled { opacity: 1; pointer-events: auto; }
+
+/* IMAGES */
+.pick-img {
+  position: relative; border: 3px solid transparent;
+  border-radius: 14px; overflow: hidden; cursor: pointer;
+  aspect-ratio: 1; transition: all .18s;
+}
+.pick-img img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  transition: transform .2s;
+}
+.pick-img:hover img { transform: scale(1.05); }
+.pick-img.selected { border-color: #3fcfb4; }
+.pick-img.disabled { opacity: .35; cursor: default; pointer-events: none; }
+.pick-img.selected.disabled { opacity: 1; pointer-events: auto; }
+.pick-img .check {
+  position: absolute; top: 6px; right: 6px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: #3fcfb4; color: #0e1a1a;
+  font-size: 13px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s;
+}
+.pick-img.selected .check { opacity: 1; }
+.pick-img .caption { display: none; }
+
+/* ── Counter ── */
+.pick-counter {
+  text-align: center; font-size: .88rem; color: #7a9e9a;
+  padding: 10px 0 4px;
+}
+.pick-counter span { color: #3fcfb4; font-weight: 700; }
+
+/* ── Waiting ── */
+.waiting-pulse {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; color: #7a9e9a; font-size: .9rem;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #3fcfb4; display: inline-block; }
+.dot:nth-child(1) { animation: pulse-dot 1.4s .0s ease-in-out infinite; }
+.dot:nth-child(2) { animation: pulse-dot 1.4s .2s ease-in-out infinite; }
+.dot:nth-child(3) { animation: pulse-dot 1.4s .4s ease-in-out infinite; }
+@keyframes pulse-dot { 0%,80%,100% { transform: scale(.8); opacity:.4; } 40% { transform: scale(1.2); opacity:1; } }
+
+/* ── Reveal ── */
+.reveal-cols {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  padding: 0 16px;
+}
+.reveal-col {
+  background: rgba(255,255,255,.05); border-radius: 16px;
+  padding: 14px 10px; text-align: center;
+}
+.reveal-col .who {
+  font-size: .75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: #7a9e9a; margin-bottom: 10px;
+}
+.reveal-col.me .who { color: #3fcfb4; }
+
+.reveal-chips { display: flex; flex-direction: column; gap: 8px; }
+.reveal-chip {
+  background: rgba(255,255,255,.09); border-radius: 10px;
+  padding: 9px 8px; font-size: .85rem; color: #c8e8e4;
+}
+.reveal-img-wrap {
+  border-radius: 10px; overflow: hidden; margin-bottom: 6px; aspect-ratio: 1;
+}
+.reveal-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── Reflectie-prompt ── */
+.prompt-box {
+  background: rgba(63,207,180,.08); border: 1px solid rgba(63,207,180,.25);
+  border-radius: 16px; padding: 18px; margin: 0 16px;
+  font-size: 1rem; color: #a8d8d0; line-height: 1.5; text-align: center;
+}
+.prompt-answer {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px; padding: 14px 16px; margin: 12px 16px 0;
+}
+.prompt-answer-label { font-size: .75rem; color: #7a9e9a; margin-bottom: 6px; }
+.prompt-answer-text { font-size: .9rem; color: #e8f0ef; line-height: 1.5; font-style: italic; }
+
+/* ── Chat ── */
+.chat-wrap {
+  display: flex; flex-direction: column; flex: 1;
+  min-height: 0;
+}
+.chat-header {
+  padding: 14px 16px 10px;
+  font-size: .8rem; color: #7a9e9a; text-align: center;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  flex-shrink: 0;
+}
+.chat-messages {
+  flex: 1; overflow-y: auto; padding: 12px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+  min-height: 0;
+}
+.chat-msg {
+  max-width: 80%; border-radius: 16px; padding: 10px 14px;
+  font-size: .9rem; line-height: 1.45;
+}
+.chat-msg.me {
+  background: #2a7a6a; color: white; align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+.chat-msg.them {
+  background: rgba(255,255,255,.1); color: #e8f0ef; align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+.chat-msg .msg-name { font-size: .7rem; font-weight: 700; opacity: .65; margin-bottom: 3px; }
+.typing-indicator { color: #7a9e9a; font-size: .8rem; font-style: italic; padding: 0 16px 4px; flex-shrink: 0; }
+.chat-input-row {
+  display: flex; gap: 8px; padding: 10px 16px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  flex-shrink: 0;
+}
+.chat-input-row input {
+  flex: 1; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.15);
+  border-radius: 22px; padding: 11px 16px; color: white; font-size: .9rem;
+  font-family: inherit; outline: none;
+}
+.chat-input-row input::placeholder { color: #4a6a66; }
+.chat-send {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: #2a7a6a; border: none; color: white;
+  font-size: 1.1rem; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Koppel screen ── */
+.koppel-code {
+  font-size: 3rem; font-weight: 800; letter-spacing: 8px;
+  color: #3fcfb4; font-family: monospace; text-align: center;
+  padding: 18px 0 8px;
+}
+
+/* ── Back button ── */
+.back-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: none; color: #7a9e9a;
+  font-size: .88rem; cursor: pointer; padding: 14px 16px 4px;
+  font-family: inherit;
+}
+.back-btn:hover { color: #a8d8d0; }
+
+/* ── Divider ── */
+.divider {
+  display: flex; align-items: center; gap: 10px; margin: 10px 16px;
+}
+.divider span { font-size: .75rem; color: #4a6a66; text-transform: uppercase; letter-spacing: .5px; }
+.divider::before, .divider::after { content:''; flex:1; height:1px; background: rgba(255,255,255,.1); }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══ SCREEN: KOPPEL ══════════════════════════════════════ -->
+<div id="screen-koppel" class="screen active">
+  <div class="sv-header">
+    <span class="icon">🌿</span>
+    <h1>Stille Vijver</h1>
+    <p>Kies samen drie woorden of beelden<br>die beschrijven hoe je je voelt bij deze ontmoeting.</p>
+  </div>
+
+  <!-- Verbinding status banner -->
+  <div id="conn-status" style="margin:0 16px 8px; padding:8px 14px; border-radius:10px;
+       font-size:.8rem; text-align:center; display:none;"></div>
+
+  <div class="card" style="margin:0 16px;">
+    <!-- Al gekoppeld? -->
+    <div id="saved-session-block" style="display:none; margin-bottom:16px; background:rgba(63,207,180,.07);
+         border:1px solid rgba(63,207,180,.25); border-radius:12px; padding:14px; text-align:center;">
+      <div style="font-size:.8rem; color:#7a9e9a; margin-bottom:4px;">Opgeslagen koppeling</div>
+      <div id="saved-code-text" style="font-size:1.4rem; font-weight:800; letter-spacing:4px; color:#3fcfb4; font-family:monospace;"></div>
+      <button class="btn" style="margin:10px 0 6px; width:100%; background:#1a5a4a;" onclick="svReconnect()">Verder met partner →</button>
+      <button onclick="svForget()" style="background:none; border:none; color:#4a6a66; font-size:.78rem; cursor:pointer; text-decoration:underline;">Andere koppeling</button>
+    </div>
+
+    <div id="new-session-block">
+      <div style="text-align:center; margin-bottom:16px;">
+        <div style="font-size:1.8rem; margin-bottom:6px;">📱</div>
+        <div style="font-weight:700; font-size:1.05rem; color:#e8f0ef; margin-bottom:4px;">Verbind met je partner</div>
+        <div style="font-size:.85rem; color:#7a9e9a;">Elk op je eigen scherm</div>
+      </div>
+
+      <button class="btn" id="btn-create" style="margin:0 0 12px; width:100%;" onclick="svCreate()">
+        Maak koppelcode +
+      </button>
+
+      <div id="code-display" style="display:none; background:rgba(63,207,180,.07); border-radius:14px; padding:18px; text-align:center; margin-bottom:14px;">
+        <div style="font-size:.75rem; color:#7a9e9a; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Jouw code</div>
+        <div id="code-text" class="koppel-code"></div>
+        <div style="font-size:.8rem; color:#4a6a66; margin-top:8px;">Deel met je partner</div>
+        <div id="waiting-msg" style="margin-top:12px;" class="waiting-pulse">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span>Wacht op partner...</span>
+        </div>
+      </div>
+
+      <div class="divider"><span>of</span></div>
+
+      <div style="font-size:.85rem; color:#7a9e9a; margin-bottom:8px;">Heb je een code van je partner?</div>
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <input id="code-input" type="text" placeholder="bijv. BOOM42" maxlength="6"
+          style="flex:1; padding:12px 14px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.15);
+                 border-radius:10px; color:white; font-size:1.1rem; font-family:monospace;
+                 text-transform:uppercase; letter-spacing:3px; outline:none;"
+          oninput="this.value=this.value.toUpperCase()"
+          onkeydown="if(event.key==='Enter') svJoin()" />
+        <button class="btn" style="width:auto; margin:0; padding:12px 18px; white-space:nowrap;" onclick="svJoin()">Verbinden</button>
+      </div>
+      <div id="koppel-error" style="color:#f87171; font-size:.82rem; margin-top:4px; display:none;"></div>
+    </div>
+
+    <div id="connected-msg" style="display:none; margin-top:16px; background:rgba(63,207,180,.1);
+         border:1px solid rgba(63,207,180,.3); border-radius:12px; padding:14px; text-align:center;">
+      <div style="font-size:1.3rem; margin-bottom:4px;">✓ Beide verbonden!</div>
+      <div style="font-size:.85rem; color:#7a9e9a; margin-bottom:12px;">Jullie kiezen elk op eigen scherm.</div>
+      <button class="btn" style="margin:0; width:100%; background:#1a5a4a;" onclick="svStart()">Begin →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN: KIES MODUS ════════════════════════════════ -->
+<div id="screen-modus" class="screen">
+  <button class="back-btn" onclick="goScreen('screen-koppel')">← Terug</button>
+  <div class="sv-header">
+    <span class="icon">🌿</span>
+    <h1>Stille Vijver</h1>
+    <p>Hoe wil jij je gevoel uitdrukken?</p>
+  </div>
+  <div class="mode-grid">
+    <div class="mode-card" onclick="kiesModus('woorden')">
+      <span class="mode-icon">💬</span>
+      <h3>Woorden</h3>
+      <p>Kies drie woorden die bij je passen</p>
+    </div>
+    <div class="mode-card" onclick="kiesModus('beelden')">
+      <span class="mode-icon">🖼️</span>
+      <h3>Beelden</h3>
+      <p>Kies drie foto's die je gevoel laten zien</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN: KIES WOORDEN ══════════════════════════════ -->
+<div id="screen-woorden" class="screen">
+  <button class="back-btn" onclick="STATE.mijnKeuze=[]; goScreen('screen-modus')">← Terug</button>
+  <div style="padding: 4px 16px 12px;">
+    <div style="font-size:1.1rem; font-weight:700; color:#a8d8d0; text-align:center;">
+      Kies drie woorden
+    </div>
+    <div style="font-size:.85rem; color:#7a9e9a; text-align:center; margin-top:4px;">
+      die beschrijven hoe je je voelt bij deze ontmoeting
+    </div>
+  </div>
+  <p class="pick-counter">Gekozen: <span id="word-count">0</span> / 3</p>
+  <div class="pick-grid" id="word-grid"></div>
+  <button class="btn" id="btn-woorden-klaar" style="margin-top:20px; opacity:.4; pointer-events:none;" onclick="kiesKlaar()">
+    Dit zijn mijn drie woorden →
+  </button>
+</div>
+
+<!-- ══ SCREEN: KIES BEELDEN ══════════════════════════════ -->
+<div id="screen-beelden" class="screen">
+  <button class="back-btn" onclick="STATE.mijnKeuze=[]; goScreen('screen-modus')">← Terug</button>
+  <div style="padding: 4px 16px 12px;">
+    <div style="font-size:1.1rem; font-weight:700; color:#a8d8d0; text-align:center;">
+      Kies drie beelden
+    </div>
+    <div style="font-size:.85rem; color:#7a9e9a; text-align:center; margin-top:4px;">
+      die beschrijven hoe je je voelt bij deze ontmoeting
+    </div>
+  </div>
+  <p class="pick-counter">Gekozen: <span id="img-count">0</span> / 3</p>
+  <div class="pick-grid" id="img-grid"></div>
+  <button class="btn" id="btn-beelden-klaar" style="margin-top:20px; opacity:.4; pointer-events:none;" onclick="kiesKlaar()">
+    Dit zijn mijn drie beelden →
+  </button>
+</div>
+
+<!-- ══ SCREEN: WACHTEN ══════════════════════════════════ -->
+<div id="screen-wacht" class="screen">
+  <button class="back-btn" onclick="STATE.mijnKeuze=[]; goScreen('screen-modus')">← Terug</button>
+  <div class="sv-header">
+    <span class="icon">⏳</span>
+    <h1>Even geduld...</h1>
+    <p>Wacht tot je partner ook heeft gekozen.</p>
+  </div>
+  <div style="margin: 20px 16px;" class="card">
+    <div style="text-align:center; margin-bottom:14px; font-size:.9rem; color:#7a9e9a;">Jouw keuze:</div>
+    <div id="my-preview" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;"></div>
+  </div>
+  <div style="padding:24px; text-align:center;" class="waiting-pulse">
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span>Partner is aan het kiezen...</span>
+  </div>
+</div>
+
+<!-- ══ SCREEN: REVEAL ════════════════════════════════════ -->
+<div id="screen-reveal" class="screen">
+  <button class="back-btn" onclick="goScreen('screen-modus')">← Opnieuw kiezen</button>
+  <div style="padding: 8px 16px 14px; text-align:center;">
+    <div style="font-size:1.8rem; margin-bottom:6px;">✨</div>
+    <div style="font-size:1.15rem; font-weight:700; color:#a8d8d0;">Zo voelen jullie je</div>
+    <div style="font-size:.85rem; color:#7a9e9a; margin-top:4px;">bij deze ontmoeting</div>
+  </div>
+  <div class="reveal-cols">
+    <div class="reveal-col me">
+      <div class="who">Jij</div>
+      <div class="reveal-chips" id="reveal-me"></div>
+    </div>
+    <div class="reveal-col">
+      <div class="who" id="reveal-them-label">Partner</div>
+      <div class="reveal-chips" id="reveal-them"></div>
+    </div>
+  </div>
+  <button class="btn" style="margin-top:20px;" onclick="naarReflectie()">Vertel er meer over →</button>
+</div>
+
+<!-- ══ SCREEN: REFLECTIE ════════════════════════════════ -->
+<div id="screen-reflectie" class="screen">
+  <button class="back-btn" onclick="goScreen('screen-reveal')">← Terug</button>
+  <div style="padding: 8px 16px 10px;">
+    <div style="font-size:1.05rem; font-weight:700; color:#a8d8d0; text-align:center; margin-bottom:16px;">
+      Vertel het aan je partner
+    </div>
+    <div class="prompt-box">
+      💬 Waarom koos je deze woorden/beelden? Wat voelde je precies?
+    </div>
+  </div>
+
+  <div id="reflectie-input-wrap" style="padding:0 16px;">
+    <textarea id="reflectie-tekst"
+      placeholder="Schrijf hier je antwoord..."
+      style="width:100%; min-height:100px; background:rgba(255,255,255,.06);
+             border:1px solid rgba(255,255,255,.15); border-radius:14px;
+             padding:14px 16px; color:white; font-size:.9rem; font-family:inherit;
+             resize:vertical; outline:none; margin-top:14px; line-height:1.5;"
+    ></textarea>
+    <button class="btn" id="btn-reflectie" style="margin:12px 0 0; width:100%; background:#1a5a4a;" onclick="stuurReflectie()">
+      Stuur mijn antwoord →
+    </button>
+  </div>
+
+  <div id="reflectie-wacht" style="display:none; padding:16px; text-align:center; color:#7a9e9a; font-size:.88rem;">
+    Jouw antwoord is verstuurd. Wacht op je partner...
+    <div style="margin-top:12px;" class="waiting-pulse">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    </div>
+  </div>
+
+  <div id="reflectie-antwoorden" style="display:none; padding:0 16px;">
+    <div class="prompt-answer">
+      <div class="prompt-answer-label">Jij</div>
+      <div class="prompt-answer-text" id="reflectie-antw-me"></div>
+    </div>
+    <div class="prompt-answer" style="margin-top:10px;">
+      <div class="prompt-answer-label" id="reflectie-antw-them-label">Partner</div>
+      <div class="prompt-answer-text" id="reflectie-antw-them"></div>
+    </div>
+    <button class="btn" style="margin-top:20px;" onclick="naarChat()">Chat verder →</button>
+  </div>
+</div>
+
+<!-- ══ SCREEN: CHAT ══════════════════════════════════════ -->
+<div id="screen-chat" class="screen" style="padding:0;">
+  <div class="chat-wrap">
+    <div class="chat-header" style="display:flex; align-items:center; gap:8px; justify-content:space-between;">
+      <button class="back-btn" style="padding:8px 0;" onclick="goScreen('screen-reflectie')">←</button>
+      <span>🌿 Stille Vijver — vrij gesprek</span>
+      <span style="width:32px;"></span>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div style="text-align:center; color:#4a6a66; font-size:.85rem; margin-top:24px;">
+        De vijver is stil. Begin een gesprek.
+      </div>
+    </div>
+    <div class="typing-indicator" id="typing-indicator" style="display:none;">... typt</div>
+    <div class="chat-input-row">
+      <input id="chat-input" type="text" placeholder="Schrijf iets..."
+        onkeydown="if(event.key==='Enter') sendChat()"
+        oninput="onChatType()" />
+      <button class="chat-send" onclick="sendChat()">↑</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+
+<script>
+'use strict';
+
+// ══════════════════════════════════════════════════════════
+// ADMIN CODE
+const ADMIN_CODE = '1111';
+
+// ══════════════════════════════════════════════════════════
+// DATA
+// ══════════════════════════════════════════════════════════
+
+const WOORDEN = [
+  'Warm','Nieuwsgierig','Rustig','Verbonden','Verrast',
+  'Verlegen','Open','Blij','Onzeker','Aangetrokken',
+  'Thuis','Licht','Kwetsbaar','Verwonderd','Geïnspireerd'
+];
+
+// Lokale foto's uit images/vijver/
+const BEELDEN = [
+  { label:'Verwondering', url:'images/vijver/alexas_fotos-WoPxj4W58C0-unsplash.webp' },
+  { label:'Verbonden',    url:'images/vijver/andrew-ly-bQl2kRQyUE8-unsplash.webp' },
+  { label:'Rust',         url:'images/vijver/blake-verdoorn-cssvEZacHvQ-unsplash.webp' },
+  { label:'Nieuwsgierig', url:'images/vijver/callum-skelton-LaMnXPLz7qc-unsplash.webp' },
+  { label:'Energie',      url:'images/vijver/chase-clark-T69h1_YfR-w-unsplash.webp' },
+  { label:'Licht',        url:'images/vijver/chris-weiher-Cj985ZL9c3U-unsplash.webp' },
+  { label:'Diepte',       url:'images/vijver/count-chris-hQNFPZK8F80-unsplash.webp' },
+  { label:'Warmte',       url:'images/vijver/grace-anne-bobadilla-dTMa4beAG2c-unsplash.webp' },
+  { label:'Open',         url:'images/vijver/hasse-lossius-vMmShmaDulw-unsplash.webp' },
+  { label:'Blij',         url:'images/vijver/isi-parente-fexYSdfHu-I-unsplash.webp' },
+  { label:'Aangetrokken', url:'images/vijver/jacqueline-munguia-1pAwJiCD60c-unsplash.webp' },
+  { label:'Vrij',         url:'images/vijver/jeremy-bishop-EwKXn5CapA4-unsplash.webp' },
+  { label:'Thuis',        url:'images/vijver/joanne-glaudemans-6bovWnOmi10-unsplash.webp' },
+  { label:'Stil',         url:'images/vijver/johannes-andersson-UCd78vfC8vU-unsplash.webp' },
+  { label:'Verlegen',     url:'images/vijver/josh-mills-hEKSPAg8axE-unsplash.webp' },
+  { label:'Kwetsbaar',    url:'images/vijver/liosha-shyp-IljVAJ9ji34-unsplash.webp' },
+  { label:'Zacht',        url:'images/vijver/liosha-shyp-p9ln5qcOQOU-unsplash.webp' },
+  { label:'Helder',       url:'images/vijver/louis-galvez-I8gQVrDcXzY-unsplash.webp' },
+  { label:'Krachtig',     url:'images/vijver/majestic-lukas-SPVSeCN7p58-unsplash.webp' },
+  { label:'Mysterieus',   url:'images/vijver/mohammed-idris-djoudi-IgOvxnXESJU-unsplash.webp' },
+  { label:'Nieuw',        url:'images/vijver/neom-nMzbnMzMjYU-unsplash.webp' },
+  { label:'Speels',       url:'images/vijver/nick-fewings-WqO0As9Od8U-unsplash.webp' },
+  { label:'Natuurlijk',   url:'images/vijver/sara-canonici-y5KxFK00DXA-unsplash.webp' },
+  { label:'Dichtbij',     url:'images/vijver/stefano-pollio-ZC0EbdLC8G0-unsplash.webp' },
+  { label:'Storm',        url:'images/vijver/stormseeker-rX12B5uX7QM-unsplash.webp' },
+  { label:'Warm',         url:'images/vijver/thomas-park-KYEeuGUkZ54-unsplash.webp' },
+  { label:'Weids',        url:'images/vijver/v2osk-1Z2niiBPg5A-unsplash.webp' },
+  { label:'Onzeker',      url:'images/vijver/viktor-forgacs-iTVZEGIBxmM-unsplash.webp' },
+  { label:'Sereen',       url:'images/vijver/wenbin-sia-8s0e1SlRd5Q-unsplash.webp' },
+];
+
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+
+let STATE = {
+  player: null,       // '1' or '2'
+  adminMode: false,   // true when using code 1111
+  modus: null,        // 'woorden' | 'beelden'
+  mijnKeuze: [],
+  partnerKeuze: [],
+  mijnReflectie: '',
+  partnerReflectie: '',
+  myName: 'Jij',
+  themName: 'Partner',
+};
+
+// ── Profiel opslag ────────────────────────────────────────
+function saveSession(code, player) {
+  localStorage.setItem('sv_code', code);
+  localStorage.setItem('sv_player', player);
+  localStorage.setItem('sv_ts', Date.now());
+}
+function loadSession() {
+  const code   = localStorage.getItem('sv_code');
+  const player = localStorage.getItem('sv_player');
+  const ts     = parseInt(localStorage.getItem('sv_ts') || '0');
+  const age    = Date.now() - ts;
+  // Sessie vervalt na 24 uur
+  if (!code || age > 86400000) return null;
+  return { code, player };
+}
+function clearSession() {
+  localStorage.removeItem('sv_code');
+  localStorage.removeItem('sv_player');
+  localStorage.removeItem('sv_ts');
+}
+
+// ── Init: check saved session ─────────────────────────────
+(function init() {
+  const saved = loadSession();
+  if (saved && saved.code !== ADMIN_CODE) {
+    document.getElementById('saved-session-block').style.display = 'block';
+    document.getElementById('saved-code-text').textContent = saved.code;
+    document.getElementById('new-session-block').style.display = 'none';
+  }
+})();
+
+// ══════════════════════════════════════════════════════════
+// SCREENS
+// ══════════════════════════════════════════════════════════
+
+function goScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════════
+// KOPPEL
+// ══════════════════════════════════════════════════════════
+
+function setupCallbacks() {
+  KoppelClient.on('both_connected', () => showBothConnected());
+  KoppelClient.on('complete',       ({ state }) => onBothDone(state));
+  KoppelClient.on('chat_message',   ({ player, text, ts }) => onChatMsg(player, text, ts));
+  KoppelClient.on('typing',         () => showTyping());
+  KoppelClient.on('error',          ({ message }) => showError(message));
+  KoppelClient.on('disconnected',   () => setStatus('Verbinding verbroken — pagina herladen om opnieuw te verbinden.', '#f87171'));
+}
+
+function svCreate() {
+  const btn = document.getElementById('btn-create');
+  btn.textContent = 'Verbinden...'; btn.disabled = true;
+  setStatus('Verbinding maken met server...', '#7a9e9a');
+
+  setupCallbacks();
+  KoppelClient.on('session_created', ({ code, player }) => {
+    STATE.player = player;
+    saveSession(code, player);
+    document.getElementById('code-text').textContent = code;
+    document.getElementById('code-display').style.display = 'block';
+    btn.textContent = 'Maak koppelcode +'; btn.disabled = false;
+    setStatus('', null);
+  });
+  KoppelClient.create('stille_vijver');
+
+  // Timeout fallback
+  setTimeout(() => {
+    if (!KoppelClient.isActive()) {
+      btn.textContent = 'Maak koppelcode +'; btn.disabled = false;
+      setStatus('Kan geen verbinding maken met server. Draait de backend op poort 3000?', '#f87171');
+    }
+  }, 6000);
+}
+
+function svJoin() {
+  const code = document.getElementById('code-input').value.trim().toUpperCase();
+  if (!code) return showError('Voer een code in.');
+
+  // ── ADMIN CODE 1111 ──────────────────────────────────────
+  if (code === ADMIN_CODE) {
+    STATE.player = '1';
+    STATE.adminMode = true;
+    saveSession(ADMIN_CODE, '1');
+    setStatus('Admin-modus actief', '#3fcfb4');
+    showBothConnected();
+    return;
+  }
+
+  if (code.length < 4) return showError('Code moet minimaal 4 tekens zijn.');
+
+  setStatus('Verbinden...', '#7a9e9a');
+  setupCallbacks();
+  KoppelClient.on('session_joined', ({ player }) => {
+    STATE.player = player;
+    saveSession(code, player);
+    hideError();
+    setStatus('', null);
+  });
+  KoppelClient.join(code, 'stille_vijver');
+}
+
+function svReconnect() {
+  const saved = loadSession();
+  if (!saved) return svForget();
+  if (saved.code === ADMIN_CODE) {
+    STATE.player = '1'; STATE.adminMode = true;
+    showBothConnected(); return;
+  }
+  setStatus('Opnieuw verbinden...', '#7a9e9a');
+  STATE.player = saved.player;
+  setupCallbacks();
+  KoppelClient.on('session_joined', ({ player }) => {
+    STATE.player = player;
+    saveSession(saved.code, player);
+    setStatus('', null);
+  });
+  KoppelClient.join(saved.code, 'stille_vijver');
+}
+
+function svForget() {
+  clearSession();
+  document.getElementById('saved-session-block').style.display = 'none';
+  document.getElementById('new-session-block').style.display = 'block';
+}
+
+function showBothConnected() {
+  if (localStorage.getItem('comm_code')) { svStart(); return; }
+  const wm = document.getElementById('waiting-msg');
+  if (wm) wm.style.display = 'none';
+  document.getElementById('connected-msg').style.display = 'block';
+}
+
+function svStart() {
+  goScreen('screen-modus');
+}
+
+function showError(msg) {
+  const el = document.getElementById('koppel-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('koppel-error').style.display = 'none';
+}
+function setStatus(msg, color) {
+  const el = document.getElementById('conn-status');
+  if (!msg) { el.style.display = 'none'; return; }
+  el.textContent = msg;
+  el.style.background = color === '#f87171' ? 'rgba(248,113,113,.1)' : 'rgba(63,207,180,.08)';
+  el.style.color = color || '#7a9e9a';
+  el.style.border = `1px solid ${color || '#7a9e9a'}44`;
+  el.style.display = 'block';
+}
+
+// ══════════════════════════════════════════════════════════
+// MODUS
+// ══════════════════════════════════════════════════════════
+
+function kiesModus(m) {
+  STATE.modus = m;
+  if (m === 'woorden') {
+    buildWordGrid();
+    goScreen('screen-woorden');
+  } else {
+    buildImgGrid();
+    goScreen('screen-beelden');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// WORD PICKER
+// ══════════════════════════════════════════════════════════
+
+function buildWordGrid() {
+  const grid = document.getElementById('word-grid');
+  grid.innerHTML = '';
+  WOORDEN.forEach(w => {
+    const el = document.createElement('div');
+    el.className = 'pick-word';
+    el.textContent = w;
+    el.dataset.val = w;
+    el.onclick = () => toggleWord(el, w);
+    grid.appendChild(el);
+  });
+}
+
+function toggleWord(el, w) {
+  const selected = STATE.mijnKeuze;
+  if (el.classList.contains('selected')) {
+    el.classList.remove('selected');
+    STATE.mijnKeuze = selected.filter(x => x !== w);
+  } else {
+    if (selected.length >= 3) return;
+    el.classList.add('selected');
+    STATE.mijnKeuze.push(w);
+  }
+  updateWordCount();
+}
+
+function updateWordCount() {
+  const n = STATE.mijnKeuze.length;
+  document.getElementById('word-count').textContent = n;
+  const btn = document.getElementById('btn-woorden-klaar');
+  btn.style.opacity = n === 3 ? '1' : '.4';
+  btn.style.pointerEvents = n === 3 ? 'auto' : 'none';
+  // dim unchosen when 3 selected
+  document.querySelectorAll('.pick-word:not(.selected)').forEach(el => {
+    el.classList.toggle('disabled', n >= 3);
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// IMAGE PICKER
+// ══════════════════════════════════════════════════════════
+
+function buildImgGrid() {
+  const grid = document.getElementById('img-grid');
+  grid.innerHTML = '';
+  BEELDEN.forEach(b => {
+    const el = document.createElement('div');
+    el.className = 'pick-img';
+    el.dataset.val = b.label;
+    el.innerHTML = `
+      <img src="${b.url}" alt="${b.label}" loading="lazy">
+      <div class="caption">${b.label}</div>
+      <div class="check">✓</div>
+    `;
+    el.onclick = () => toggleImg(el, b.label);
+    grid.appendChild(el);
+  });
+}
+
+function toggleImg(el, label) {
+  const selected = STATE.mijnKeuze;
+  if (el.classList.contains('selected')) {
+    el.classList.remove('selected');
+    STATE.mijnKeuze = selected.filter(x => x !== label);
+  } else {
+    if (selected.length >= 3) return;
+    el.classList.add('selected');
+    STATE.mijnKeuze.push(label);
+  }
+  updateImgCount();
+}
+
+function updateImgCount() {
+  const n = STATE.mijnKeuze.length;
+  document.getElementById('img-count').textContent = n;
+  const btn = document.getElementById('btn-beelden-klaar');
+  btn.style.opacity = n === 3 ? '1' : '.4';
+  btn.style.pointerEvents = n === 3 ? 'auto' : 'none';
+  document.querySelectorAll('.pick-img:not(.selected)').forEach(el => {
+    el.classList.toggle('disabled', n >= 3);
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// KLAAR — stuur naar backend
+// ══════════════════════════════════════════════════════════
+
+function kiesKlaar() {
+  buildMyPreview();
+  goScreen('screen-wacht');
+  const data = { modus: STATE.modus, keuze: STATE.mijnKeuze, type: 'keuze' };
+  if (STATE.adminMode) {
+    // Simuleer partner met gespiegelde keuze
+    setTimeout(() => onBothDone({
+      p1: data,
+      p2: { modus: STATE.modus, keuze: [...STATE.mijnKeuze].reverse(), type: 'keuze' }
+    }), 800);
+  } else {
+    KoppelClient.done(data);
+  }
+}
+
+function buildMyPreview() {
+  const wrap = document.getElementById('my-preview');
+  wrap.innerHTML = '';
+  STATE.mijnKeuze.forEach(val => {
+    if (STATE.modus === 'woorden') {
+      const chip = document.createElement('div');
+      chip.style.cssText = 'background:rgba(63,207,180,.15);border:1px solid rgba(63,207,180,.4);border-radius:20px;padding:6px 14px;font-size:.88rem;color:#a8d8d0;';
+      chip.textContent = val;
+      wrap.appendChild(chip);
+    } else {
+      const b = BEELDEN.find(x => x.label === val);
+      if (b) {
+        const img = document.createElement('img');
+        img.src = b.url;
+        img.style.cssText = 'width:70px;height:70px;object-fit:cover;border-radius:12px;border:2px solid #3fcfb4;';
+        wrap.appendChild(img);
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// BOTH DONE — reveal
+// ══════════════════════════════════════════════════════════
+
+function onBothDone(state) {
+  const myKey  = STATE.player === '1' ? 'p1' : 'p2';
+  const themKey = STATE.player === '1' ? 'p2' : 'p1';
+  const myData   = state[myKey];
+  const themData = state[themKey];
+
+  // Phase 1: both chose
+  if (myData?.type === 'keuze' && themData?.type === 'keuze') {
+    STATE.partnerKeuze = themData.keuze;
+    buildReveal(myData, themData);
+    goScreen('screen-reveal');
+    return;
+  }
+  // Phase 2: both reflected
+  if (myData?.type === 'reflectie' && themData?.type === 'reflectie') {
+    STATE.partnerReflectie = themData.tekst;
+    showReflecties(myData.tekst, themData.tekst);
+    return;
+  }
+}
+
+function buildReveal(myData, themData) {
+  buildRevealSide('reveal-me', myData.modus, myData.keuze);
+  buildRevealSide('reveal-them', themData.modus, themData.keuze);
+}
+
+function buildRevealSide(elId, modus, keuze) {
+  const wrap = document.getElementById(elId);
+  wrap.innerHTML = '';
+  keuze.forEach(val => {
+    if (modus === 'woorden') {
+      const chip = document.createElement('div');
+      chip.className = 'reveal-chip';
+      chip.textContent = val;
+      wrap.appendChild(chip);
+    } else {
+      const b = BEELDEN.find(x => x.label === val);
+      const div = document.createElement('div');
+      div.className = 'reveal-chip';
+      if (b) {
+        div.innerHTML = `<div class="reveal-img-wrap"><img src="${b.url}" alt="${val}"></div><div style="font-size:.75rem;color:#7a9e9a;">${val}</div>`;
+      } else { div.textContent = val; }
+      wrap.appendChild(div);
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// REFLECTIE
+// ══════════════════════════════════════════════════════════
+
+function naarReflectie() {
+  goScreen('screen-reflectie');
+}
+
+function stuurReflectie() {
+  const tekst = document.getElementById('reflectie-tekst').value.trim();
+  if (!tekst) return;
+  STATE.mijnReflectie = tekst;
+  document.getElementById('reflectie-input-wrap').style.display = 'none';
+  document.getElementById('reflectie-wacht').style.display = 'block';
+  const data = { type: 'reflectie', tekst };
+  if (STATE.adminMode) {
+    setTimeout(() => onBothDone({
+      p1: data, p2: { type: 'reflectie', tekst: 'Dit is een test-antwoord van de gesimuleerde partner.' }
+    }), 800);
+  } else {
+    KoppelClient.done(data);
+  }
+}
+
+function showReflecties(mijn, partner) {
+  document.getElementById('reflectie-wacht').style.display = 'none';
+  document.getElementById('reflectie-antw-me').textContent = mijn;
+  document.getElementById('reflectie-antw-them').textContent = partner;
+  document.getElementById('reflectie-antwoorden').style.display = 'block';
+}
+
+// ══════════════════════════════════════════════════════════
+// CHAT
+// ══════════════════════════════════════════════════════════
+
+function naarChat() {
+  goScreen('screen-chat');
+  document.getElementById('chat-input').focus();
+}
+
+function sendChat() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  appendMsg('me', text);
+  if (STATE.adminMode) {
+    setTimeout(() => appendMsg('them', '(admin-modus: geen echte partner)'), 600);
+  } else {
+    window.CommLayer?.sendBoardChat(text);
+  }
+}
+// Ontvang via CommLayer
+window.CommLayer?.onChatMessage(({ text, side }) => {
+  if (side === 'them') appendMsg('them', text);
+});
+
+let typingTimeout = null;
+function onChatType() {
+  KoppelClient.sendTyping();
+}
+
+function showTyping() {
+  const el = document.getElementById('typing-indicator');
+  el.style.display = 'block';
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => { el.style.display = 'none'; }, 2000);
+}
+
+function onChatMsg(player, text, ts) {
+  // Don't double-render own messages (already shown on send)
+  const isMe = player === STATE.player;
+  if (!isMe) appendMsg('them', text);
+}
+
+function appendMsg(side, text) {
+  const wrap = document.getElementById('chat-messages');
+  // Remove empty-state placeholder
+  const empty = wrap.querySelector('div[style]');
+  if (empty) empty.remove();
+
+  const msg = document.createElement('div');
+  msg.className = `chat-msg ${side}`;
+  msg.textContent = text;
+  wrap.appendChild(msg);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+// ── AUTO-START ─────────────────────────────────────────────────
+(function(){
+  const gc=localStorage.getItem('comm_code');
+  if(!gc) return;
+
+  if(gc==='1111'){
+    STATE.player='1';STATE.adminMode=true;
+    saveSession(ADMIN_CODE,'1');
+    showBothConnected();
+    return;
+  }
+
+  // Replace entire lobby with spinner
+  document.getElementById('screen-koppel').innerHTML =
+    '<style>@keyframes spin{to{transform:rotate(360deg)}}</style>' +
+    '<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">' +
+    '<div style="width:40px;height:40px;border:3px solid rgba(63,207,180,.15);border-top-color:#3fcfb4;border-radius:50%;animation:spin 1s linear infinite"></div>' +
+    '<div style="color:#6a9a6a;font-size:.88rem;font-family:Segoe UI,sans-serif">Even verbinden…</div></div>';
+
+  setupCallbacks();
+  KoppelClient.on('session_created',({code,player})=>{STATE.player=player;saveSession(code,player);SDClient.announceGame('stille_vijver','Stille Vijver');});
+  KoppelClient.on('session_joined', ({code,player})=>{STATE.player=player;saveSession(code,player);});
+  KoppelClient.joinOrCreate(gc+'.V','stille_vijver');
+})();
+</script>
+</body>
+</html>

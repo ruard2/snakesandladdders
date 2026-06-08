@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=no">
+  <title>Slow Dating</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Slow Dating">
+  <link rel="apple-touch-icon" href="images/icon-192.png">
+
+  <script src="config.js"></script>
+  <script src="sd-client.js"></script>
+  <script src="comm.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: #0a0a0a;
+      overflow: hidden;
+    }
+
+    /* ── Outer scroll container ──────────────────── */
+    #world-outer {
+      position: fixed; inset: 0;
+      overflow-y: scroll;
+      overflow-x: hidden;
+      scroll-snap-type: y mandatory;
+      -webkit-overflow-scrolling: touch;
+      background: #0a0a0a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    /* hide scrollbar */
+    #world-outer::-webkit-scrollbar { display: none; }
+    #world-outer { scrollbar-width: none; }
+
+    /* ── Locked kaart (boven) ─────────────────────── */
+    .locked-kaart {
+      position: relative;
+      flex-shrink: 0;
+      scroll-snap-align: start;
+      cursor: pointer;
+      overflow: hidden;
+      /* size set by fitMap() */
+    }
+    .lk-img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover; object-position: center top;
+      filter: blur(4px) brightness(.55) saturate(.75);
+      transform: scale(1.03);
+      display: block;
+    }
+    .lk-overlay {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .lk-content {
+      text-align: center; font-family: sans-serif; padding: 20px;
+      background: rgba(0,0,0,.38);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .lk-lock  { font-size: 2.4rem; margin-bottom: 14px; }
+    .lk-title { font-size: 1.6rem; font-family: serif; font-weight: 700;
+                color: rgba(255,255,255,.92); margin-bottom: 8px; text-shadow: 0 1px 8px rgba(0,0,0,.6); }
+    .lk-req   { font-size: .82rem; color: rgba(220,220,200,.75); margin-bottom: 6px; }
+    .lk-hint  { font-size: .68rem; color: rgba(200,200,180,.50); margin-top: 16px; letter-spacing: .06em; }
+    /* Genoeg voortgang maar nog niet betaald — geen blur, wel banner */
+    .locked-kaart.ready .lk-img     { filter: none; transform: none; }
+
+    /* Volledig betaald/unlocked — geen blur, geen banner */
+    .locked-kaart.unlocked .lk-img    { filter: none; transform: none; }
+    .locked-kaart.unlocked .lk-overlay { display: none; }
+
+    /* Congrats toast */
+    #congrats-toast {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+      z-index: 6000; display: none;
+      background: linear-gradient(135deg,#2a4a10,#3a6a18);
+      border: 1px solid rgba(160,220,80,.35);
+      border-radius: 16px; padding: 14px 20px;
+      font-family: sans-serif; text-align: center;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      max-width: 300px; width: calc(100% - 40px);
+      animation: toastIn .4s ease;
+    }
+    #congrats-toast.show { display: block; }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    .ct-emoji { font-size: 1.6rem; margin-bottom: 6px; }
+    .ct-title { color: #c0e060; font-size: .95rem; font-weight: 700; margin-bottom: 4px; }
+    .ct-hint  { color: rgba(180,220,100,.7); font-size: .78rem; }
+
+    /* ── Nabijheidsgroei balk (alleen ornament-img) ─────────── */
+    #nabijheid-bar {
+      position: fixed;
+      top: 0; left: 50%; transform: translateX(-50%);
+      z-index: 20;
+      pointer-events: none;
+      line-height: 0;
+      /* breedte gezet door fitMap() */
+    }
+    #nb-img {
+      display: block;
+      width: 100%;
+      height: auto;
+      filter: invert(1);
+      mix-blend-mode: screen;
+      opacity: .45;
+      -webkit-mask-image:
+        linear-gradient(to right,  transparent 0%, black 6%, black 94%, transparent 100%),
+        linear-gradient(to bottom, black 0%, black 45%, transparent 100%);
+      -webkit-mask-composite: destination-in;
+      mask-image:
+        linear-gradient(to right,  transparent 0%, black 6%, black 94%, transparent 100%),
+        linear-gradient(to bottom, black 0%, black 45%, transparent 100%);
+      mask-composite: intersect;
+    }
+    /* ── Poppetjes — absoluut in balkdiv ────────────────────── */
+    .nb-fig {
+      position: absolute;
+      z-index: 21;
+      height: 28px;
+      width: auto;
+      pointer-events: none;
+      filter: brightness(1.2) drop-shadow(0 1px 3px rgba(0,0,0,.45));
+      /* verticaal: voeten op de ornamentenlijn */
+      bottom: 52%;
+    }
+    /* fig1 via left, fig2 via right — gecentreerd op het waypoint */
+    #nb-fig1 { transition: left  1.2s cubic-bezier(.4,0,.2,1); transform: translateX(-50%); }
+    #nb-fig2 { transition: right 1.2s cubic-bezier(.4,0,.2,1); transform: translateX(50%);  }
+
+    /* ── Map container ────────────────────────────── */
+    #map {
+      position: relative;
+      flex-shrink: 0;
+      scroll-snap-align: start;
+      /* size set by fitMap() */
+      overflow: hidden;
+      touch-action: none;  /* wij regelen touch zelf */
+    }
+    /* Inner wrapper krijgt de zoom/pan transform */
+    #map-inner {
+      position: absolute;
+      inset: 0;
+      transform-origin: 0 0;
+      will-change: transform;
+    }
+    #map img.bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      display: block;
+    }
+
+    /* ── Hotspot — volledig onzichtbaar ─────────── */
+    .hs {
+      position: absolute;
+      cursor: pointer;
+      text-decoration: none;
+      background: transparent;
+      border: none;
+      outline: none;
+    }
+
+    /* ── Comm overlay — onderin op het kaartplaatje ─── */
+    #comm-overlay {
+      position: absolute;
+      bottom: 3%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.38);
+      backdrop-filter: blur(10px) saturate(1.4);
+      -webkit-backdrop-filter: blur(10px) saturate(1.4);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 40px;
+      padding: 8px 20px;
+      z-index: 10;
+      pointer-events: all;
+    }
+    .co-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 4px 8px;
+      border-radius: 20px;
+      transition: background .15s;
+      position: relative;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .co-btn:active { background: rgba(255,255,255,.12); }
+    .co-ico { font-size: 1.4rem; line-height: 1; }
+    .co-lbl { font-size: .5rem; color: rgba(255,255,255,.55); letter-spacing: .06em; text-transform: uppercase; }
+    .co-badge {
+      position: absolute;
+      top: 1px; right: 3px;
+      background: #e05050;
+      color: #fff;
+      border-radius: 8px;
+      font-size: .52rem;
+      font-weight: 800;
+      padding: 1px 4px;
+      min-width: 14px;
+      text-align: center;
+      display: none;
+      line-height: 1.3;
+    }
+    .co-sep { width: 1px; height: 28px; background: rgba(255,255,255,.15); flex-shrink: 0; }
+
+    /* ── Welkom overlay ─────────────────────────────────────── */
+    #welkom-overlay {
+      position: fixed; inset: 0; z-index: 8000;
+      background: linear-gradient(160deg, #0d1a05 0%, #071010 100%);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 30px 24px;
+      font-family: sans-serif;
+    }
+    .wl-title { color: #c8e060; font-size: 2rem; font-family: serif; margin: 0; text-align: center; }
+    .wl-sub   { color: #7a9060; font-size: .87rem; text-align: center; max-width: 290px; line-height: 1.7; margin: 0; }
+    .wl-block { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 320px; }
+    .wl-btn-gold    { background: linear-gradient(135deg,#8ab030,#c0e050); color: #0d1a05; border: none;
+                      border-radius: 14px; padding: 14px 20px; font-size: 1rem; font-weight: 700;
+                      cursor: pointer; width: 100%; font-family: inherit; }
+    .wl-btn-outline { background: transparent; border: 1.5px solid #6a9030; color: #a0c050;
+                      border-radius: 14px; padding: 14px 20px; font-size: 1rem; font-weight: 600;
+                      cursor: pointer; width: 100%; font-family: inherit; }
+    .wl-btn-ghost   { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+                      color: #9ab070; border-radius: 14px; padding: 11px 20px; font-size: .9rem;
+                      cursor: pointer; width: 100%; font-family: inherit; }
+    .wl-code-big  { font-size: 2.4rem; letter-spacing: .4em; color: #c0e050; font-family: serif; text-align: center; }
+    .wl-hint      { color: #5a7040; font-size: .78rem; text-align: center; }
+    .wl-input     { text-align: center; font-size: 1.6rem; letter-spacing: .3em; text-transform: uppercase;
+                    font-weight: 700; background: rgba(255,255,255,.07); border: 2px solid rgba(140,200,60,.35);
+                    border-radius: 14px; padding: 14px; color: #c0e050; width: 100%; font-family: sans-serif; outline: none; }
+    .wl-err       { color: #e07070; font-size: .82rem; text-align: center; display: none; }
+    .wl-dots span { display: inline-block; animation: wldot 1.2s infinite; }
+    .wl-dots span:nth-child(2){ animation-delay:.2s; }
+    .wl-dots span:nth-child(3){ animation-delay:.4s; }
+    @keyframes wldot{ 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-7px)} }
+
+    /* ── Unlock popup ───────────────────────────────────────── */
+    #unlock-popup {
+      position: fixed; inset: 0; z-index: 7000;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.65); padding: 24px;
+    }
+    #unlock-popup.show { display: flex; }
+    #unlock-popup .up-card {
+      background: #0d1a08; border: 1px solid rgba(160,200,80,.2);
+      border-radius: 20px; padding: 24px 22px; max-width: 320px; width: 100%;
+      font-family: sans-serif;
+    }
+    #unlock-popup h3 { color: #c0e060; font-size: 1.1rem; margin: 0 0 6px; }
+    #unlock-popup .up-sub { color: #7a9060; font-size: .82rem; margin: 0 0 18px; line-height: 1.5; }
+    .up-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .up-row .up-ico  { font-size: 1.1rem; flex-shrink: 0; }
+    .up-row .up-txt  { font-size: .82rem; color: #c8c0a8; flex: 1; }
+    .up-row .up-done { color: #90d890; font-weight: 700; font-size: .8rem; }
+    .up-row .up-nd   { color: #9a7860; font-size: .8rem; }
+    .up-divider { height: 1px; background: rgba(255,255,255,.06); margin: 14px 0; }
+    .up-price { text-align: center; color: #c8a040; font-size: .9rem; font-weight: 600; margin-bottom: 14px; }
+    .up-btn-pay { width: 100%; background: linear-gradient(135deg,#8ab030,#c0e050); color: #0d1a05;
+                  border: none; border-radius: 14px; padding: 13px; font-size: 1rem; font-weight: 700;
+                  cursor: pointer; font-family: inherit; margin-bottom: 8px; }
+    .up-btn-close { width: 100%; background: none; border: none; color: #5a7040;
+                    font-size: .82rem; cursor: pointer; font-family: inherit; padding: 6px; }
+
+    /* Ripple */
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      width: 60px; height: 60px;
+      margin-left: -30px; margin-top: -30px;
+      background: rgba(255,255,255,0.35);
+      animation: rip 0.55s ease-out forwards;
+      pointer-events: none;
+    }
+    @keyframes rip {
+      from { transform: scale(0); opacity: 1; }
+      to   { transform: scale(3); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Nabijheidsgroei-balk ─────────────────────────────── -->
+<div id="nabijheid-bar">
+  <img id="nb-img" src="images/nabijheid_balk2.webp" alt="">
+  <img id="nb-fig1" class="nb-fig" src="images/figuur_t.webp"  alt="">
+  <img id="nb-fig2" class="nb-fig" src="images/figuur2_t.webp" alt="">
+</div>
+
+<div id="world-outer">
+
+<!-- Kaart 5 — geblurd, hoogste boven -->
+<div class="locked-kaart" id="locked-5" onclick="portalClick(5)">
+  <img src="images/kaart5.webp" class="lk-img" alt="Wereld 5">
+  <div class="lk-overlay">
+    <div class="lk-content">
+      <div class="lk-lock">🔒</div>
+      <div class="lk-title">Wereld 5 — Ziel</div>
+      <div class="lk-req"  id="lk-req-5">Voltooi eerst wereld 4</div>
+      <div class="lk-hint" id="lk-hint-5">↓ tik voor meer info</div>
+    </div>
+  </div>
+</div>
+
+<!-- Kaart 4 -->
+<div class="locked-kaart" id="locked-4" onclick="portalClick(4)">
+  <img src="images/kaart4.webp" class="lk-img" alt="Wereld 4">
+  <div class="lk-overlay">
+    <div class="lk-content">
+      <div class="lk-lock">🔒</div>
+      <div class="lk-title">Wereld 4 — Intimiteit</div>
+      <div class="lk-req"  id="lk-req-4">Voltooi eerst wereld 3</div>
+      <div class="lk-hint" id="lk-hint-4">↓ tik voor meer info</div>
+    </div>
+  </div>
+</div>
+
+<!-- Kaart 3 -->
+<div class="locked-kaart" id="locked-3" onclick="portalClick(3)">
+  <img src="images/kaart3.webp" class="lk-img" alt="Wereld 3">
+  <div class="lk-overlay">
+    <div class="lk-content">
+      <div class="lk-lock">🔒</div>
+      <div class="lk-title">Wereld 3 — Verbinding</div>
+      <div class="lk-req"  id="lk-req-3">Voltooi eerst wereld 2</div>
+      <div class="lk-hint" id="lk-hint-3">↓ tik voor meer info</div>
+    </div>
+  </div>
+</div>
+
+<!-- Kaart 2 — geblurd, direct boven kaart 1 -->
+<div class="locked-kaart" id="locked-2" onclick="portalClick(2)">
+  <img src="images/kaart2.webp" class="lk-img" alt="Wereld 2">
+  <div class="lk-overlay">
+    <div class="lk-content">
+      <div class="lk-lock">🔒</div>
+      <div class="lk-title">Wereld 2 — Verdieping</div>
+      <div class="lk-req"  id="lk-req-2">Voltooi 5 ontdekkingen</div>
+      <div class="lk-hint" id="lk-hint-2">↓ tik voor meer info</div>
+    </div>
+  </div>
+</div>
+
+<div id="map">
+ <div id="map-inner">
+  <img class="bg" src="images/kaart1.webp" alt="Kaart 1 – Het Beginland">
+
+  <!--
+    Bbox-posities als % van originele afbeelding (941 × 1672).
+    left=bbox.x/941, top=bbox.y/1672, width=bbox.width/941, height=bbox.height/1672
+  -->
+
+  <!-- Je waarden → waarden.html -->
+  <a class="hs" href="waarden.html"        style="left:80.0%;top:19.6%;width:15.2%;height:7.3%;"></a>
+
+  <!-- Lach samen → lach_samen.html -->
+  <a class="hs" href="lach_samen.html"     style="left:17.1%;top:33.8%;width:15.3%;height:7.8%;"></a>
+
+  <!-- Leer elkaar kennen → kennismaking.html -->
+  <a class="hs" href="kennismaking.html"   style="left:10.7%;top:44.9%;width:20.0%;height:6.7%;"></a>
+
+  <!-- Je familieboom → profiel.html -->
+  <a class="hs" href="familiedorp.html"    style="left:77.3%;top:44.2%;width:19.2%;height:7.5%;"></a>
+
+  <!-- Je kwaliteiten → kwaliteiten.html -->
+  <a class="hs" href="kwaliteiten.html" style="left:76.9%;top:57.7%;width:19.7%;height:6.8%;"></a>
+
+  <!-- Stille vijver → kleurkompas.html -->
+  <a class="hs" href="stille_vijver.html"  style="left:14.6%;top:70.4%;width:18.3%;height:7.4%;"></a>
+
+  <!-- Brug van ontdekking → brug_ontdekking.html -->
+  <a class="hs" href="brug_ontdekking.html" style="left:71.7%;top:72.8%;width:22.0%;height:7.3%;"></a>
+
+ </div><!-- /map-inner -->
+
+  <!-- Comm overlay — op het plaatje, onderin (buiten map-inner zodat het niet meeschaalt) -->
+  <div id="comm-overlay">
+    <button class="co-btn" onclick="CommLayer.toggleChat()">
+      <span class="co-badge" data-comm-badge></span>
+      <span class="co-ico">💬</span>
+      <span class="co-lbl">Chat</span>
+    </button>
+    <div class="co-sep"></div>
+    <button class="co-btn" onclick="CommLayer.toggleCall()">
+      <span class="co-ico" data-comm-call>📞</span>
+      <span class="co-lbl" id="co-call-lbl">Bellen</span>
+    </button>
+    <div class="co-sep"></div>
+    <button class="co-btn" onclick="CommLayer.toggleSett()">
+      <span class="co-badge" data-comm-sett-badge style="display:none;background:#c8a040;"></span>
+      <span class="co-ico">⚙️</span>
+      <span class="co-lbl">Opties</span>
+    </button>
+  </div>
+
+</div><!-- /map -->
+</div><!-- /world-outer -->
+
+<!-- ── Congrats toast ─────────────────────────────────────── -->
+<div id="congrats-toast">
+  <div class="ct-emoji">🎉</div>
+  <div class="ct-title" id="ct-title">Wereld 2 vrijgespeeld!</div>
+  <div class="ct-hint">Scroll omhoog om te openen ↑</div>
+</div>
+
+<!-- ── Unlock popup ──────────────────────────────────────── -->
+<div id="unlock-popup">
+  <div class="up-card">
+    <h3>🗺 Wereld 2 — Verdieping</h3>
+    <p class="up-sub">Jullie ontdekken elkaar steeds dieper.<br>Wereld 2 opent als jullie klaar zijn.</p>
+
+    <div class="up-row">
+      <span class="up-ico">🌿</span>
+      <span class="up-txt">Minstens 5 ontdekkingen samen</span>
+      <span id="up-games-status" class="up-nd">0 / 5</span>
+    </div>
+    <div class="up-row">
+      <span class="up-ico">💳</span>
+      <span class="up-txt">Wereld 2 vrijschakelen</span>
+      <span id="up-pay-status" class="up-nd">Nog niet</span>
+    </div>
+
+    <div class="up-divider"></div>
+    <p class="up-price">€ 2,00 — één keer, samen</p>
+    <button class="up-btn-pay" id="up-pay-btn" onclick="unlockPay()">✦ Schakelen vrij</button>
+    <button class="up-btn-close" onclick="document.getElementById('unlock-popup').classList.remove('show')">Misschien later</button>
+  </div>
+</div>
+
+<!-- ── Welkom & koppel overlay ─────────────────────────── -->
+<div id="welkom-overlay">
+
+  <div style="text-align:center;">
+    <div style="font-size:3.2rem;margin-bottom:8px;">🌿</div>
+    <h1 class="wl-title">Welkom</h1>
+    <p class="wl-sub" style="margin-top:10px;">
+      Slow Dating doe je samen.<br>
+      Koppel eerst met je partner om te beginnen.
+    </p>
+  </div>
+
+  <!-- State: keuze -->
+  <div id="wl-start" class="wl-block">
+    <button class="wl-btn-gold" onclick="wlCreate()">✦ Begin samen</button>
+    <button class="wl-btn-outline" onclick="wlShowJoin()">Ik heb een koppelcode</button>
+  </div>
+
+  <!-- State: aanmaken -->
+  <div id="wl-creating" class="wl-block" style="display:none;text-align:center;align-items:center;">
+    <p class="wl-hint">Jouw koppelcode:</p>
+    <div class="wl-code-big" id="wl-code">···</div>
+    <p class="wl-hint" style="max-width:240px;line-height:1.6;">Geef deze code aan je partner<br>en wacht samen tot jullie verbonden zijn.</p>
+    <p class="wl-hint wl-dots" style="margin-top:4px;">Wachten<span>.</span><span>.</span><span>.</span></p>
+    <button class="wl-btn-ghost" style="margin-top:8px;" onclick="wlShowStart()">← Terug</button>
+  </div>
+
+  <!-- State: joinen -->
+  <div id="wl-joining" class="wl-block" style="display:none;">
+    <input id="wl-input" class="wl-input" maxlength="8" placeholder="ABCDE"
+           oninput="this.value=this.value.toUpperCase()"
+           onkeydown="if(event.key==='Enter')wlJoin()"/>
+    <p id="wl-err" class="wl-err"></p>
+    <button class="wl-btn-gold" onclick="wlJoin()">Verbinden →</button>
+    <button class="wl-btn-ghost" onclick="wlShowStart()">← Terug</button>
+  </div>
+
+</div><!-- /welkom-overlay -->
+
+<script>
+  // ── Ripple on tap ──────────────────────────────────────
+  document.querySelectorAll('.hs').forEach(el => {
+    el.addEventListener('click', function(e) {
+      const r = document.createElement('div');
+      r.className = 'ripple';
+      const rect = this.getBoundingClientRect();
+      r.style.left = (e.clientX - rect.left) + 'px';
+      r.style.top  = (e.clientY - rect.top)  + 'px';
+      this.appendChild(r);
+      setTimeout(() => r.remove(), 600);
+    });
+  });
+
+  // ── Fit map to viewport keeping image ratio (941×1672) ─
+  function fitMap() {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const imgRatio = 941 / 1672;
+    const vpRatio  = vw / vh;
+    let w, h;
+    if (vpRatio > imgRatio) { h = vh; w = h * imgRatio; }
+    else                    { w = vw; h = w / imgRatio; }
+
+    document.getElementById('map').style.width  = w + 'px';
+    document.getElementById('map').style.height = h + 'px';
+
+    // Gelockte kaarten krijgen dezelfde afmetingen
+    document.querySelectorAll('.locked-kaart').forEach(el => {
+      el.style.width  = w + 'px';
+      el.style.height = h + 'px';
+    });
+
+    // Nabijheidsbalk: exact even breed als de kaart
+    const nbBar = document.getElementById('nabijheid-bar');
+    if (nbBar) nbBar.style.width = w + 'px';
+
+    // Scroll naar kaart1 (sla gelockte kaarten boven over)
+    const outer   = document.getElementById('world-outer');
+    const locked  = document.querySelectorAll('.locked-kaart').length;
+    outer.scrollTo({ top: locked * h, behavior: 'instant' });
+  }
+  fitMap();
+  window.addEventListener('resize', () => {
+    fitMap();
+    // Herpositioneer poppetjes na resize
+    if (typeof window.__lastNbDone !== 'undefined') updateNabijheid(window.__lastNbDone);
+  });
+  // Herbereken zodra balk-img geladen is (offsetWidth beschikbaar)
+  document.getElementById('nb-img').addEventListener('load', () => {
+    fitMap();
+    if (typeof window.__lastNbDone !== 'undefined') updateNabijheid(window.__lastNbDone);
+  });
+
+  // ── Portaal: laad unlock status ────────────────────────────
+  (function() {
+    const CARDS = [
+      null, // index 0 unused
+      null, // kaart1 = huidige
+      { title: 'Wereld 2 — Verdieping', img: 'images/kaart2.webp', price: '€ 2', req: 5,  prev: 1, page: 'world2.html' },
+      { title: 'Wereld 3 — Verbinding', img: 'images/kaart3.webp', price: '€ 3', req: 10, prev: 2, page: 'world3.html' },
+      { title: 'Wereld 4 — Intimiteit', img: 'images/kaart4.webp', price: '€ 4', req: 15, prev: 3, page: 'world4.html' },
+      { title: 'Wereld 5 — Ziel',       img: 'images/kaart5.webp', price: '€ 5', req: 20, prev: 4, page: 'world5.html' },
+    ];
+    let progress = { gamesCompleted: 0, cardsUnlocked: [1], boardsCompleted: 0 };
+
+    // ── Nabijheidsgroei-balk updaten ──────────────────────────
+    // Balk loopt van 0 → 5 spellen (kaart1 vereiste)
+    // Beide figuren naderen het midden: fig1 van 0%→50%, fig2 van 100%→50%
+    function updateNabijheid(totalDone) {
+      const fig1 = document.getElementById('nb-fig1');
+      const fig2 = document.getElementById('nb-fig2');
+      if (!fig1 || !fig2) return;
+
+      // Exacte waypoints gemeten uit nabijheid_balk2.png (2804px breed):
+      //   0 games  → startpunt net na grote krul : 7.4%
+      //   5 games  → markering "2"               : 14.5%
+      //  10 games  → markering "3"               : 24.9%
+      //  15 games  → markering "4"               : 35.2%
+      //  20 games  → midden "5" (naast elkaar)   : 48.5%
+      const WAYPOINTS = [7.4, 14.5, 24.9, 35.2, 48.5];
+
+      const clamped = Math.min(Math.max(totalDone, 0), 20);
+      let pos;
+      if (clamped >= 20) {
+        pos = WAYPOINTS[4];
+      } else {
+        const seg  = Math.floor(clamped / 5);           // segment 0-3
+        const frac = (clamped % 5) / 5;                 // 0.0–1.0 binnen segment
+        pos = WAYPOINTS[seg] + frac * (WAYPOINTS[seg + 1] - WAYPOINTS[seg]);
+      }
+
+      fig1.style.left  = pos.toFixed(2) + '%';
+      fig2.style.right = pos.toFixed(2) + '%';
+      fig2.style.left  = 'auto';
+    }
+
+    let _toastTimer = null;
+    function showCongratsToast(cardTitle) {
+      const toast = document.getElementById('congrats-toast');
+      document.getElementById('ct-title').textContent = cardTitle + ' vrijgespeeld!';
+      toast.classList.add('show');
+      clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => toast.classList.remove('show'), 6000);
+    }
+
+    function renderAllPortals() {
+      const unlocked = progress.cardsUnlocked || [1];
+      const done     = progress.boardsCompleted || 0;
+      let firstReady = null;
+
+      for (let i = 2; i <= 5; i++) {
+        const card = CARDS[i];
+        const el   = document.getElementById('locked-' + i);
+        const req  = document.getElementById('lk-req-' + i);
+        const hint = document.getElementById('lk-hint-' + i);
+        const lock = el ? el.querySelector('.lk-lock') : null;
+        if (!el) continue;
+
+        const isUnlocked   = unlocked.includes(i);
+        const prevUnlocked = unlocked.includes(card.prev);
+        const isReady      = !isUnlocked && prevUnlocked && done >= card.req;
+
+        el.classList.remove('unlocked', 'ready');
+
+        if (isUnlocked) {
+          el.classList.add('unlocked');
+          // Navigeer automatisch als kaart volledig betaald/unlocked
+          if (i === 2) { window.location.href = card.page; return; }
+        } else if (isReady) {
+          el.classList.add('ready');
+          if (lock) lock.textContent = '✨';
+          if (req)  req.textContent  = `${card.price} — vrijschakelen om te openen`;
+          if (hint) hint.textContent = '↓ tik hier';
+          if (!firstReady) firstReady = card.title;
+        } else if (!prevUnlocked) {
+          if (lock) lock.textContent = '🔒';
+          if (req)  req.textContent  = `Voltooi eerst wereld ${card.prev}`;
+          if (hint) hint.textContent = '↓ tik voor meer info';
+        } else {
+          if (lock) lock.textContent = '🔒';
+          if (req)  req.textContent  = `${done} / ${card.req} ontdekkingen nodig`;
+          if (hint) hint.textContent = '↓ tik voor meer info';
+        }
+      }
+
+      // Toon toast als er een kaart ready is die nog niet eerder gezien
+      if (firstReady) {
+        const seenKey = 'congrats_seen_' + firstReady;
+        if (!localStorage.getItem(seenKey)) {
+          localStorage.setItem(seenKey, '1');
+          setTimeout(() => showCongratsToast(firstReady), 800);
+        }
+      }
+
+      // Balk updaten
+      window.__lastNbDone = progress.boardsCompleted || 0;
+      updateNabijheid(window.__lastNbDone);
+    }
+
+    window.portalClick = function(cardNum) {
+      const card     = CARDS[cardNum];
+      const unlocked = progress.cardsUnlocked || [1];
+      if (unlocked.includes(cardNum)) { window.location.href = card.page; return; }
+
+      // Vorige wereld niet unlocked → toon info alleen
+      if (!unlocked.includes(card.prev)) {
+        document.querySelector('#unlock-popup h3').textContent = '🗺 ' + card.title;
+        document.getElementById('up-games-status').textContent = `Voltooi eerst wereld ${card.prev}`;
+        document.getElementById('up-games-status').className   = 'up-nd';
+        document.getElementById('up-pay-status').textContent   = 'Nog niet beschikbaar';
+        document.getElementById('up-pay-btn').style.display    = 'none';
+        document.querySelector('.up-price').textContent        = '';
+        document.getElementById('unlock-popup').classList.add('show');
+        return;
+      }
+
+      document.getElementById('up-pay-btn').style.display = '';
+      const done = progress.boardsCompleted || 0;
+      document.querySelector('#unlock-popup h3').textContent = '🗺 ' + card.title;
+      document.getElementById('up-games-status').textContent = done + ' / ' + card.req;
+      document.getElementById('up-games-status').className   = done >= card.req ? 'up-done' : 'up-nd';
+      document.getElementById('up-pay-status').textContent   = 'Nog niet';
+      document.getElementById('up-pay-btn').textContent      = `✦ Vrijschakelen ${card.price}`;
+      document.querySelector('.up-price').textContent        = `${card.price} — één keer, samen`;
+      document.getElementById('unlock-popup').classList.add('show');
+    };
+
+    window.unlockPay = function() {
+      // Placeholder — betaling komt later
+      alert('Betaalfunctie komt binnenkort!\nVoor nu: gebruik admin code 1111 om te testen.');
+    };
+
+    // Fetch progress from backend
+    const gc = localStorage.getItem('comm_code');
+    if (gc && gc !== '1111') {
+      fetch(`${window.KOPPEL_BACKEND_URL || 'https://snakesandladdders-production.up.railway.app'}/api/progress/${gc}`)
+        .then(r => r.json())
+        .then(data => { progress = data; renderAllPortals(); })
+        .catch(() => renderAllPortals());
+    } else if (gc === '1111') {
+      // Admin: 0 spellen gedaan — test startpositie
+      progress = { gamesCompleted: 0, cardsUnlocked: [1], boardsCompleted: 0 };
+      renderAllPortals();
+    } else {
+      renderAllPortals();
+    }
+  })();
+
+  // ── Welkom gate: toon overlay als niet gekoppeld ───────────
+  (function() {
+    const gc = localStorage.getItem('comm_code');
+    if (gc) return; // al gekoppeld
+
+    const overlay = document.getElementById('welkom-overlay');
+    const commOv  = document.getElementById('comm-overlay');
+    overlay.style.display  = 'flex';
+    commOv.style.display   = 'none';
+
+    function onPaired(code, player) {
+      localStorage.setItem('comm_code', code);
+      localStorage.setItem('comm_player', player);
+      window.CommLayer?.setSession(code, player);
+      overlay.style.display = 'none';
+      commOv.style.display  = 'flex';
+    }
+
+    window.wlCreate = function() {
+      document.getElementById('wl-start').style.display    = 'none';
+      document.getElementById('wl-creating').style.display = 'flex';
+      document.getElementById('wl-creating').style.flexDirection = 'column';
+      SDClient.on('session_created', ({ code }) => {
+        document.getElementById('wl-code').textContent = code;
+      });
+      SDClient.on('both_connected', () => {
+        onPaired(SDClient.getCode(), SDClient.getPlayer());
+      });
+      SDClient.create('global');
+    };
+
+    window.wlShowJoin = function() {
+      document.getElementById('wl-start').style.display   = 'none';
+      document.getElementById('wl-joining').style.display = 'flex';
+      document.getElementById('wl-joining').style.flexDirection = 'column';
+      setTimeout(() => document.getElementById('wl-input')?.focus(), 80);
+    };
+
+    window.wlShowStart = function() {
+      document.getElementById('wl-start').style.display    = 'flex';
+      document.getElementById('wl-creating').style.display = 'none';
+      document.getElementById('wl-joining').style.display  = 'none';
+    };
+
+    window.wlJoin = function() {
+      const code = (document.getElementById('wl-input')?.value || '').trim().toUpperCase();
+      if (!code) return;
+      document.getElementById('wl-err').style.display = 'none';
+
+      // Admin bypass
+      if (code === '1111') { onPaired('1111', '1'); return; }
+
+      SDClient.on('session_joined', ({ code: c, player }) => {
+        onPaired(c, player);
+      });
+      SDClient.on('error', ({ message }) => {
+        const e = document.getElementById('wl-err');
+        e.textContent = message; e.style.display = 'block';
+      });
+      SDClient.join(code, 'global');
+    };
+  })();
+</script>
+
+<script>
+  // Service worker registreren (PWA)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+
+  // ── Pinch-zoom & pan op de kaart ──────────────────────────
+  (function() {
+    const map   = document.getElementById('map');
+    const inner = document.getElementById('map-inner');
+    if (!map || !inner) return;
+
+    let scale = 1, minScale = 1, maxScale = 4;
+    let tx = 0, ty = 0;          // pan offset
+    let startDist = 0, startScale = 1;
+    let startTx = 0, startTy = 0;
+    let startMidX = 0, startMidY = 0;
+    let lastTap = 0;
+
+    function clamp(val, lo, hi) { return Math.max(lo, Math.min(hi, val)); }
+
+    function applyTransform(animate) {
+      const w = map.offsetWidth, h = map.offsetHeight;
+      // Begrens pan zodat de kaart het scherm altijd vult
+      const maxTx = 0, minTx = w - w * scale;
+      const maxTy = 0, minTy = h - h * scale;
+      tx = clamp(tx, minTx, maxTx);
+      ty = clamp(ty, minTy, maxTy);
+      inner.style.transition = animate ? 'transform .25s ease' : 'none';
+      inner.style.transform  = `translate(${tx}px,${ty}px) scale(${scale})`;
+    }
+
+    function dist(t) {
+      const dx = t[0].clientX - t[1].clientX;
+      const dy = t[0].clientY - t[1].clientY;
+      return Math.hypot(dx, dy);
+    }
+    function midpoint(t) {
+      return {
+        x: (t[0].clientX + t[1].clientX) / 2,
+        y: (t[0].clientY + t[1].clientY) / 2,
+      };
+    }
+
+    map.addEventListener('touchstart', e => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        startDist  = dist(e.touches);
+        startScale = scale;
+        const mid  = midpoint(e.touches);
+        const rect = map.getBoundingClientRect();
+        startMidX  = mid.x - rect.left;
+        startMidY  = mid.y - rect.top;
+        startTx    = tx; startTy = ty;
+      } else if (e.touches.length === 1 && scale > 1) {
+        startTx = tx - e.touches[0].clientX;
+        startTy = ty - e.touches[0].clientY;
+      }
+      // Dubbeltik → reset zoom
+      const now = Date.now();
+      if (now - lastTap < 300 && e.touches.length === 1) {
+        scale = 1; tx = 0; ty = 0;
+        applyTransform(true);
+        // scroll-snap weer inschakelen
+        document.getElementById('world-outer').style.overflowY = 'scroll';
+      }
+      lastTap = now;
+    }, { passive: false });
+
+    map.addEventListener('touchmove', e => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const newDist = dist(e.touches);
+        scale = clamp(startScale * (newDist / startDist), minScale, maxScale);
+        // Zoom rondom het middelpunt van de pinch
+        tx = startMidX - (startMidX - startTx) * (scale / startScale);
+        ty = startMidY - (startMidY - startTy) * (scale / startScale);
+        applyTransform(false);
+        // Schakel scroll-snap uit tijdens zoom
+        document.getElementById('world-outer').style.overflowY = scale > 1 ? 'hidden' : 'scroll';
+      } else if (e.touches.length === 1 && scale > 1) {
+        e.preventDefault();
+        tx = e.touches[0].clientX + startTx;
+        ty = e.touches[0].clientY + startTy;
+        applyTransform(false);
+      }
+    }, { passive: false });
+
+    map.addEventListener('touchend', e => {
+      if (scale <= 1) {
+        scale = 1; tx = 0; ty = 0;
+        applyTransform(true);
+        document.getElementById('world-outer').style.overflowY = 'scroll';
+      }
+    });
+  })();
+</script>
+
+<!-- ══ GAME INVITE POPUP ══════════════════════════════════ -->
+<div id="game-invite-overlay" style="display:none;position:fixed;inset:0;z-index:9800;
+     background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;padding:0 0 80px;">
+  <div id="game-invite-card" style="background:#1a2a1a;border:1.5px solid rgba(200,160,64,.35);
+       border-radius:20px;padding:22px 24px 20px;max-width:360px;width:calc(100% - 32px);
+       box-shadow:0 8px 40px rgba(0,0,0,.6);animation:slideUp .3s ease-out;">
+    <div id="game-invite-icon" style="font-size:2rem;text-align:center;margin-bottom:8px;">🎮</div>
+    <div style="text-align:center;color:#e8c060;font-size:1rem;font-weight:700;margin-bottom:4px;"
+         id="game-invite-title">Partner is bij een spel</div>
+    <div style="text-align:center;color:#9ab080;font-size:.85rem;margin-bottom:18px;"
+         id="game-invite-sub">Wil je meedoen?</div>
+    <div style="display:flex;gap:10px;">
+      <button id="game-invite-no" style="flex:1;padding:12px;border-radius:14px;border:1.5px solid rgba(200,80,80,.4);
+              background:rgba(200,80,80,.12);color:#e07070;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;"
+              onclick="dismissGameInvite()">✕ Nee</button>
+      <button id="game-invite-yes" style="flex:1;padding:12px;border-radius:14px;border:none;
+              background:linear-gradient(135deg,#c8a040,#e8c060);color:#1a1208;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;"
+              onclick="acceptGameInvite()">✓ Meedoen</button>
+    </div>
+  </div>
+</div>
+<style>
+@keyframes slideUp { from { transform:translateY(30px);opacity:0; } to { transform:translateY(0);opacity:1; } }
+</style>
+<script>
+var _pendingGameUrl = null;
+var _inviteTimeout  = null;
+
+function showGameInvite(gameKey, gameName) {
+  _pendingGameUrl = gameKey + '.html';
+  const overlay = document.getElementById('game-invite-overlay');
+  const icons = { lach_samen:'😄', kennismaking:'💫', stille_vijver:'🌿', familiedorp:'🏡', kwaliteiten:'🌟', brug_ontdekking:'🌉', waarden:'⚖️' };
+  document.getElementById('game-invite-icon').textContent  = icons[gameKey] || '🎮';
+  document.getElementById('game-invite-title').textContent = 'Partner speelt ' + gameName;
+  document.getElementById('game-invite-sub').textContent   = 'Wil jij ook meedoen?';
+  overlay.style.display = 'flex';
+  // Auto-dismiss after 30s
+  clearTimeout(_inviteTimeout);
+  _inviteTimeout = setTimeout(dismissGameInvite, 30000);
+}
+
+function acceptGameInvite() {
+  const url = _pendingGameUrl;   // save before dismiss clears it
+  dismissGameInvite();
+  if (url) window.location.href = url;
+}
+
+function dismissGameInvite() {
+  clearTimeout(_inviteTimeout);
+  document.getElementById('game-invite-overlay').style.display = 'none';
+  _pendingGameUrl = null;
+}
+
+// Luister op game invites via SDClient (eenvoudig en direct)
+SDClient.onGameInvite(function(data) {
+  console.log('[world] game invite:', data);
+  showGameInvite(data.game, data.name);
+});
+</script>
+</body>
+</html>

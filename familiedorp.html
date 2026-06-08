@@ -1,0 +1,1213 @@
+﻿﻿<!DOCTYPE html>
+<html lang="nl">
+<head>
+<script src="config.js"></script>
+<script src="sd-client.js"></script>
+<script src="comm.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bouw je familiedorp</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100dvh; font-family: 'Segoe UI', system-ui, sans-serif; background: #1A0D0A; color: #f0e8d8; overflow: hidden; }
+#app { height: 100dvh; display: flex; flex-direction: column; max-width: 480px; margin: 0 auto; }
+
+.screen { display: none; flex-direction: column; flex: 1; min-height: 0; }
+.screen.active { display: flex; animation: fi .25s ease; }
+@keyframes fi { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+
+/* ── shared ── */
+.btn { display:block; width:100%; padding:14px; background:#8B3525; border:none; border-radius:14px; color:#f0e8d8; font-size:.95rem; font-weight:700; cursor:pointer; font-family:inherit; transition:background .2s; }
+.btn:hover { background:#A04030; }
+.btn-ghost { background:transparent; border:1px solid rgba(255,255,255,.2); color:#D4784A; }
+.btn-ghost:hover { background:rgba(255,255,255,.06); }
+.card { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); border-radius:18px; padding:20px; }
+.back-btn { background:none; border:none; color:#9A5840; font-size:.88rem; cursor:pointer; padding:12px 16px 6px; font-family:inherit; }
+.back-btn:hover { color:#D4784A; }
+.scroll-area { flex:1; overflow-y:auto; min-height:0; padding:0 16px 24px; }
+
+/* ── koppel screen ── */
+.koppel-header { text-align:center; padding:28px 16px 16px; }
+.koppel-header .icon { font-size:3rem; display:block; margin-bottom:8px; }
+.koppel-header h1 { font-size:1.5rem; font-weight:700; color:#D4784A; }
+.koppel-header p { font-size:.88rem; color:#9A5840; margin-top:5px; line-height:1.5; }
+.code-big { font-size:2.6rem; font-weight:800; letter-spacing:7px; color:#D4784A; font-family:monospace; text-align:center; padding:14px 0 6px; }
+.divider { display:flex; align-items:center; gap:8px; margin:12px 0; }
+.divider span { font-size:.72rem; color:#6B3028; text-transform:uppercase; }
+.divider::before,.divider::after { content:''; flex:1; height:1px; background:rgba(255,255,255,.1); }
+.code-input { flex:1; padding:11px 14px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); border-radius:10px; color:white; font-size:1rem; font-family:monospace; text-transform:uppercase; letter-spacing:3px; outline:none; }
+.err { color:#f87171; font-size:.8rem; display:none; margin-top:4px; }
+.connected-box { background:rgba(212,120,74,.08); border:1px solid rgba(212,120,74,.25); border-radius:12px; padding:14px; text-align:center; display:none; margin-top:12px; }
+.status-bar { font-size:.78rem; text-align:center; padding:5px 14px; border-radius:8px; display:none; margin:0 16px 6px; }
+
+/* ── intro screen ── */
+.intro-wrap { flex:1; overflow-y:auto; min-height:0; display:flex; flex-direction:column; gap:16px; padding:24px 16px; }
+.intro-step { display:flex; gap:12px; align-items:flex-start; }
+.intro-step .num { width:28px; height:28px; border-radius:50%; background:#8B3525; color:#f0e8d8; font-size:.8rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px; }
+.intro-step p { font-size:.9rem; color:#c8b898; line-height:1.5; }
+.safe-note { background:rgba(212,120,74,.07); border:1px solid rgba(212,120,74,.2); border-radius:12px; padding:14px; font-size:.82rem; color:#a08858; line-height:1.5; }
+
+/* ── canvas screen ── */
+#screen-canvas { position:relative; }
+.canvas-topbar { display:flex; align-items:center; gap:8px; padding:8px 12px; flex-shrink:0; border-bottom:1px solid rgba(255,255,255,.07); }
+.canvas-topbar-title { font-size:.85rem; font-weight:700; color:#D4784A; flex:1; text-align:center; }
+.canvas-topbar .done-btn { background:#8B3525; border:none; border-radius:10px; padding:6px 14px; color:#f0e8d8; font-size:.8rem; font-weight:700; cursor:pointer; font-family:inherit; }
+
+/* The village canvas */
+#village-canvas {
+  flex:1; position:relative; min-height:0; overflow:hidden;
+  background: url('images/dorp/center.webp') center/cover no-repeat;
+  touch-action: none;
+}
+.placed-item {
+  position:absolute; display:flex; flex-direction:column; align-items:center;
+  cursor:grab; user-select:none; transform:translate(-50%,-50%);
+  transition: transform .1s;
+}
+.placed-item.dragging { cursor:grabbing; z-index:100; opacity:.85; }
+.placed-item img { width:40px; height:40px; object-fit:contain; pointer-events:none; filter:drop-shadow(0 2px 4px rgba(0,0,0,.4)); }
+.placed-item.dier img { width:30px; height:30px; }
+.placed-item .item-labels { pointer-events:none; display:flex; flex-direction:column; align-items:center; gap:2px; margin-top:3px; }
+.placed-item .item-role  { font-size:.6rem; font-weight:700; color:white; background:rgba(0,0,0,.6); border-radius:6px; padding:1px 5px; max-width:72px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.placed-item .item-label { font-size:.58rem; color:#fbbf24; background:rgba(0,0,0,.55); border-radius:6px; padding:1px 5px; max-width:72px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* tray */
+.icon-tray {
+  flex-shrink:0; border-top:2px solid rgba(212,120,74,.2);
+  background:rgba(26,13,10,.92);
+  display:flex; flex-direction:column;
+  max-height:140px;
+}
+.tray-tabs { display:flex; overflow-x:auto; gap:0; border-bottom:1px solid rgba(255,255,255,.07); flex-shrink:0; }
+.tray-tab { padding:7px 14px; font-size:.72rem; font-weight:700; color:#9A5840; border:none; background:none; cursor:pointer; white-space:nowrap; font-family:inherit; flex-shrink:0; border-bottom:2px solid transparent; transition:all .15s; }
+.tray-tab.active { color:#D4784A; border-bottom-color:#D4784A; }
+.tray-icons { display:flex; overflow-x:auto; gap:8px; padding:8px 12px; flex:1; }
+.tray-icon { display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; flex-shrink:0; padding:4px; border-radius:10px; transition:background .15s; }
+.tray-icon:hover { background:rgba(212,120,74,.15); }
+.tray-icon:active { background:rgba(212,120,74,.25); }
+.tray-icon img { width:34px; height:34px; object-fit:contain; pointer-events:none; }
+.tray-icon.dier img { width:26px; height:26px; }
+.tray-icon span { font-size:.6rem; color:#9A5840; max-width:48px; text-align:center; line-height:1.2; }
+
+/* ── skin tone picker ── */
+.tone-picker {
+  position:fixed; bottom:150px; left:50%; transform:translateX(-50%);
+  background:#1E0F0A; border:1px solid rgba(212,120,74,.3);
+  border-radius:16px; padding:12px 16px; z-index:300;
+  display:none; flex-direction:column; gap:10px; box-shadow:0 8px 24px rgba(0,0,0,.5);
+}
+.tone-picker.show { display:flex; }
+.tone-picker-title { font-size:.75rem; color:#9A5840; text-align:center; }
+.tone-row { display:flex; gap:8px; justify-content:center; }
+.tone-btn {
+  width:32px; height:32px; border-radius:50%; border:2px solid transparent;
+  cursor:pointer; transition:border-color .15s; padding:0; background:none;
+  display:flex; align-items:center; justify-content:center;
+}
+.tone-btn:hover { border-color:#D4784A; }
+.tone-swatch { width:22px; height:22px; border-radius:50%; pointer-events:none; }
+.tone-default { font-size:1.1rem; }
+
+/* ── reveal chat ── */
+.reveal-chat-btn {
+  position:absolute; top:8px; right:8px;
+  background:rgba(0,0,0,.55); border:none; border-radius:20px;
+  padding:4px 10px; color:#D4784A; font-size:.8rem; cursor:pointer;
+  font-family:inherit;
+}
+.reveal-chat-panel {
+  background:rgba(26,13,10,.95); border:1px solid rgba(212,120,74,.2);
+  border-radius:12px; padding:12px; margin-top:8px; display:none;
+}
+.reveal-chat-panel.show { display:block; }
+.napraat-quick { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+.napraat-q { padding:9px 12px; background:rgba(212,120,74,.07); border:1px solid rgba(212,120,74,.15); border-radius:10px; color:#c8b898; font-size:.82rem; cursor:pointer; font-family:inherit; text-align:left; line-height:1.4; }
+.napraat-q:hover { background:rgba(212,120,74,.15); }
+.reveal-chat-input-row { display:flex; gap:6px; }
+.reveal-chat-input { flex:1; padding:8px 12px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); border-radius:20px; color:white; font-size:.82rem; font-family:inherit; outline:none; }
+.reveal-chat-send { width:34px; height:34px; border-radius:50%; background:#8B3525; border:none; color:#f0e8d8; font-size:.9rem; cursor:pointer; }
+.chat-bubble { padding:7px 11px; border-radius:12px; font-size:.82rem; margin-bottom:5px; max-width:90%; }
+.chat-bubble.me   { background:#6B3028; color:#f0e8d8; margin-left:auto; border-bottom-right-radius:3px; }
+.chat-bubble.them { background:rgba(255,255,255,.1); color:#e8d8c8; border-bottom-left-radius:3px; }
+.chat-bubbles { max-height:120px; overflow-y:auto; margin-bottom:8px; }
+
+/* ── edit modal ── */
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:200; display:none; align-items:flex-end; }
+.modal-overlay.show { display:flex; }
+.modal-sheet { background:#1E0F0A; border-radius:20px 20px 0 0; padding:20px 20px 32px; width:100%; max-height:70vh; overflow-y:auto; }
+.modal-sheet h3 { font-size:1rem; font-weight:700; color:#D4784A; margin-bottom:14px; }
+.modal-input { width:100%; padding:10px 14px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); border-radius:10px; color:white; font-size:.9rem; font-family:inherit; outline:none; margin-bottom:12px; }
+.label-chips { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px; }
+.label-chip { padding:6px 12px; border-radius:20px; font-size:.78rem; cursor:pointer; border:1px solid rgba(255,255,255,.15); color:#c8b898; background:none; font-family:inherit; transition:all .15s; }
+.label-chip.selected { background:rgba(212,120,74,.2); border-color:#D4784A; color:#D4784A; }
+.modal-actions { display:flex; gap:8px; }
+.modal-del { flex:1; padding:11px; background:rgba(248,113,113,.1); border:1px solid rgba(248,113,113,.3); border-radius:10px; color:#f87171; font-size:.88rem; font-weight:600; cursor:pointer; font-family:inherit; }
+.modal-save { flex:2; padding:11px; background:#8B3525; border:none; border-radius:10px; color:#f0e8d8; font-size:.88rem; font-weight:700; cursor:pointer; font-family:inherit; }
+
+/* ── sfeer screen ── */
+.sfeer-grid { display:flex; flex-wrap:wrap; gap:8px; padding:0 0 12px; }
+.sfeer-chip { padding:9px 14px; border-radius:20px; font-size:.85rem; cursor:pointer; border:1.5px solid rgba(255,255,255,.15); color:#c8b898; background:none; font-family:inherit; transition:all .15s; }
+.sfeer-chip.selected { background:rgba(212,120,74,.18); border-color:#D4784A; color:#D4784A; font-weight:700; }
+.sfeer-chip.disabled { opacity:.35; cursor:default; pointer-events:none; }
+.sfeer-chip.selected.disabled { opacity:1; pointer-events:auto; }
+.zin-list { display:flex; flex-direction:column; gap:8px; }
+.zin-item { padding:12px 14px; border-radius:12px; border:1.5px solid rgba(255,255,255,.12); color:#c8b898; font-size:.9rem; cursor:pointer; background:none; text-align:left; font-family:inherit; transition:all .15s; line-height:1.4; }
+.zin-item.selected { background:rgba(212,120,74,.15); border-color:#D4784A; color:#D4784A; }
+.zin-input { width:100%; padding:11px 14px; background:rgba(255,255,255,.07); border:1.5px solid rgba(255,255,255,.12); border-radius:12px; color:white; font-size:.9rem; font-family:inherit; outline:none; margin-top:8px; }
+
+/* ── wacht screen ── */
+.wacht-wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:32px 24px; text-align:center; }
+.dots { display:flex; gap:6px; }
+.dots span { width:8px; height:8px; border-radius:50%; background:#D4784A; display:inline-block; }
+.dots span:nth-child(1) { animation:pd 1.2s .0s ease-in-out infinite; }
+.dots span:nth-child(2) { animation:pd 1.2s .2s ease-in-out infinite; }
+.dots span:nth-child(3) { animation:pd 1.2s .4s ease-in-out infinite; }
+@keyframes pd { 0%,80%,100%{transform:scale(.7);opacity:.4}40%{transform:scale(1.2);opacity:1} }
+
+/* ── reveal screen ── */
+.reveal-wrap { flex:1; overflow-y:auto; min-height:0; padding:16px; display:flex; flex-direction:column; gap:14px; }
+.village-preview { border-radius:14px; overflow:hidden; position:relative; }
+.village-preview .preview-canvas { width:100%; aspect-ratio:4/3; background:url('images/dorp/center.webp') center/cover no-repeat; position:relative; }
+.village-preview .preview-label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:1px; padding:6px 12px; background:rgba(0,0,0,.5); color:#D4784A; }
+.preview-item { position:absolute; transform:translate(-50%,-50%); pointer-events:none; text-align:center; }
+.preview-item img { width:36px; height:36px; object-fit:contain; }
+.preview-item span { display:block; font-size:.55rem; color:white; background:rgba(0,0,0,.55); border-radius:6px; padding:1px 4px; white-space:nowrap; }
+.sfeer-row { display:flex; flex-wrap:wrap; gap:6px; }
+.sfeer-preview { padding:5px 12px; border-radius:16px; font-size:.78rem; background:rgba(212,120,74,.12); border:1px solid rgba(212,120,74,.25); color:#D4784A; }
+.zin-preview { font-style:italic; color:#c8b898; font-size:.9rem; text-align:center; padding:8px 14px; background:rgba(255,255,255,.05); border-radius:10px; }
+
+/* ── napraatscherm ── */
+.napraatbtn { padding:12px 14px; background:rgba(212,120,74,.08); border:1px solid rgba(212,120,74,.2); border-radius:12px; color:#c8b898; font-size:.9rem; cursor:pointer; font-family:inherit; text-align:left; line-height:1.5; transition:all .15s; }
+.napraatbtn:hover { background:rgba(212,120,74,.15); color:#D4784A; }
+
+/* ── open mic ── */
+.mic-bar { display:flex; gap:8px; align-items:center; padding:10px 0 4px; }
+.mic-btn-fd { flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
+  padding:12px; border-radius:14px; border:none; cursor:pointer; font-size:.9rem;
+  font-weight:700; font-family:inherit; transition:all .2s; }
+.mic-btn-fd.idle { background:rgba(122,196,122,.1); border:1.5px solid rgba(122,196,122,.4); color:#7ac47a; }
+.mic-btn-fd.active { background:rgba(200,80,80,.15); border:1.5px solid rgba(200,80,80,.5); color:#e07070; }
+.mic-status-fd { font-size:.72rem; color:#6B3028; text-align:center; padding:2px 0 6px; }
+.chat-toggle-fd { display:flex; align-items:center; gap:8px; padding:8px 0 4px; cursor:pointer;
+  font-size:.82rem; color:#9A5840; border-top:1px solid rgba(255,255,255,.06); margin-top:4px; }
+.chat-toggle-fd .arr { margin-left:auto; font-size:.7rem; }
+.inline-chat { display:none; flex-direction:column; gap:6px; }
+.inline-chat.open { display:flex; }
+.inline-chat-msgs { max-height:120px; overflow-y:auto; }
+.inline-chat-input-row { display:flex; gap:6px; }
+.inline-chat-input { flex:1; padding:8px 12px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); border-radius:20px; color:white; font-size:.82rem; font-family:inherit; outline:none; }
+.inline-chat-send { width:34px; height:34px; border-radius:50%; background:#8B3525; border:none; color:#f0e8d8; font-size:.9rem; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══ KOPPEL ══════════════════════════════════════════════ -->
+<div id="screen-koppel" class="screen active">
+  <div style="flex:1; overflow-y:auto; min-height:0; padding-bottom:16px;">
+    <div class="koppel-header">
+      <span class="icon">🏡</span>
+      <h1>Bouw je familiedorp</h1>
+      <p>Zet de mensen en dieren die bij jouw wereld horen op het dorpsplein — zo dichtbij of ver als het voor jou voelt.</p>
+    </div>
+    <div id="status-bar" class="status-bar"></div>
+    <div id="saved-block" style="display:none;margin:0 16px 12px;" class="card">
+      <div style="font-size:.75rem;color:#9A5840;margin-bottom:4px;">Opgeslagen koppeling</div>
+      <div id="saved-code" style="font-size:1.3rem;font-weight:800;letter-spacing:4px;color:#D4784A;font-family:monospace;margin-bottom:10px;"></div>
+      <button class="btn" onclick="fdReconnect()">Verder met partner →</button>
+      <button onclick="fdForget()" style="background:none;border:none;color:#6B3028;font-size:.78rem;cursor:pointer;text-decoration:underline;display:block;margin-top:8px;">Andere koppeling</button>
+    </div>
+    <div id="new-block" style="padding:0 16px; display:flex; flex-direction:column; gap:10px;">
+      <button class="btn" id="btn-create" onclick="fdCreate()">Maak koppelcode +</button>
+      <div id="code-display" style="display:none;" class="card">
+        <div style="font-size:.72rem;color:#9A5840;text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:4px;">Jouw code</div>
+        <div class="code-big" id="code-text"></div>
+        <div style="font-size:.75rem;color:#6B3028;text-align:center;">Deel met je partner</div>
+        <div class="dots" style="justify-content:center;margin-top:10px;"><span></span><span></span><span></span></div>
+      </div>
+      <div class="divider"><span>of</span></div>
+      <div style="font-size:.82rem;color:#9A5840;margin-bottom:2px;">Code van je partner:</div>
+      <div style="display:flex;gap:8px;">
+        <input class="code-input" id="code-input" placeholder="BOOM42" maxlength="6"
+          oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')fdJoin()">
+        <button class="btn" style="width:auto;padding:11px 16px;white-space:nowrap;" onclick="fdJoin()">Verbinden</button>
+      </div>
+      <div class="err" id="err-msg"></div>
+      <div class="connected-box" id="connected-box">
+        <div style="font-size:1.2rem;margin-bottom:4px;">✓ Beide verbonden!</div>
+        <div style="font-size:.82rem;color:#9A5840;margin-bottom:12px;">Ieder bouwt zijn eigen dorp.</div>
+        <button class="btn" onclick="goScreen('screen-intro')">Begin →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ INTRO ════════════════════════════════════════════════ -->
+<div id="screen-intro" class="screen">
+  <button class="back-btn" onclick="goScreen('screen-koppel')">← Terug</button>
+  <div class="intro-wrap">
+    <div style="text-align:center;font-size:1.2rem;font-weight:700;color:#D4784A;">Zo werkt het</div>
+    <div class="intro-step"><div class="num">1</div><p>Sleep mensen en dieren vanuit de lade naar het dorpsplein. Zet ze <strong>dichterbij jou</strong> als ze dichtbij staan in je leven, <strong>verder weg</strong> als ze er wel bij horen maar wat meer op afstand, of aan de <strong>rand</strong> als je ze er liever even kort insluit.</p></div>
+    <div class="intro-step"><div class="num">2</div><p>Geef ieder optioneel een <strong>naam of bijnaam</strong> en een <strong>lichte typering</strong> — zoals "de grappenmaker" of "de echte baas van het huis".</p></div>
+    <div class="intro-step"><div class="num">3</div><p>Kies daarna <strong>drie sfeerwoorden</strong> die typisch zijn voor jouw thuis, en één <strong>herkenbare familiezin</strong>.</p></div>
+    <div class="intro-step"><div class="num">4</div><p>Als jullie <strong>allebei klaar</strong> zijn, openen jullie elkaars dorp tegelijk.</p></div>
+    <div class="safe-note">🌿 Deel alleen wat goed voelt. Je hoeft niemand te benoemen die je er liever buiten houdt. Je mag altijd een "mysteriepersoon" plaatsen of zeggen: "hier kom ik later op terug."</div>
+    <button class="btn" onclick="startCanvas()">Bouw mijn dorp →</button>
+  </div>
+</div>
+
+<!-- ══ CANVAS ═══════════════════════════════════════════════ -->
+<div id="screen-canvas" class="screen">
+  <div class="canvas-topbar">
+    <button class="back-btn" style="padding:4px 0;" onclick="goScreen('screen-intro')">←</button>
+    <div class="canvas-topbar-title">🏡 Familiedorp</div>
+    <button class="done-btn" onclick="goScreen('screen-sfeer')">Klaar →</button>
+  </div>
+  <div id="village-canvas"></div>
+  <div class="icon-tray" id="icon-tray">
+    <div class="tray-tabs" id="tray-tabs"></div>
+    <div class="tray-icons" id="tray-icons"></div>
+  </div>
+</div>
+
+<!-- ══ SKIN TONE PICKER ══════════════════════════════════════ -->
+<div class="tone-picker" id="tone-picker">
+  <div class="tone-picker-title">Kies huidskleur</div>
+  <div class="tone-row" id="tone-row"></div>
+  <button onclick="closeTonePicker()" style="background:none;border:none;color:#6B3028;font-size:.75rem;cursor:pointer;font-family:inherit;text-align:center;">Annuleer</button>
+</div>
+
+<!-- ══ EDIT MODAL ════════════════════════════════════════════ -->
+<div class="modal-overlay" id="edit-modal" onclick="closeModal(event)">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <h3>✏️ Bewerk dit poppetje</h3>
+    <input class="modal-input" id="edit-name" placeholder="Naam of bijnaam (optioneel)" maxlength="20">
+    <div style="font-size:.78rem;color:#9A5840;margin-bottom:8px;">Typering (optioneel):</div>
+    <div class="label-chips" id="label-chips"></div>
+    <div class="modal-actions">
+      <button class="modal-del" onclick="deleteItem()">🗑 Verwijder</button>
+      <button class="modal-save" onclick="saveItem()">Opslaan ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SFEER ════════════════════════════════════════════════ -->
+<div id="screen-sfeer" class="screen">
+  <button class="back-btn" onclick="goScreen('screen-canvas')">← Terug</button>
+  <div class="scroll-area" style="padding-top:8px;">
+    <div style="font-size:1.1rem;font-weight:700;color:#D4784A;margin-bottom:4px;">Hoe voelt jouw thuis?</div>
+    <div style="font-size:.82rem;color:#9A5840;margin-bottom:14px;">Kies drie woorden die typisch zijn.</div>
+    <div class="sfeer-grid" id="sfeer-chips"></div>
+    <button class="btn" id="btn-sfeer-next" style="margin-top:8px;opacity:.4;pointer-events:none;" onclick="goScreen('screen-zin')">Volgende →</button>
+  </div>
+</div>
+
+<!-- ══ ZIN ══════════════════════════════════════════════════ -->
+<div id="screen-zin" class="screen">
+  <button class="back-btn" onclick="goScreen('screen-sfeer')">← Terug</button>
+  <div class="scroll-area" style="padding-top:8px;">
+    <div style="font-size:1.1rem;font-weight:700;color:#D4784A;margin-bottom:4px;">De typische familiezin</div>
+    <div style="font-size:.82rem;color:#9A5840;margin-bottom:14px;">Welke zin klinkt het meest als jouw thuis? Kies of schrijf er zelf één.</div>
+    <div class="zin-list" id="zin-list"></div>
+    <input class="zin-input" id="zin-eigen" placeholder="Of schrijf je eigen familiezin..." maxlength="60" oninput="onZinEigen()">
+    <button class="btn" id="btn-zin-next" style="margin-top:16px;opacity:.4;pointer-events:none;" onclick="bevestigEnWacht()">Klaar om te delen →</button>
+  </div>
+</div>
+
+<!-- ══ WACHT ════════════════════════════════════════════════ -->
+<div id="screen-wacht" class="screen">
+  <div class="wacht-wrap">
+    <div style="font-size:3rem;">⏳</div>
+    <div style="font-size:1.2rem;font-weight:700;color:#D4784A;">Jouw dorp is klaar!</div>
+    <div style="font-size:.88rem;color:#9A5840;">Wacht tot je partner ook klaar is...</div>
+    <div class="dots"><span></span><span></span><span></span></div>
+    <div style="font-size:.78rem;color:#4A1A12;margin-top:8px;">Jullie dorpen openen tegelijk.</div>
+  </div>
+</div>
+
+<!-- ══ REVEAL ═══════════════════════════════════════════════ -->
+<div id="screen-reveal" class="screen">
+  <div class="canvas-topbar">
+    <div class="canvas-topbar-title" style="text-align:left;padding-left:0;">✨ Jullie familiedorpen</div>
+    <button class="done-btn" onclick="goScreen('screen-napraat')">Verder →</button>
+  </div>
+  <div class="reveal-wrap" id="reveal-wrap">
+    <!-- filled by JS -->
+  </div>
+</div>
+
+<!-- ══ NAPRAAT ══════════════════════════════════════════════ -->
+<div id="screen-napraat" class="screen">
+  <div class="canvas-topbar">
+    <button class="back-btn" style="padding:4px 0;" onclick="goScreen('screen-reveal')">←</button>
+    <div class="canvas-topbar-title">Praat er verder over</div>
+  </div>
+  <div class="scroll-area" style="padding-top:12px; display:flex; flex-direction:column; gap:10px;">
+    <!-- Bellen via CommLayer -->
+    <div class="mic-bar">
+      <button class="mic-btn-fd idle" onclick="CommLayer.toggleCall()" style="flex:1;">
+        <span data-comm-call>📵</span> Bellen
+      </button>
+      <button class="mic-btn-fd idle" onclick="CommLayer.toggleChat()" style="flex:1;">
+        <span class="co-badge" data-comm-badge style="display:none;"></span>💬 Chat
+      </button>
+    </div>
+
+    <!-- Chat (inklapbaar) -->
+    <div class="chat-toggle-fd" onclick="fdToggleChat()">
+      💬 Of chat <span class="arr" id="fd-chat-arr">▼</span>
+    </div>
+    <div class="inline-chat" id="fd-inline-chat">
+      <div class="inline-chat-msgs" id="fd-chat-msgs">
+        <!-- chat bubbles via JS -->
+      </div>
+      <div class="inline-chat-input-row">
+        <input class="inline-chat-input" id="fd-chat-input" placeholder="Schrijf iets..."
+               onkeydown="if(event.key==='Enter')fdSendChat()"/>
+        <button class="inline-chat-send" onclick="fdSendChat()">↑</button>
+      </div>
+    </div>
+
+    <div style="font-size:.82rem;color:#9A5840;margin-top:4px;">Of kies een gespreksthema:</div>
+    <div id="napraat-vragen"></div>
+    <button class="btn" style="margin-top:8px;" onclick="window.location.href='world.html'">← Terug naar de kaart</button>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+'use strict';
+const ADMIN = '1111';
+
+// ══════════════════════════════════════════════════════════
+// DATA — OpenMoji via CDN
+// ══════════════════════════════════════════════════════════
+
+const OM = code => `https://cdn.jsdelivr.net/npm/openmoji@15.1.0/color/svg/${code}.svg`;
+
+const TRAY_CATS = [
+  { id:'ouders', label:'Ouders', items:[
+    { id:'vader',      img:OM('1F468'),             role:'vader',       tone:true },
+    { id:'moeder',     img:OM('1F469'),             role:'moeder',      tone:true },
+    { id:'vader-grijs',img:OM('1F9D1-200D-1F9B3'), role:'vader (grijs)',tone:true },
+    { id:'moeder-grijs',img:OM('1F469-200D-1F9B3'),role:'moeder (grijs)',tone:true },
+    { id:'pleegvader', img:OM('1F468'),             role:'pleegvader',  tone:true },
+    { id:'pleegmoeder',img:OM('1F469'),             role:'pleegmoeder', tone:true },
+    { id:'verzorger',  img:OM('1F9D1'),             role:'verzorger',   tone:true },
+    { id:'stiefvader', img:OM('1F468'),             role:'stiefvader',  tone:true },
+    { id:'stiefmoeder',img:OM('1F469'),             role:'stiefmoeder', tone:true },
+  ]},
+  { id:'kinderen', label:'Kinderen', items:[
+    { id:'baby',      img:OM('1F476'), role:'baby',      tone:true },
+    { id:'broertje',  img:OM('1F466'), role:'broertje',  tone:true },
+    { id:'zusje',     img:OM('1F467'), role:'zusje',     tone:true },
+    { id:'broer',     img:OM('1F466'), role:'broer',     tone:true },
+    { id:'zus',       img:OM('1F467'), role:'zus',       tone:true },
+    { id:'halfbroer', img:OM('1F466'), role:'halfbroer', tone:true },
+    { id:'halfzus',   img:OM('1F467'), role:'halfzus',   tone:true },
+    { id:'pleegkind', img:OM('1F9D2'), role:'pleegkind', tone:true },
+    { id:'tiener',    img:OM('1F9D1'), role:'tiener',    tone:true },
+  ]},
+  { id:'grootouders', label:'Grootouders', items:[
+    { id:'opa',    img:OM('1F474'), role:'opa',    tone:true },
+    { id:'oma',    img:OM('1F475'), role:'oma',    tone:true },
+    { id:'overopa',img:OM('1F474'), role:'overopa',tone:true },
+    { id:'overoma',img:OM('1F475'), role:'overoma',tone:true },
+  ]},
+  { id:'familie', label:'Familie', items:[
+    { id:'oom',       img:OM('1F468'), role:'oom',       tone:true },
+    { id:'tante',     img:OM('1F469'), role:'tante',     tone:true },
+    { id:'neef',      img:OM('1F466'), role:'neef',      tone:true },
+    { id:'nicht',     img:OM('1F467'), role:'nicht',     tone:true },
+    { id:'familielid',img:OM('1F9D1'), role:'familielid',tone:true },
+  ]},
+  { id:'mensen', label:'Mensen', items:[
+    { id:'vriend',   img:OM('1F468'), role:'vriend',         tone:true },
+    { id:'vriendin', img:OM('1F469'), role:'vriendin',       tone:true },
+    { id:'buurman',  img:OM('1F468'), role:'buurman',        tone:true },
+    { id:'buurvrouw',img:OM('1F469'), role:'buurvrouw',      tone:true },
+    { id:'speciaal', img:OM('1F9D1'), role:'speciaal iemand',tone:true },
+    { id:'mysterie', img:OM('2753'),  role:'mysterie',       tone:false },
+  ]},
+  { id:'dieren', label:'Dieren', dier:true, items:[
+    { id:'hond',     img:OM('1F415'), role:'hond',       tone:false },
+    { id:'kat',      img:OM('1F408'), role:'kat',        tone:false },
+    { id:'konijn',   img:OM('1F430'), role:'konijn',     tone:false },
+    { id:'paard',    img:OM('1F434'), role:'paard',      tone:false },
+    { id:'vogel',    img:OM('1F426'), role:'vogel',      tone:false },
+    { id:'vis',      img:OM('1F41F'), role:'vis',        tone:false },
+    { id:'schildpad',img:OM('1F422'), role:'schildpad',  tone:false },
+    { id:'kip',      img:OM('1F413'), role:'kip',        tone:false },
+    { id:'poedel',   img:OM('1F429'), role:'poedel',     tone:false },
+    { id:'vos',      img:OM('1F98A'), role:'vos',        tone:false },
+    { id:'ander',    img:OM('1F43E'), role:'ander dier', tone:false },
+  ]},
+];
+
+const LABELS = [
+  'de regelaar','de grappenmaker','de stille kracht','de sfeermaker',
+  'de denker','de zorgzame','de chaoot','de keukenheld',
+  'de appgroep-koning(in)','de altijd-te-laat-persoon','de doe-maar-normaal-persoon',
+  'de mopperaar met een goed hart','de praktische helper','de verhalenverteller',
+  'de rustbrenger','de vragensteller','de eeuwige optimist','de echte baas van het huis',
+  // dieren
+  'de echte baas','de knuffelkoning','de herrieschopper','de bankbezetter',
+  'de chaosmotor','de trouwe schaduw','de snackinspecteur','de slaapkampioen','de dramaqueen',
+];
+
+const SFEER_OPTIES = [
+  'gezellig druk','rustig','praktisch','chaotisch maar warm','veel humor',
+  'veel eten','veel praten','weinig woorden, wel betrokken','iedereen bemoeit zich ermee',
+  'iedereen doet zijn eigen ding','veel plannen','veel improviseren',
+  'altijd koffie of thee','altijd iemand te laat','veel dieren',
+  'veel verhalen','veel doe-maar-normaal','veel zorg voor elkaar',
+  'soms ingewikkeld','liever kort houden',
+];
+
+const ZIN_OPTIES = [
+  'Heb je wel genoeg gegeten?',
+  'Doe even normaal.',
+  'Wie heeft de oplader?',
+  'We gaan over vijf minuten weg.',
+  'Zet de waterkoker maar aan.',
+  'Dat kan nog best.',
+  'Niet zo moeilijk doen.',
+  'Vroeger deden we dat ook zo.',
+  'Waar is de afstandsbediening?',
+  'Neem nog wat mee voor onderweg.',
+  'Ik zeg niks, maar...',
+  'Gezellig dat je er bent.',
+  'We hadden toch afgesproken om op tijd te zijn?',
+  'Er is altijd nog plek voor taart.',
+  'Kom, we doen gewoon alsof dit gepland was.',
+];
+
+const NAPRAAT_VRAGEN = [
+  'Wie zou ik op een verjaardag bij jullie meteen herkennen?',
+  'Wie zorgt bij jullie voor de meeste gezelligheid?',
+  'Wie is het grappigste personage in jouw familiedorp?',
+  'Wie staat dichterbij dan mensen misschien zouden verwachten?',
+  'Welk dier of mens is eigenlijk de baas?',
+  'Wat is typisch aan jouw familie of thuiswereld?',
+  'Wat neem jij graag mee uit jouw thuis?',
+  'Wat laat je liever nog even voor later?',
+];
+
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+let S = {
+  player: null, adminMode: false, code: null,
+  placedItems: [],     // { uid, assetId, role, imgSrc, name, label, x, y }
+  sfeer: [],           // max 3
+  zin: '',
+  activeCat: 'ouders', // start tab
+  editUid: null,
+  partnerData: null,
+};
+let uidCounter = 0;
+function newUid() { return 'item_' + (++uidCounter); }
+
+// ══════════════════════════════════════════════════════════
+// SCREENS
+// ══════════════════════════════════════════════════════════
+function goScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ══════════════════════════════════════════════════════════
+// KOPPEL
+// ══════════════════════════════════════════════════════════
+function saveKoppel(code, player) {
+  localStorage.setItem('fd_code', code);
+  localStorage.setItem('fd_player', player);
+  localStorage.setItem('fd_ts', Date.now());
+}
+function loadKoppel() {
+  const code = localStorage.getItem('fd_code');
+  const player = localStorage.getItem('fd_player');
+  const age = Date.now() - parseInt(localStorage.getItem('fd_ts') || '0');
+  if (!code || age > 86400000) return null;
+  return { code, player };
+}
+function clearKoppel() { ['fd_code','fd_player','fd_ts'].forEach(k => localStorage.removeItem(k)); }
+
+(function initKoppel() {
+  const saved = loadKoppel();
+  if (saved && saved.code !== ADMIN) {
+    document.getElementById('saved-block').style.display = 'block';
+    document.getElementById('saved-code').textContent = saved.code;
+    document.getElementById('new-block').style.display = 'none';
+  }
+})();
+
+function setupCb() {
+  KoppelClient.on('both_connected', () => {
+    if (localStorage.getItem('comm_code')) { goScreen('screen-intro'); return; }
+    document.getElementById('connected-box').style.display = 'block';
+    document.getElementById('code-display') && (document.getElementById('code-display').querySelector('.dots').style.display='none');
+  });
+  KoppelClient.on('complete', ({ state }) => onBothDone(state));
+  KoppelClient.on('error', ({ message }) => showErr(message));
+}
+
+function fdCreate() {
+  const btn = document.getElementById('btn-create');
+  btn.textContent='Verbinden...'; btn.disabled=true;
+  setStatus('Verbinding maken...', false);
+  setupCb();
+  KoppelClient.on('session_created', ({ code, player }) => {
+    S.player=player; S.code=code;
+    saveKoppel(code, player);
+    document.getElementById('code-text').textContent = code;
+    document.getElementById('code-display').style.display = 'block';
+    btn.textContent='Maak koppelcode +'; btn.disabled=false;
+    setStatus('',false);
+  });
+  KoppelClient.create('familiedorp');
+  setTimeout(() => {
+    if (!KoppelClient.isActive()) { btn.textContent='Maak koppelcode +'; btn.disabled=false; setStatus('Geen verbinding. Backend actief?', true); }
+  }, 6000);
+}
+
+function fdJoin() {
+  const code = document.getElementById('code-input').value.trim().toUpperCase();
+  if (!code) return showErr('Voer een code in.');
+  if (code === ADMIN) { S.player='1'; S.adminMode=true; S.code=ADMIN; saveKoppel(ADMIN,'1'); document.getElementById('connected-box').style.display='block'; return; }
+  setStatus('Verbinden...', false);
+  setupCb();
+  KoppelClient.on('session_joined', ({ player }) => { S.player=player; S.code=code; saveKoppel(code,player); hideErr(); setStatus('',false); });
+  KoppelClient.join(code, 'familiedorp');
+}
+
+function fdReconnect() {
+  const saved = loadKoppel();
+  if (!saved) return fdForget();
+  if (saved.code === ADMIN) { S.player='1'; S.adminMode=true; S.code=ADMIN; document.getElementById('connected-box').style.display='block'; return; }
+  S.player=saved.player; S.code=saved.code;
+  setupCb();
+  KoppelClient.on('session_joined', ({ player }) => { S.player=player; saveKoppel(saved.code,player); setStatus('',false); });
+  KoppelClient.join(saved.code, 'familiedorp');
+}
+
+function fdForget() {
+  clearKoppel();
+  document.getElementById('saved-block').style.display='none';
+  document.getElementById('new-block').style.display='flex';
+}
+
+function showErr(m) { const e=document.getElementById('err-msg'); e.textContent=m; e.style.display='block'; }
+function hideErr() { document.getElementById('err-msg').style.display='none'; }
+function setStatus(m, isErr) {
+  const el=document.getElementById('status-bar');
+  if (!m) { el.style.display='none'; return; }
+  el.textContent=m;
+  el.style.cssText=`display:block;background:${isErr?'rgba(248,113,113,.1)':'rgba(212,120,74,.07)'};color:${isErr?'#f87171':'#9A5840'};border:1px solid ${isErr?'#f8717144':'#D4784A44'};border-radius:8px;font-size:.78rem;text-align:center;padding:5px 14px;margin:0 0 6px;`;
+}
+
+// ══════════════════════════════════════════════════════════
+// CANVAS
+// ══════════════════════════════════════════════════════════
+function startCanvas() {
+  buildTray();
+  goScreen('screen-canvas');
+  S.placedItems.forEach(item => renderItem(item));
+  if (S.placedItems.length === 0) showSelfTonePicker();
+}
+
+function showSelfTonePicker() {
+  let geslacht = 'man';
+  try { const p = JSON.parse(localStorage.getItem('koppel_profiel')||'{}'); if(p.geslacht==='vrouw') geslacht='vrouw'; } catch(e){}
+  const baseCode = geslacht === 'vrouw' ? '1F469' : '1F468';
+
+  const picker = document.getElementById('tone-picker');
+  picker.querySelector('.tone-picker-title').textContent = 'Kies jouw huidskleur';
+  const annuleer = picker.querySelector('button[onclick="closeTonePicker()"]');
+  if (annuleer) annuleer.style.display = 'none';
+
+  const row = document.getElementById('tone-row');
+  row.innerHTML = '';
+  TONES.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'tone-btn';
+    btn.innerHTML = t.code === null
+      ? '<span class="tone-default">&#128528;</span>'
+      : `<span class="tone-swatch" style="background:${t.color}"></span>`;
+    btn.title = t.label;
+    btn.onclick = () => placeSelf(baseCode, t.code);
+    row.appendChild(btn);
+  });
+  picker.classList.add('show');
+}
+
+function placeSelf(baseCode, toneCode) {
+  const finalCode = applyTone(baseCode, toneCode);
+  const picker = document.getElementById('tone-picker');
+  picker.classList.remove('show');
+  const annuleer = picker.querySelector('button[onclick="closeTonePicker()"]');
+  if (annuleer) annuleer.style.display = '';
+  const selfItem = { uid:newUid(), assetId:'zelf', role:'ikzelf', imgSrc:OM(finalCode), name:'ik', label:'', x:0.5, y:0.5 };
+  S.placedItems.push(selfItem);
+  renderItem(selfItem);
+  showCanvasHint('Jijzelf staat in het midden. Sleep om te verplaatsen.');
+}
+
+function buildTray() {
+  const tabs = document.getElementById('tray-tabs');
+  tabs.innerHTML = '';
+  TRAY_CATS.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'tray-tab' + (cat.id === S.activeCat ? ' active' : '');
+    btn.textContent = cat.label;
+    btn.onclick = () => { S.activeCat = cat.id; buildTray(); };
+    tabs.appendChild(btn);
+  });
+  buildTrayIcons();
+}
+
+function buildTrayIcons() {
+  const wrap = document.getElementById('tray-icons');
+  wrap.innerHTML = '';
+  const cat = TRAY_CATS.find(c => c.id === S.activeCat);
+  if (!cat) return;
+  const isDierCat = !!cat.dier;
+  cat.items.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'tray-icon' + (isDierCat ? ' dier' : '');
+    div.innerHTML = `<img src="${item.img}" alt="${item.role}"><span>${item.role}</span>`;
+    div.onclick = () => pickFromTray(item);
+    wrap.appendChild(div);
+  });
+}
+
+// ── Skin tones ────────────────────────────────────────────
+const TONES = [
+  { code: null,     color: '#ffd93b', label: 'standaard' },
+  { code: '1F3FB',  color: '#fde0b7', label: 'licht' },
+  { code: '1F3FC',  color: '#f3c290', label: 'licht-midden' },
+  { code: '1F3FD',  color: '#d49b6e', label: 'midden' },
+  { code: '1F3FE',  color: '#a06535', label: 'donker-midden' },
+  { code: '1F3FF',  color: '#5c3217', label: 'donker' },
+];
+
+// Emojis die skin tone ondersteunen (basis code)
+const TONE_SUPPORTED = new Set([
+  '1F468','1F469','1F9D1','1F476','1F466','1F467','1F9D2',
+  '1F474','1F475','1F9D3','1F471-200D-2642-FE0F','1F471-200D-2640-FE0F',
+  '1F9D1-200D-1F9B3','1F9D1-200D-1F9B2','1F469-200D-1F9B2',
+]);
+
+function applyTone(baseCode, toneCode) {
+  if (!toneCode) return baseCode;
+  // ZWJ compound: insert tone after first segment
+  if (baseCode.includes('-200D-')) {
+    const idx = baseCode.indexOf('-200D-');
+    return baseCode.slice(0, idx) + '-' + toneCode + baseCode.slice(idx);
+  }
+  return baseCode + '-' + toneCode;
+}
+
+let pendingTrayItem = null;
+
+// Picking from tray: tap icon → skin tone picker if person, else direct
+let pendingItem = null;
+function pickFromTray(item) {
+  if (item.tone) {
+    const baseCode = item.img.replace('https://cdn.jsdelivr.net/npm/openmoji@15.1.0/color/svg/','').replace('.svg','');
+    pendingTrayItem = { ...item, baseCode };
+    showTonePicker();
+  } else {
+    startPlacing(item);
+  }
+}
+
+function showTonePicker() {
+  const row = document.getElementById('tone-row');
+  row.innerHTML = '';
+  TONES.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'tone-btn';
+    if (t.code === null) {
+      btn.innerHTML = `<span class="tone-default">😐</span>`;
+    } else {
+      btn.innerHTML = `<span class="tone-swatch" style="background:${t.color}"></span>`;
+    }
+    btn.title = t.label;
+    btn.onclick = () => applyToneAndPlace(t.code);
+    row.appendChild(btn);
+  });
+  document.getElementById('tone-picker').classList.add('show');
+}
+
+function applyToneAndPlace(toneCode) {
+  const item = pendingTrayItem;
+  document.getElementById('tone-picker').classList.remove('show');
+  if (!item) return;
+  const finalCode = applyTone(item.baseCode, toneCode);
+  startPlacing({ ...item, img: OM(finalCode) });
+  pendingTrayItem = null;
+}
+
+function closeTonePicker() {
+  document.getElementById('tone-picker').classList.remove('show');
+  pendingTrayItem = null;
+}
+
+function startPlacing(item) {
+  pendingItem = item;
+  const canvas = document.getElementById('village-canvas');
+  canvas.style.cursor = 'crosshair';
+  showCanvasHint('Tik op het dorpsplein om ' + item.role + ' te plaatsen...');
+}
+
+function showCanvasHint(msg) {
+  let h = document.getElementById('canvas-hint');
+  if (!h) {
+    h = document.createElement('div');
+    h.id = 'canvas-hint';
+    h.style.cssText = 'position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#D4784A;font-size:.75rem;padding:5px 12px;border-radius:20px;pointer-events:none;z-index:50;white-space:nowrap;';
+    document.getElementById('village-canvas').appendChild(h);
+  }
+  h.textContent = msg;
+  h.style.display = 'block';
+  clearTimeout(h._t);
+  h._t = setTimeout(() => { h.style.display='none'; pendingItem=null; document.getElementById('village-canvas').style.cursor=''; }, 5000);
+}
+
+// Canvas click = place pending item
+document.getElementById('village-canvas').addEventListener('pointerdown', function(e) {
+  if (e.target.closest('.placed-item')) return; // handled by item
+  if (!pendingItem) return;
+  const rect = this.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top) / rect.height;
+  placeItem(pendingItem, x, y);
+  pendingItem = null;
+  this.style.cursor = '';
+  const h = document.getElementById('canvas-hint');
+  if (h) h.style.display = 'none';
+});
+
+function placeItem(trayItem, x, y) {
+  const uid = newUid();
+  const item = { uid, assetId: trayItem.id, role: trayItem.role, imgSrc: trayItem.img, name: '', label: '', x, y };
+  S.placedItems.push(item);
+  renderItem(item);
+}
+
+function renderItem(item) {
+  const canvas = document.getElementById('village-canvas');
+  let el = document.getElementById('pi_' + item.uid);
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'pi_' + item.uid;
+    const isDier = TRAY_CATS.find(c => c.dier)?.items.some(i => i.id === item.assetId);
+    el.className = 'placed-item' + (isDier ? ' dier' : '');
+    el.innerHTML = `
+      <img src="${item.imgSrc}" alt="${item.role}">
+      <div class="item-labels">
+        <div class="item-role"></div>
+        <div class="item-label"></div>
+      </div>`;
+    canvas.appendChild(el);
+    makeDraggable(el, item);
+    el.addEventListener('click', ev => { ev.stopPropagation(); openModal(item.uid); });
+  }
+  el.style.left = (item.x * 100) + '%';
+  el.style.top  = (item.y * 100) + '%';
+  el.querySelector('.item-role').textContent  = item.name || item.role;
+  const lblEl = el.querySelector('.item-label');
+  lblEl.textContent = item.label || '';
+  lblEl.style.display = item.label ? 'block' : 'none';
+}
+
+function makeDraggable(el, item) {
+  let startX, startY, startLeft, startTop, isDragging = false;
+  el.addEventListener('pointerdown', e => {
+    e.stopPropagation();
+    isDragging = false;
+    const canvas = document.getElementById('village-canvas');
+    const rect = canvas.getBoundingClientRect();
+    startX = e.clientX; startY = e.clientY;
+    startLeft = item.x; startTop = item.y;
+    el.setPointerCapture(e.pointerId);
+
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp, { once: true });
+
+    function onMove(e2) {
+      const dx = e2.clientX - startX;
+      const dy = e2.clientY - startY;
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) isDragging = true;
+      if (!isDragging) return;
+      item.x = Math.max(0, Math.min(1, startLeft + dx / rect.width));
+      item.y = Math.max(0, Math.min(1, startTop  + dy / rect.height));
+      el.style.left = (item.x * 100) + '%';
+      el.style.top  = (item.y * 100) + '%';
+      el.classList.add('dragging');
+    }
+    function onUp() {
+      el.removeEventListener('pointermove', onMove);
+      el.classList.remove('dragging');
+      if (!isDragging) { closeTonePicker(); openModal(item.uid); }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// EDIT MODAL
+// ══════════════════════════════════════════════════════════
+function openModal(uid) {
+  S.editUid = uid;
+  const item = S.placedItems.find(i => i.uid === uid);
+  if (!item) return;
+  document.getElementById('edit-name').value = item.name || '';
+  buildLabelChips(item.label);
+  document.getElementById('edit-modal').classList.add('show');
+}
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('edit-modal')) return;
+  document.getElementById('edit-modal').classList.remove('show');
+  S.editUid = null;
+}
+function buildLabelChips(selected) {
+  const wrap = document.getElementById('label-chips');
+  wrap.innerHTML = '';
+  LABELS.forEach(l => {
+    const btn = document.createElement('button');
+    btn.className = 'label-chip' + (l === selected ? ' selected' : '');
+    btn.textContent = l;
+    btn.onclick = () => {
+      wrap.querySelectorAll('.label-chip').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    };
+    wrap.appendChild(btn);
+  });
+}
+function saveItem() {
+  const item = S.placedItems.find(i => i.uid === S.editUid);
+  if (!item) return;
+  item.name = document.getElementById('edit-name').value.trim();
+  const sel = document.querySelector('#label-chips .label-chip.selected');
+  item.label = sel ? sel.textContent : '';
+  renderItem(item);
+  document.getElementById('edit-modal').classList.remove('show');
+  S.editUid = null;
+}
+function deleteItem() {
+  if (!S.editUid) return;
+  S.placedItems = S.placedItems.filter(i => i.uid !== S.editUid);
+  const el = document.getElementById('pi_' + S.editUid);
+  if (el) el.remove();
+  document.getElementById('edit-modal').classList.remove('show');
+  S.editUid = null;
+}
+
+// ══════════════════════════════════════════════════════════
+// SFEER
+// ══════════════════════════════════════════════════════════
+(function buildSfeer() {
+  const wrap = document.getElementById('sfeer-chips');
+  SFEER_OPTIES.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'sfeer-chip';
+    btn.textContent = s;
+    btn.onclick = () => toggleSfeer(btn, s);
+    wrap.appendChild(btn);
+  });
+})();
+
+function toggleSfeer(btn, s) {
+  if (btn.classList.contains('selected')) {
+    btn.classList.remove('selected');
+    S.sfeer = S.sfeer.filter(x => x !== s);
+  } else {
+    if (S.sfeer.length >= 3) return;
+    btn.classList.add('selected');
+    S.sfeer.push(s);
+  }
+  const n = S.sfeer.length;
+  document.querySelectorAll('.sfeer-chip:not(.selected)').forEach(b => b.classList.toggle('disabled', n >= 3));
+  const nextBtn = document.getElementById('btn-sfeer-next');
+  nextBtn.style.opacity = n === 3 ? '1' : '.4';
+  nextBtn.style.pointerEvents = n === 3 ? 'auto' : 'none';
+}
+
+// ══════════════════════════════════════════════════════════
+// ZIN
+// ══════════════════════════════════════════════════════════
+(function buildZin() {
+  const wrap = document.getElementById('zin-list');
+  ZIN_OPTIES.forEach(z => {
+    const btn = document.createElement('button');
+    btn.className = 'zin-item';
+    btn.textContent = z;
+    btn.onclick = () => selectZin(btn, z);
+    wrap.appendChild(btn);
+  });
+})();
+
+function selectZin(btn, z) {
+  document.querySelectorAll('.zin-item').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('zin-eigen').value = '';
+  S.zin = z;
+  updateZinBtn();
+}
+function onZinEigen() {
+  document.querySelectorAll('.zin-item').forEach(b => b.classList.remove('selected'));
+  S.zin = document.getElementById('zin-eigen').value.trim();
+  updateZinBtn();
+}
+function updateZinBtn() {
+  const btn = document.getElementById('btn-zin-next');
+  const ok = S.zin.length > 0;
+  btn.style.opacity = ok ? '1' : '.4';
+  btn.style.pointerEvents = ok ? 'auto' : 'none';
+}
+
+// ══════════════════════════════════════════════════════════
+// KLAAR / WACHT
+// ══════════════════════════════════════════════════════════
+function bevestigEnWacht() {
+  goScreen('screen-wacht');
+  const data = {
+    placedItems: S.placedItems.map(i => ({ assetId:i.assetId, role:i.role, imgSrc:i.imgSrc, name:i.name, label:i.label, x:i.x, y:i.y })),
+    sfeer: S.sfeer,
+    zin: S.zin,
+  };
+  if (S.adminMode) {
+    setTimeout(() => onBothDone({ p1: data, p2: { ...data, sfeer:['chaotisch maar warm','veel humor','altijd iemand te laat'], zin:'Heb je wel genoeg gegeten?' } }), 1000);
+  } else {
+    KoppelClient.done(data);
+  }
+}
+
+function onBothDone(state) {
+  const myKey   = S.player === '1' ? 'p1' : 'p2';
+  const themKey = S.player === '1' ? 'p2' : 'p1';
+  S.partnerData = state[themKey];
+  buildReveal(state[myKey], state[themKey]);
+  goScreen('screen-reveal');
+}
+
+// ══════════════════════════════════════════════════════════
+// REVEAL
+// ══════════════════════════════════════════════════════════
+function buildReveal(myData, themData) {
+  const wrap = document.getElementById('reveal-wrap');
+  wrap.innerHTML = '';
+  wrap.appendChild(buildVillagePreview('Jouw dorp', myData, true));
+  wrap.appendChild(buildVillagePreview('Dorp van je partner', themData, false));
+  buildNapraat();
+}
+
+const revealChatMsgs = []; // shared chat log
+
+function buildVillagePreview(label, data, isMe) {
+  const sec = document.createElement('div');
+
+  const lbl = document.createElement('div');
+  lbl.className = 'village-preview';
+  lbl.style.position = 'relative';
+
+  const labelBar = document.createElement('div');
+  labelBar.className = 'preview-label';
+  labelBar.textContent = label + (isMe ? ' 🏡' : ' 👀');
+  lbl.appendChild(labelBar);
+
+  const cvs = document.createElement('div');
+  cvs.className = 'preview-canvas';
+  (data.placedItems || []).forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'preview-item';
+    el.style.left = (item.x * 100) + '%';
+    el.style.top  = (item.y * 100) + '%';
+    el.innerHTML = `
+      <img src="${item.imgSrc}" alt="${item.role}">
+      <span>${item.name || item.role}</span>
+      ${item.label ? `<span style="color:#fbbf24;font-size:.5rem;">${item.label}</span>` : ''}`;
+    cvs.appendChild(el);
+  });
+
+  // 💬 chat button op het dorp
+  const chatBtn = document.createElement('button');
+  chatBtn.className = 'reveal-chat-btn';
+  chatBtn.textContent = '💬 Vraag stellen';
+  const panelId = isMe ? 'chat-panel-me' : 'chat-panel-them';
+  chatBtn.onclick = () => toggleRevealChat(panelId);
+  cvs.appendChild(chatBtn);
+  lbl.appendChild(cvs);
+  sec.appendChild(lbl);
+
+  // Chat panel
+  const panel = document.createElement('div');
+  panel.className = 'reveal-chat-panel';
+  panel.id = panelId;
+
+  // Bestaande berichten
+  const bubbles = document.createElement('div');
+  bubbles.className = 'chat-bubbles';
+  bubbles.id = panelId + '-bubbles';
+  panel.appendChild(bubbles);
+
+  // Napraat shortcuts
+  const qs = document.createElement('div');
+  qs.className = 'napraat-quick';
+  const shortVragen = NAPRAAT_VRAGEN.slice(0, 4);
+  shortVragen.forEach(v => {
+    const b = document.createElement('button');
+    b.className = 'napraat-q';
+    b.textContent = '💬 ' + v;
+    b.onclick = () => sendRevealChat(v, panelId);
+    qs.appendChild(b);
+  });
+  panel.appendChild(qs);
+
+  // Eigen input
+  const row = document.createElement('div');
+  row.className = 'reveal-chat-input-row';
+  const inp = document.createElement('input');
+  inp.className = 'reveal-chat-input';
+  inp.placeholder = 'Of stel je eigen vraag...';
+  inp.id = panelId + '-input';
+  inp.onkeydown = e => { if (e.key === 'Enter') sendRevealChat(inp.value.trim(), panelId); };
+  const sendBtn = document.createElement('button');
+  sendBtn.className = 'reveal-chat-send';
+  sendBtn.textContent = '↑';
+  sendBtn.onclick = () => sendRevealChat(inp.value.trim(), panelId);
+  row.appendChild(inp); row.appendChild(sendBtn);
+  panel.appendChild(row);
+  sec.appendChild(panel);
+
+  // sfeer + zin
+  if (data.sfeer && data.sfeer.length) {
+    const sfrow = document.createElement('div');
+    sfrow.className = 'sfeer-row';
+    sfrow.style.marginTop = '8px';
+    data.sfeer.forEach(s => {
+      const chip = document.createElement('div');
+      chip.className = 'sfeer-preview';
+      chip.textContent = s;
+      sfrow.appendChild(chip);
+    });
+    sec.appendChild(sfrow);
+  }
+  if (data.zin) {
+    const z = document.createElement('div');
+    z.className = 'zin-preview';
+    z.textContent = '"' + data.zin + '"';
+    z.style.marginTop = '8px';
+    sec.appendChild(z);
+  }
+  return sec;
+}
+
+function toggleRevealChat(panelId) {
+  const p = document.getElementById(panelId);
+  if (p) p.classList.toggle('show');
+}
+
+function sendRevealChat(text, panelId) {
+  if (!text) return;
+  const inp = document.getElementById(panelId + '-input');
+  if (inp) inp.value = '';
+  appendRevealBubble('me', text, panelId);
+  if (!S.adminMode) window.CommLayer?.sendBoardChat(text);
+}
+
+function appendRevealBubble(side, text, panelId) {
+  // Add to both panels' bubbles
+  ['chat-panel-me-bubbles','chat-panel-them-bubbles'].forEach(id => {
+    const wrap = document.getElementById(id);
+    if (!wrap) return;
+    const b = document.createElement('div');
+    b.className = 'chat-bubble ' + side;
+    b.textContent = text;
+    wrap.appendChild(b);
+    wrap.scrollTop = wrap.scrollHeight;
+  });
+}
+
+// Ontvang chat via CommLayer
+window.CommLayer?.onChatMessage(({ text, side }) => {
+  appendRevealBubble(side, text, 'chat-panel-me');
+  fdAddChatMsg(text, side);
+});
+
+// Bellen + chat gaan via CommLayer
+
+// ── Inline chat (napraat)
+let fdChatOpen = false;
+function fdToggleChat() {
+  fdChatOpen = !fdChatOpen;
+  document.getElementById('fd-inline-chat').classList.toggle('open', fdChatOpen);
+  document.getElementById('fd-chat-arr').textContent = fdChatOpen ? '▲' : '▼';
+  if (fdChatOpen) document.getElementById('fd-chat-input').focus();
+}
+
+function fdSendChat() {
+  const inp = document.getElementById('fd-chat-input');
+  const text = inp.value.trim();
+  if (!text) return;
+  fdAddChatMsg(text, 'me');
+  inp.value = '';
+  if (S.adminMode) { setTimeout(() => fdAddChatMsg('Interessant! Vertel meer...', 'them'), 800); return; }
+  window.CommLayer?.sendBoardChat(text);
+}
+
+function fdAddChatMsg(text, side) {
+  const msgs = document.getElementById('fd-chat-msgs');
+  if (!msgs) return;
+  const b = document.createElement('div');
+  b.className = 'chat-bubble ' + side;
+  b.textContent = text;
+  msgs.appendChild(b);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ══════════════════════════════════════════════════════════
+// NAPRAAT
+// ══════════════════════════════════════════════════════════
+function buildNapraat() {
+  const wrap = document.getElementById('napraat-vragen');
+  wrap.innerHTML = '';
+  // Shuffle en toon 5
+  const picked = [...NAPRAAT_VRAGEN].sort(() => Math.random()-.5).slice(0, 5);
+  picked.forEach(v => {
+    const btn = document.createElement('button');
+    btn.className = 'napraatbtn';
+    btn.textContent = '💬 ' + v;
+    wrap.appendChild(btn);
+  });
+}
+
+// ── AUTO-START ─────────────────────────────────────────────────
+(function(){
+  const gc=localStorage.getItem('comm_code');
+  if(!gc) return;
+
+  if(gc==='1111'){
+    S.player='1';S.adminMode=true;S.code='1111';
+    goScreen('screen-intro');
+    return;
+  }
+
+  // Replace entire lobby with spinner
+  document.getElementById('screen-koppel').innerHTML =
+    '<style>@keyframes spin{to{transform:rotate(360deg)}}</style>' +
+    '<div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">' +
+    '<div style="width:40px;height:40px;border:3px solid rgba(212,120,74,.15);border-top-color:#d4784a;border-radius:50%;animation:spin 1s linear infinite"></div>' +
+    '<div style="color:#9A5840;font-size:.88rem;font-family:Segoe UI,sans-serif">Even verbinden…</div></div>';
+
+  setupCb();
+  KoppelClient.on('session_created',({code,player})=>{S.code=code;S.player=player;SDClient.announceGame('familiedorp','Je Familieboom');});
+  KoppelClient.on('session_joined', ({code,player})=>{S.code=code;S.player=player;});
+  KoppelClient.joinOrCreate(gc+'.F','familiedorp');
+})();
+</script>
+</body>
+</html>
+

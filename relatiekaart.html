@@ -1,0 +1,655 @@
+﻿<!DOCTYPE html>
+<html lang="nl">
+<head>`n<script src="config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Jullie Relatiekaart</title>
+<script src="profiel.js"></script>
+<script src="toon-helper.js"></script>
+<style>
+/* ── Reset + base ──────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:         #1c1a2e;
+  --surface:    #252340;
+  --surface2:   #2e2b50;
+  --border:     rgba(255,255,255,0.09);
+  --text:       #e8e4f0;
+  --muted:      #8a84a8;
+  --accent-a:   #e8765c;   /* persoon A — warm terracotta */
+  --accent-b:   #5c9be8;   /* persoon B — zacht blauw */
+  --accent-gem: #a07de0;   /* gedeeld — paars */
+  --gold:       #e8c45c;
+  --groen:      #5ce8a0;
+  --radius:     16px;
+  --radius-sm:  10px;
+  --shadow:     0 4px 24px rgba(0,0,0,0.3);
+}
+html, body {
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ── Header ────────────────────────────────────────────── */
+.rk-header {
+  padding: 16px 16px 12px;
+  background: rgba(28,26,46,0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+  position: sticky; top: 0; z-index: 100;
+}
+.back-btn {
+  background: rgba(255,255,255,0.06); border: none;
+  color: var(--muted); border-radius: 50%;
+  width: 36px; height: 36px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; flex-shrink: 0;
+}
+.back-btn:hover { background: rgba(255,255,255,0.12); }
+.header-info h1 { font-size: 1.05rem; font-weight: 700; }
+.header-info .sub { font-size: 0.72rem; color: var(--muted); margin-top: 1px; }
+
+/* ── Pagina ────────────────────────────────────────────── */
+.pagina { max-width: 520px; margin: 0 auto; padding: 20px 16px 60px; }
+
+/* ── Confidence badge ──────────────────────────────────── */
+.confidence-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 20px;
+  font-size: 0.72rem; font-weight: 600;
+  margin-bottom: 16px;
+}
+.conf-low    { background: rgba(232,196,92,0.15); color: var(--gold); border: 1px solid rgba(232,196,92,0.3); }
+.conf-medium { background: rgba(92,232,160,0.12); color: var(--groen); border: 1px solid rgba(92,232,160,0.25); }
+.conf-high   { background: rgba(160,125,224,0.15); color: var(--accent-gem); border: 1px solid rgba(160,125,224,0.3); }
+
+/* ── Sectie-kaart ──────────────────────────────────────── */
+.kaart {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+.kaart-header {
+  padding: 16px 18px 14px;
+  cursor: pointer; user-select: none;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.kaart-header:hover { background: rgba(255,255,255,0.03); }
+.kh-links { display: flex; align-items: center; gap: 10px; }
+.kh-icon  { font-size: 1.3rem; }
+.kh-titel { font-size: 0.9rem; font-weight: 700; }
+.kh-preview { font-size: 0.74rem; color: var(--muted); margin-top: 2px; }
+.kh-chevron { color: var(--muted); font-size: 0.72rem; transition: transform 0.2s; }
+.kaart.open .kh-chevron { transform: rotate(180deg); }
+.kaart-body { display: none; padding: 0 18px 18px; }
+.kaart.open .kaart-body { display: block; }
+
+/* ── Twee-kolommen (A vs B) ────────────────────────────── */
+.ab-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;
+}
+.ab-cel {
+  background: var(--surface2); border-radius: var(--radius-sm);
+  padding: 13px 12px;
+}
+.ab-wie {
+  font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase;
+  font-weight: 700; margin-bottom: 8px;
+}
+.ab-wie.a { color: var(--accent-a); }
+.ab-wie.b { color: var(--accent-b); }
+.ab-item {
+  font-size: 0.82rem; padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 6px;
+}
+.ab-item:last-child { border-bottom: none; }
+.ab-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.dot-a { background: var(--accent-a); }
+.dot-b { background: var(--accent-b); }
+
+/* ── Gedeelde sectie ───────────────────────────────────── */
+.gedeeld-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(160,125,224,0.12); color: var(--accent-gem);
+  border: 1px solid rgba(160,125,224,0.25);
+  padding: 5px 12px; border-radius: 20px;
+  font-size: 0.8rem; font-weight: 600; margin: 4px;
+}
+.gedeeld-rij { display: flex; flex-wrap: wrap; margin: -4px; margin-bottom: 8px; }
+
+/* ── Patroon kaart ─────────────────────────────────────── */
+.patroon-kaart {
+  background: var(--surface2); border-radius: var(--radius-sm);
+  padding: 14px; margin-bottom: 10px;
+}
+.pk-naam { font-size: 0.88rem; font-weight: 700; margin-bottom: 6px; }
+.pk-beschrijving { font-size: 0.82rem; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+.pk-label {
+  font-size: 0.65rem; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 4px; font-weight: 600;
+}
+.pk-tekst { font-size: 0.82rem; line-height: 1.5; }
+.pk-divider { height: 1px; background: var(--border); margin: 10px 0; }
+
+/* ── Reveal secties ────────────────────────────────────── */
+.rv-sectie {
+  border-radius: var(--radius-sm); padding: 14px; margin-bottom: 10px;
+}
+.rv-kans      { background: rgba(92,232,160,0.08); border: 1px solid rgba(92,232,160,0.2); }
+.rv-uitdaging { background: rgba(232,196,92,0.08); border: 1px solid rgba(232,196,92,0.2); }
+.rv-sectie h4 {
+  font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;
+  font-weight: 700; margin-bottom: 6px;
+}
+.rv-kans h4      { color: var(--groen); }
+.rv-uitdaging h4 { color: var(--gold); }
+.rv-sectie p     { font-size: 0.88rem; line-height: 1.55; }
+
+/* ── Experiment ────────────────────────────────────────── */
+.exp-kaart {
+  background: linear-gradient(135deg, rgba(160,125,224,0.12), rgba(92,155,232,0.1));
+  border: 1px solid rgba(160,125,224,0.3);
+  border-radius: var(--radius-sm); padding: 14px;
+  margin-bottom: 10px;
+}
+.exp-nummer {
+  font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--accent-gem); font-weight: 700; margin-bottom: 6px;
+}
+.exp-tekst { font-size: 0.88rem; line-height: 1.55; }
+
+/* ── Domein badges ─────────────────────────────────────── */
+.dom-rij { display: flex; flex-wrap: wrap; gap: 6px; }
+.dom-badge {
+  font-size: 0.76rem; padding: 4px 10px; border-radius: 20px;
+  font-weight: 500;
+}
+.dom-sterk { background: rgba(92,232,160,0.12); color: var(--groen); border: 1px solid rgba(92,232,160,0.2); }
+.dom-groei { background: rgba(232,196,92,0.12); color: var(--gold); border: 1px solid rgba(232,196,92,0.2); }
+
+/* ── Opening kaart ─────────────────────────────────────── */
+.opening-kaart {
+  background: linear-gradient(135deg, var(--surface), #2a2550);
+  border: 1px solid rgba(160,125,224,0.2);
+  border-radius: var(--radius); padding: 22px 20px; margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.opening-kaart .ok-icon { font-size: 2.2rem; margin-bottom: 10px; }
+.opening-kaart .ok-titel { font-size: 1.15rem; font-weight: 700; margin-bottom: 8px; }
+.opening-kaart .ok-tekst { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+
+/* ── Sectie-label ──────────────────────────────────────── */
+.s-label {
+  font-size: 0.65rem; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--muted); font-weight: 600; margin-bottom: 8px;
+}
+
+/* ── Disclaimer ────────────────────────────────────────── */
+.disclaimer {
+  font-size: 0.74rem; color: var(--muted); font-style: italic;
+  background: rgba(255,255,255,0.03); border-radius: var(--radius-sm);
+  padding: 10px 12px; margin-bottom: 14px; line-height: 1.5;
+}
+
+/* ── Geen-data staat ───────────────────────────────────── */
+.geen-data {
+  text-align: center; padding: 48px 20px;
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.geen-data .gd-icon { font-size: 2.5rem; margin-bottom: 14px; }
+.geen-data h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+.geen-data p  { font-size: 0.85rem; color: var(--muted); line-height: 1.6; }
+.geen-data .progress-mini {
+  background: rgba(255,255,255,0.06); border-radius: 4px;
+  height: 5px; margin: 16px 0 6px; overflow: hidden;
+}
+.geen-data .progress-fill {
+  height: 5px; background: var(--accent-gem); border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+/* ── Partner invoer ────────────────────────────────────── */
+.partner-invoer {
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--border); padding: 20px; margin-bottom: 16px;
+}
+.pi-label { font-size: 0.78rem; color: var(--muted); margin-bottom: 8px; }
+.pi-input {
+  width: 100%; background: rgba(255,255,255,0.06);
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text); padding: 11px 14px; font-size: 0.88rem;
+  font-family: monospace;
+}
+.pi-input:focus { outline: none; border-color: var(--accent-gem); }
+.pi-btn {
+  margin-top: 10px; width: 100%; padding: 12px;
+  background: var(--accent-gem); border: none; border-radius: var(--radius-sm);
+  color: white; font-weight: 700; cursor: pointer; font-size: 0.9rem;
+}
+.pi-btn:hover { filter: brightness(1.1); }
+
+/* ── Klok afsluiting ───────────────────────────────────── */
+.afsluiting {
+  text-align: center; padding: 24px 20px;
+  font-size: 0.85rem; color: var(--muted);
+  line-height: 1.6;
+}
+.home-link {
+  display: block; text-align: center; margin-top: 20px;
+  color: var(--muted); font-size: 0.82rem; text-decoration: none;
+}
+.home-link:hover { color: var(--text); }
+
+/* ── Laad ──────────────────────────────────────────────── */
+.laad { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 0.88rem; }
+.spinner {
+  width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1);
+  border-top-color: var(--accent-gem); border-radius: 50%;
+  animation: spin 1s linear infinite; margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="rk-header">
+  <a href="world.html"><button class="back-btn">←</button></a>
+  <div class="header-info">
+    <h1>🗺️ Jullie Relatiekaart</h1>
+    <div class="sub" id="header-sub">Bouwt op met elke ronde samen</div>
+  </div>
+</div>
+
+<div class="pagina">
+
+  <!-- Laadstand -->
+  <div id="laad-sectie" class="laad">
+    <div class="spinner"></div>
+    Relatiekaart berekenen...
+  </div>
+
+  <!-- Partner-ID invoer (fallback) -->
+  <div id="partner-invoer-sectie" style="display:none;">
+    <div class="partner-invoer">
+      <div class="pi-label">Voer het gebruikers-ID van je partner in om de relatiekaart te berekenen.</div>
+      <div class="pi-label" style="font-size:0.72rem;margin-bottom:4px;">
+        (Je partner vindt dit op <a href="profiel.html" style="color:var(--accent-gem);">profiel.html</a> bovenaan)
+      </div>
+      <input class="pi-input" type="text" id="partner-id-input"
+        placeholder="xxxxxxxx-xxxx-4xxx-xxxx-xxxxxxxxxxxx"
+        onkeydown="if(event.key==='Enter')laadMetPartnerId()">
+      <button class="pi-btn" onclick="laadMetPartnerId()">Berekenen →</button>
+      <div id="pi-fout" style="color:var(--accent-a);font-size:0.8rem;margin-top:8px;display:none;"></div>
+    </div>
+  </div>
+
+  <!-- Hoofdinhoud -->
+  <div id="rk-inhoud" style="display:none;"></div>
+
+</div>
+
+<script>
+'use strict';
+
+// ── Tekst (i18n) ──────────────────────────────────────────
+const TEKST = {
+  confidence: {
+    low:    { label: 'Eerste indruk',      hint: 'Gebaseerd op 5-7 rondes. Taal: "lijkt", "kan". Speel meer voor dieper inzicht.' },
+    medium: { label: 'Duidelijk patroon',  hint: 'Gebaseerd op 8-11 rondes. Terugkerende thema\'s worden zichtbaar.' },
+    high:   { label: 'Volledig beeld',     hint: 'Gebaseerd op 12+ rondes. Patronen en behoeften zijn helder.' },
+  },
+  geen_partner: 'Geen partner gevonden. Speel eerst rondes samen in De Grot, of voer het ID van je partner in.',
+  te_weinig:    (n) => `Je hebt ${n} ronde${n!==1?'s':''} samen gespeeld. Speel minimaal 5 rondes voor de eerste relatiekaart.`,
+  opening: [
+    'Jullie hebben samen een aantal situaties doorlopen. Wat je hieronder ziet is geen oordeel — het is een spiegel van de patronen die in jullie antwoorden terugkomen.',
+    'Een sterke relatie is niet een relatie zonder patronen. Een sterke relatie leert haar patronen kennen.',
+  ],
+  overlap_intro:     'Jullie delen deze behoeften — ze kwamen bij allebei sterk naar voren.',
+  gap_intro:         'Hier verschillen jullie topbehoeften. Geen van beiden heeft ongelijk — jullie beschermen allebei iets waardevols.',
+  clash_intro:       'Hier kan een bescherming van de één raken aan een gevoeligheid van de ander. Dit is geen schuld — het is een patroon dat aandacht verdient.',
+  sterk_intro:       'Domeinen waar jullie antwoorden kracht tonen.',
+  groei_intro:       'Domeinen waar verdieping mogelijk is.',
+  exp_intro:         'Klein, concreet en uitvoerbaar. Kies er één.',
+  afsluiting:        'De kaart verandert mee met elke ronde die jullie spelen. Hoe meer jullie spelen, hoe rijker het beeld.',
+  disclaimer:        'Deze kaart is geen diagnose. Het zijn patronen uit jullie antwoorden — niet jullie definitieve waarheid.',
+  domein_namen: {
+    D1:'Aandacht',D2:'Verbinding',D3:'Veiligheid',D4:'Vrijheid',D5:'Waardering',
+    D6:'Communicatie',D7:'Conflict & herstel',D8:'Intimiteit',D9:'Gezin',D10:'Familie',
+    D11:'Geld',D12:'Werk',D13:'Zingeving',D14:'Toekomst',D15:'Verlies',
+  },
+  domein_emoji: {
+    D1:'👁️',D2:'🤝',D3:'🛡️',D4:'🕊️',D5:'⭐',
+    D6:'💬',D7:'🔧',D8:'❤️',D9:'🏡',D10:'🌳',
+    D11:'💰',D12:'🎯',D13:'🌟',D14:'🚀',D15:'🌊',
+  },
+};
+
+// ── Init ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  const userId = ProfielClient.init();
+
+  // Partner-ID uit localStorage (opgeslagen tijdens grot.html samen-sessie)
+  const partnerId = localStorage.getItem('grot_partner_id') || getUrlParam('partner');
+
+  if (!partnerId) {
+    document.getElementById('laad-sectie').style.display = 'none';
+    document.getElementById('partner-invoer-sectie').style.display = 'block';
+    return;
+  }
+
+  await laadKaart(userId, partnerId);
+});
+
+function getUrlParam(key) {
+  return new URLSearchParams(window.location.search).get(key);
+}
+
+async function laadMetPartnerId() {
+  const input = document.getElementById('partner-id-input').value.trim();
+  if (!input || input.length < 8) {
+    toonFout('Voer een geldig partner-ID in.');
+    return;
+  }
+  localStorage.setItem('grot_partner_id', input);
+  document.getElementById('partner-invoer-sectie').style.display = 'none';
+  document.getElementById('laad-sectie').style.display = 'block';
+  await laadKaart(ProfielClient.getUserId(), input);
+}
+
+function toonFout(msg) {
+  const el = document.getElementById('pi-fout');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+async function laadKaart(userId, partnerId) {
+  try {
+    const backend = window.KOPPEL_BACKEND_URL || 'https://snakesandladdders-production.up.railway.app';
+    const resp = await fetch(
+      `${backend}/api/relatiekaart?partnerUserId=${encodeURIComponent(partnerId)}`,
+      { headers: { 'x-user-id': userId } }
+    );
+
+    document.getElementById('laad-sectie').style.display = 'none';
+
+    if (!resp.ok) {
+      toonGeenData(TEKST.geen_partner);
+      document.getElementById('partner-invoer-sectie').style.display = 'block';
+      return;
+    }
+
+    const kaart = await resp.json();
+
+    if (!kaart.ok) {
+      toonGeenData(kaart.message || TEKST.geen_partner);
+      document.getElementById('partner-invoer-sectie').style.display = 'block';
+      return;
+    }
+
+    bouwKaart(kaart, userId);
+
+  } catch (e) {
+    document.getElementById('laad-sectie').style.display = 'none';
+    toonGeenData('Relatiekaart kon niet worden geladen. Probeer het later opnieuw.');
+    document.getElementById('partner-invoer-sectie').style.display = 'block';
+  }
+}
+
+function toonGeenData(msg) {
+  const rondes = parseInt(localStorage.getItem('grot_rondes') || '0');
+  const pct = Math.min((rondes / 5) * 100, 100);
+  const inhoud = document.getElementById('rk-inhoud');
+  inhoud.style.display = 'block';
+  inhoud.innerHTML = `
+    <div class="geen-data">
+      <div class="gd-icon">🗺️</div>
+      <h2>Nog niet genoeg data</h2>
+      <p>${msg}</p>
+      <div class="progress-mini">
+        <div class="progress-fill" style="width:${pct}%"></div>
+      </div>
+      <p style="font-size:0.75rem;">${rondes}/5 rondes samen gespeeld</p>
+      <div style="margin-top:20px;">
+        <a href="grot.html" style="display:block;padding:12px;background:rgba(160,125,224,0.15);border:1px solid rgba(160,125,224,0.3);border-radius:10px;text-align:center;color:var(--accent-gem);text-decoration:none;font-weight:600;">
+          🔮 Ga naar De Grot — speel samen
+        </a>
+      </div>
+    </div>`;
+}
+
+// ── Kaart bouwen ───────────────────────────────────────────
+function bouwKaart(k, mijnId) {
+  const inhoud = document.getElementById('rk-inhoud');
+  inhoud.style.display = 'block';
+
+  const conf     = TEKST.confidence[k.confidence] || TEKST.confidence.low;
+  const isA      = k.userIdA === mijnId;
+  const mijnBeh  = isA ? k.topBehoeftenA : k.topBehoeftenB;
+  const partBeh  = isA ? k.topBehoeftenB : k.topBehoeftenA;
+  const mijnBesch = isA ? k.topBeschermingA : k.topBeschermingB;
+  const partBesch = isA ? k.topBeschermingB : k.topBeschermingA;
+
+  // Header sub bijwerken
+  document.getElementById('header-sub').textContent =
+    `${k.rondeCount} ronde${k.rondeCount!==1?'s':''} samen`;
+
+  let html = '';
+
+  // ── Confidence badge
+  // Gebruik toon-helper vertrouwen als beschikbaar
+  const vwWoord = window.TOON
+    ? TOON.vertrouwen(k.rondeCount, 'woord')
+    : (k.confidence === 'high' ? 'aanwezig' : k.confidence === 'medium' ? 'komt terug' : 'lijkt');
+
+  html += `<span class="confidence-badge conf-${k.confidence}">
+    ${k.confidence === 'high' ? '✦' : k.confidence === 'medium' ? '◆' : '◇'}
+    ${conf.label} — ${k.rondeCount} ronde${k.rondeCount!==1?'s':''} · taal: "${vwWoord}"
+  </span>`;
+
+  // ── Opening
+  html += `
+  <div class="opening-kaart">
+    <div class="ok-icon">🗺️</div>
+    <div class="ok-titel">Jullie relatiekaart</div>
+    <div class="ok-tekst">${TEKST.opening[0]}</div>
+    <div style="height:8px;"></div>
+    <div class="ok-tekst" style="font-style:italic;">"${TEKST.opening[1]}"</div>
+  </div>`;
+
+  // ── Disclaimer
+  html += `<div class="disclaimer">${TEKST.disclaimer}</div>`;
+
+  // ── Gedeelde behoeften (overlap)
+  if (k.overlap && k.overlap.length > 0) {
+    html += sektie('🤝', 'Jullie delen dit',
+      () => {
+        let s = `<p class="disclaimer" style="margin-bottom:12px;">${TEKST.overlap_intro}</p>`;
+        s += '<div class="gedeeld-rij">';
+        k.overlap.forEach(item => {
+          s += `<span class="gedeeld-chip">💜 ${item.label}</span>`;
+        });
+        s += '</div>';
+        s += `<div class="rv-sectie rv-kans" style="margin-top:10px;">
+          <h4>✓ Kans</h4>
+          <p>Jullie begrijpen beiden wat ${k.overlap[0].label.toLowerCase()} betekent. Dit is een gedeeld fundament.</p>
+        </div>`;
+        return s;
+      },
+      k.overlap.slice(0,2).map(i => i.label).join(' · '),
+      true
+    );
+  }
+
+  // ── Behoeften per persoon
+  html += sektie('💙', 'Jullie behoeften',
+    () => {
+      let s = `<p class="disclaimer" style="margin-bottom:12px;">Wat ieder van jullie het meest nodig lijkt te hebben in de relatie.</p>`;
+      s += '<div class="ab-grid">';
+      s += abCel('Jij', 'a', mijnBeh, 'dot-a');
+      s += abCel('Partner', 'b', partBeh, 'dot-b');
+      s += '</div>';
+      // Gap tekst als topbehoefte verschilt
+      if (k.gaps && k.gaps.length > 0) {
+        const g = k.gaps[0];
+        s += `<div class="rv-sectie rv-uitdaging">
+          <h4>◇ Verschil zonder schuld</h4>
+          <p>${TEKST.gap_intro}<br><br>
+          <strong>Jij:</strong> ${g.labelA?.toLowerCase() || '?'} &nbsp;↔&nbsp;
+          <strong>Partner:</strong> ${g.labelB?.toLowerCase() || '?'}</p>
+        </div>`;
+      }
+      return s;
+    },
+    [mijnBeh?.[0]?.label, partBeh?.[0]?.label].filter(Boolean).join(' / ')
+  );
+
+  // ── Beschermingen
+  if (mijnBesch || partBesch) {
+    html += sektie('🛡️', 'Wat jullie beschermen',
+      () => {
+        let s = `<p class="disclaimer" style="margin-bottom:12px;">Beschermingen zijn niet slecht — ze bewaken iets waardevols. Ze ontstonden ooit met een reden.</p>`;
+        s += '<div class="ab-grid">';
+        s += `<div class="ab-cel"><div class="ab-wie a">Jij</div>
+          ${mijnBesch ? `<div class="ab-item"><span class="ab-dot dot-a"></span>${mijnBesch.label}</div>` : '<div style="color:var(--muted);font-size:0.8rem;">Nog onbekend</div>'}
+        </div>`;
+        s += `<div class="ab-cel"><div class="ab-wie b">Partner</div>
+          ${partBesch ? `<div class="ab-item"><span class="ab-dot dot-b"></span>${partBesch.label}</div>` : '<div style="color:var(--muted);font-size:0.8rem;">Nog onbekend</div>'}
+        </div>`;
+        s += '</div>';
+        return s;
+      },
+      [mijnBesch?.label, partBesch?.label].filter(Boolean).join(' / ')
+    );
+  }
+
+  // ── Clashes (patronen)
+  if (k.clashes && k.clashes.length > 0) {
+    html += sektie('⚡', 'Patronen om te kennen',
+      () => {
+        let s = `<p class="disclaimer" style="margin-bottom:12px;">${TEKST.clash_intro}</p>`;
+        k.clashes.forEach(clash => {
+          const wie = (clash.who === 'A' && isA) || (clash.who === 'B' && !isA) ? 'Jij' : 'Partner';
+          s += `<div class="patroon-kaart">
+            <div class="pk-naam">${wie === 'Jij' ? 'Jouw bescherming' : 'Bescherming van partner'}: ${clash.protects}</div>
+            <div class="pk-divider"></div>
+            <div class="pk-label">Kan raken aan</div>
+            <div class="pk-tekst">${wie === 'Jij' ? 'Gevoeligheid bij partner' : 'Jouw gevoeligheid'}: ${clash.triggers}</div>
+            <div class="pk-divider"></div>
+            <div class="rv-sectie rv-kans" style="margin-top:0;">
+              <h4>✓ Kans in dit patroon</h4>
+              <p>Als beide kanten worden herkend, kan dit patroon veranderen van botsing naar begrip.</p>
+            </div>
+          </div>`;
+        });
+        return s;
+      },
+      k.clashes.length + ' patroon' + (k.clashes.length!==1?'en':'') + ' herkend'
+    );
+  }
+
+  // ── Domeinen
+  const heeftDomeinen = (k.sharedSterkeDomeinen && k.sharedSterkeDomeinen.length > 0) ||
+                        (k.sharedGroeiDomeinen  && k.sharedGroeiDomeinen.length  > 0);
+  if (heeftDomeinen) {
+    html += sektie('🗺️', 'Jullie domeinen',
+      () => {
+        let s = '';
+        if (k.sharedSterkeDomeinen && k.sharedSterkeDomeinen.length > 0) {
+          s += `<div class="s-label" style="margin-bottom:8px;">Jullie krachten</div>
+          <div class="dom-rij" style="margin-bottom:14px;">
+            ${k.sharedSterkeDomeinen.map(d => `<span class="dom-badge dom-sterk">${TEKST.domein_emoji[d]||''} ${TEKST.domein_namen[d]||d}</span>`).join('')}
+          </div>`;
+        }
+        if (k.sharedGroeiDomeinen && k.sharedGroeiDomeinen.length > 0) {
+          s += `<div class="s-label" style="margin-bottom:8px;">Groeikansen</div>
+          <div class="dom-rij">
+            ${k.sharedGroeiDomeinen.map(d => `<span class="dom-badge dom-groei">${TEKST.domein_emoji[d]||''} ${TEKST.domein_namen[d]||d}</span>`).join('')}
+          </div>`;
+        }
+        if (!s) s = '<p style="color:var(--muted);font-size:0.85rem;">Speel meer rondes voor domein-inzichten.</p>';
+        return s;
+      },
+      (k.sharedSterkeDomeinen||[]).slice(0,2).map(d=>TEKST.domein_namen[d]||d).join(', ') || '—'
+    );
+  }
+
+  // ── Experimenten
+  if (k.experimenten && k.experimenten.length > 0) {
+    html += sektie('→', 'Experimenten voor jullie',
+      () => {
+        let s = `<p class="disclaimer" style="margin-bottom:12px;">${TEKST.exp_intro}</p>`;
+        k.experimenten.forEach((exp, i) => {
+          s += `<div class="exp-kaart">
+            <div class="exp-nummer">Experiment ${i+1}</div>
+            <div class="exp-tekst">${exp}</div>
+          </div>`;
+        });
+        return s;
+      },
+      k.experimenten.length + ' experiment' + (k.experimenten.length!==1?'en':''),
+      true
+    );
+  }
+
+  // ── Afsluiting
+  html += `
+  <div class="afsluiting">
+    <p>${TEKST.afsluiting}</p>
+    <div style="margin-top:16px;">
+      <a href="grot.html" style="display:inline-block;padding:12px 20px;background:rgba(160,125,224,0.15);border:1px solid rgba(160,125,224,0.3);border-radius:10px;color:var(--accent-gem);text-decoration:none;font-weight:600;font-size:0.88rem;">
+        🔮 Nog een ronde spelen
+      </a>
+    </div>
+  </div>
+  <a href="world.html" class="home-link">← Terug naar de kaart</a>`;
+
+  inhoud.innerHTML = html;
+
+  // Open eerste sectie automatisch
+  const eerste = inhoud.querySelector('.kaart');
+  if (eerste) eerste.classList.add('open');
+}
+
+// ── Helper: maak een uitklapbare sectie ───────────────────
+function sektie(icon, titel, bodyFn, preview, startOpen = false) {
+  const id = 'sk-' + Math.random().toString(36).slice(2, 7);
+  return `
+  <div class="kaart${startOpen ? ' open' : ''}" id="${id}">
+    <div class="kaart-header" onclick="toggleKaart('${id}')">
+      <div class="kh-links">
+        <span class="kh-icon">${icon}</span>
+        <div>
+          <div class="kh-titel">${titel}</div>
+          <div class="kh-preview">${preview || ''}</div>
+        </div>
+      </div>
+      <span class="kh-chevron">▼</span>
+    </div>
+    <div class="kaart-body">${bodyFn()}</div>
+  </div>`;
+}
+
+function abCel(wie, cls, items, dotCls) {
+  const rijen = (items || []).slice(0, 3).map(item =>
+    `<div class="ab-item"><span class="ab-dot ${dotCls}"></span>${item.label}</div>`
+  ).join('');
+  return `<div class="ab-cel">
+    <div class="ab-wie ${cls}">${wie}</div>
+    ${rijen || '<div style="color:var(--muted);font-size:0.8rem;">Nog onbekend</div>'}
+  </div>`;
+}
+
+function toggleKaart(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('open');
+}
+</script>
+</body>
+</html>

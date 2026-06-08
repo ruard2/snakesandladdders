@@ -1,0 +1,1257 @@
+﻿<!DOCTYPE html>
+<html lang="nl">
+<head>
+<script src="config.js"></script>
+<script src="sd-client.js"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>Leer Elkaar Kennen ✦</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:#1a0a2e;color:#f0e6d3;font-family:'Inter',sans-serif;overflow:hidden;}
+
+/* ── Screens ───────────────────────────────── */
+.screen{display:none;position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;}
+.screen.active{display:flex;flex-direction:column;align-items:center;}
+
+/* ── Bg gradient ───────────────────────────── */
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse at 30% 20%,#3d1050 0%,transparent 60%),
+             radial-gradient(ellipse at 70% 80%,#1a3050 0%,transparent 60%),
+             #0f0720;
+  z-index:0;}
+.screen{z-index:1;}
+
+/* ── Typography ────────────────────────────── */
+h1{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:600;
+   background:linear-gradient(135deg,#d4af37,#f0d060,#d4af37);
+   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+   text-align:center;line-height:1.2;}
+h2{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:400;color:#f0e6d3;text-align:center;}
+.sub{color:#a090b8;font-size:0.85rem;text-align:center;line-height:1.5;}
+
+/* ── Buttons ───────────────────────────────── */
+.btn{display:block;width:100%;padding:14px 20px;border:none;border-radius:14px;
+     font-size:1rem;font-weight:600;cursor:pointer;transition:all .2s;
+     font-family:'Inter',sans-serif;}
+.btn-gold{background:linear-gradient(135deg,#d4af37,#f0d060);color:#1a0a2e;}
+.btn-gold:active{transform:scale(0.97);}
+.btn-outline{background:transparent;border:1.5px solid #d4af3766;color:#d4af37;}
+.btn-outline:active{background:#d4af3715;}
+.btn-ghost{background:rgba(255,255,255,0.07);color:#f0e6d3;border:1px solid rgba(255,255,255,0.1);}
+.btn-ghost:active{background:rgba(255,255,255,0.12);}
+.btn-sm{padding:10px 16px;font-size:0.875rem;border-radius:10px;}
+
+/* ── Card ──────────────────────────────────── */
+.card-wrap{perspective:1000px;width:100%;max-width:340px;height:220px;cursor:pointer;}
+.card-inner{position:relative;width:100%;height:100%;transition:transform 0.6s cubic-bezier(.4,0,.2,1);transform-style:preserve-3d;}
+.card-wrap.flipped .card-inner{transform:rotateY(180deg);}
+.card-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:20px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;}
+.card-front{background:linear-gradient(135deg,#2d1b4e,#1e1040);
+  border:1.5px solid #d4af3740;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4),inset 0 1px 0 rgba(212,175,55,0.2);}
+.card-back{background:linear-gradient(135deg,#1e3050,#2d1b4e);
+  border:1.5px solid #d4af3740;transform:rotateY(180deg);
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);}
+.card-cat{font-size:0.7rem;letter-spacing:0.15em;text-transform:uppercase;
+  color:#d4af37;margin-bottom:12px;opacity:0.8;}
+.card-vraag{font-family:'Playfair Display',serif;font-size:1.05rem;color:#f0e6d3;
+  text-align:center;line-height:1.5;font-style:italic;}
+.card-followup{font-size:0.8rem;color:#a090b8;text-align:center;margin-top:10px;font-style:normal;}
+.card-tap{font-size:0.75rem;color:#d4af3788;text-align:center;}
+.card-icon{font-size:2rem;margin-bottom:8px;}
+.card-hint{font-size:0.78rem;color:#a090b8;margin-top:6px;text-align:center;}
+
+/* ── Progress dots ─────────────────────────── */
+.dots{display:flex;gap:6px;justify-content:center;}
+.dot{width:8px;height:8px;border-radius:50%;background:#ffffff20;transition:background .3s;}
+.dot.done{background:#d4af37;}
+.dot.active{background:#f0d060;box-shadow:0 0 6px #f0d06088;}
+
+/* ── Category badge ────────────────────────── */
+.cat-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;
+  border-radius:20px;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;
+  background:rgba(212,175,55,0.15);color:#d4af37;border:1px solid #d4af3730;}
+
+/* ── Input ──────────────────────────────────── */
+textarea,input[type=text]{width:100%;background:rgba(255,255,255,0.07);
+  border:1.5px solid rgba(255,255,255,0.15);border-radius:12px;
+  color:#f0e6d3;font-size:1rem;padding:14px;font-family:'Inter',sans-serif;
+  resize:none;outline:none;transition:border-color .2s;}
+textarea:focus,input[type=text]:focus{border-color:#d4af37;}
+textarea{min-height:100px;}
+
+/* ── Choice buttons ─────────────────────────── */
+.choices{display:flex;flex-direction:column;gap:10px;width:100%;}
+.choice-btn{padding:14px 18px;background:rgba(255,255,255,0.06);
+  border:1.5px solid rgba(255,255,255,0.12);border-radius:12px;
+  color:#f0e6d3;font-size:0.95rem;text-align:left;cursor:pointer;
+  transition:all .2s;font-family:'Inter',sans-serif;}
+.choice-btn:active,.choice-btn.selected{background:rgba(212,175,55,0.2);
+  border-color:#d4af37;color:#f0d060;}
+
+/* ── Score badge ────────────────────────────── */
+.score-ring{width:90px;height:90px;border-radius:50%;
+  background:conic-gradient(#d4af37 var(--pct,0%),rgba(255,255,255,0.1) 0%);
+  display:flex;align-items:center;justify-content:center;position:relative;}
+.score-ring::before{content:'';position:absolute;inset:6px;border-radius:50%;background:#1a0a2e;}
+.score-num{position:relative;font-family:'Playfair Display',serif;font-size:1.4rem;color:#f0d060;}
+
+/* ── Level pill ─────────────────────────────── */
+.level-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;
+  border-radius:20px;font-size:0.8rem;font-weight:600;}
+.level-1{background:#1e3a2e;color:#5db882;border:1px solid #5db88240;}
+.level-2{background:#2e2a1e;color:#d4af37;border:1px solid #d4af3740;}
+.level-3{background:#2e1e2e;color:#c47ac4;border:1px solid #c47ac440;}
+
+/* ── Mode cards ─────────────────────────────── */
+.mode-card{background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.1);
+  border-radius:18px;padding:20px;cursor:pointer;transition:all .2s;text-align:left;}
+.mode-card:active{transform:scale(0.98);background:rgba(212,175,55,0.1);border-color:#d4af37;}
+.mode-icon{font-size:2rem;margin-bottom:8px;}
+.mode-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:#f0d060;margin-bottom:4px;}
+.mode-desc{font-size:0.8rem;color:#a090b8;line-height:1.4;}
+
+/* ── Reveal ──────────────────────────────────── */
+.reveal-box{background:rgba(255,255,255,0.05);border-radius:14px;padding:16px;width:100%;}
+.reveal-label{font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;color:#a090b8;margin-bottom:6px;}
+.reveal-answer{font-size:1rem;color:#f0e6d3;font-family:'Playfair Display',serif;font-style:italic;}
+.reveal-match{font-size:0.8rem;margin-top:6px;}
+.match-yes{color:#5db882;}
+.match-no{color:#e07070;}
+
+/* ── Waiting ─────────────────────────────────── */
+.waiting-dots span{display:inline-block;animation:bounce 1.2s infinite;}
+.waiting-dots span:nth-child(2){animation-delay:.2s;}
+.waiting-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
+
+/* ── Koppel screen ───────────────────────────── */
+.code-input{text-align:center;font-size:1.6rem;letter-spacing:0.3em;text-transform:uppercase;
+  font-weight:700;background:rgba(255,255,255,0.08);border:2px solid rgba(212,175,55,0.4);
+  border-radius:14px;padding:16px;color:#f0d060;width:100%;}
+.big-code{font-size:2.2rem;letter-spacing:0.4em;font-weight:700;color:#f0d060;
+  font-family:'Playfair Display',serif;text-align:center;}
+
+/* ── Misc ────────────────────────────────────── */
+.pad{padding:24px 20px;}
+.gap{display:flex;flex-direction:column;gap:12px;}
+.gap-sm{display:flex;flex-direction:column;gap:8px;}
+.row{display:flex;gap:10px;}
+.row .btn{flex:1;}
+.center{text-align:center;}
+.stars{color:#d4af37;font-size:1.1rem;}
+.divider{width:100%;height:1px;background:rgba(255,255,255,0.08);margin:8px 0;}
+.vonk{animation:vonkje .4s ease-out forwards;}
+@keyframes vonkje{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+.back-btn{position:fixed;top:10px;left:10px;z-index:9999;background:rgba(0,0,0,0.45);
+  color:#d4af37;border:1px solid #d4af3755;border-radius:20px;padding:5px 12px;
+  font-size:0.75rem;text-decoration:none;font-family:serif;letter-spacing:0.05em;
+  backdrop-filter:blur(6px);}
+</style>
+</head>
+<body>
+
+<a href="world.html" class="back-btn">← Kaart</a>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: START / KOPPELCODE
+════════════════════════════════════════════════ -->
+<div id="screen-start" class="screen active">
+  <div class="pad gap" style="width:100%;max-width:420px;padding-top:60px;">
+    <div style="text-align:center;margin-bottom:8px;">
+      <div style="font-size:3rem;">💫</div>
+      <h1>Leer Elkaar Kennen</h1>
+      <p class="sub" style="margin-top:8px;">Ontdek, verras en verbind.<br>Elk op je eigen telefoon.</p>
+    </div>
+    <div class="divider"></div>
+    <button class="btn btn-gold" onclick="startKoppel('create')">✦ Maak een sessie aan</button>
+    <button class="btn btn-outline" onclick="startKoppel('join')">Doe mee met koppelcode</button>
+    <button class="btn btn-ghost" onclick="startSolo()">Solo bekijken</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: KOPPELCODE CREATE/JOIN
+════════════════════════════════════════════════ -->
+<div id="screen-koppel" class="screen">
+  <div class="pad gap" style="width:100%;max-width:420px;padding-top:60px;">
+    <h2 id="koppel-title">Sessie aanmaken</h2>
+    <p class="sub" id="koppel-sub"></p>
+
+    <div id="koppel-create-ui" style="display:none;text-align:center;">
+      <p class="sub">Jouw koppelcode:</p>
+      <div class="big-code" id="display-code">...</div>
+      <p class="sub" style="margin-top:8px;">Geef deze code aan je partner</p>
+      <div style="margin-top:16px;" id="waiting-partner">
+        <p class="sub waiting-dots">Wachten op partner<span>.</span><span>.</span><span>.</span></p>
+      </div>
+      <div id="both-connected-ui" style="display:none;margin-top:16px;">
+        <p style="color:#5db882;margin-bottom:12px;">✓ Beide verbonden!</p>
+        <button class="btn btn-gold" onclick="goNiveau()">Begin ✦</button>
+      </div>
+    </div>
+
+    <div id="koppel-join-ui" style="display:none;">
+      <input type="text" class="code-input" id="join-code-input" maxlength="6"
+             placeholder="ABCDE" oninput="this.value=this.value.toUpperCase()"/>
+      <button class="btn btn-gold" onclick="doJoin()">Verbinden</button>
+      <div id="join-waiting" style="display:none;text-align:center;">
+        <p class="sub waiting-dots">Verbinden<span>.</span><span>.</span><span>.</span></p>
+      </div>
+      <div id="join-connected" style="display:none;text-align:center;">
+        <p style="color:#5db882;">✓ Verbonden! Wacht op host...</p>
+      </div>
+    </div>
+
+    <p id="koppel-error" style="color:#e07070;text-align:center;display:none;"></p>
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-start')">← Terug</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: NIVEAU BEPALEN
+════════════════════════════════════════════════ -->
+<div id="screen-niveau" class="screen">
+  <div class="pad gap" style="width:100%;max-width:420px;padding-top:50px;">
+    <h2>Hoe lang kennen jullie elkaar al?</h2>
+    <p class="sub">We bewaren dit — nooit meer opnieuw invullen.</p>
+    <div class="choices" id="duur-choices">
+      <button class="choice-btn" onclick="selectDuur(1,this)">🌱 Nog maar kort (minder dan 3 maanden)</button>
+      <button class="choice-btn" onclick="selectDuur(2,this)">🌿 Een tijdje (3 maanden – 1 jaar)</button>
+      <button class="choice-btn" onclick="selectDuur(3,this)">🌳 Al een tijd (meer dan 1 jaar)</button>
+    </div>
+    <div class="divider" style="margin-top:4px;"></div>
+    <h2>En hoe goed kennen jullie elkaar?</h2>
+    <div class="choices" id="kennis-choices">
+      <button class="choice-btn" onclick="selectKennis(1,this)">🔍 We beginnen net met ontdekken</button>
+      <button class="choice-btn" onclick="selectKennis(2,this)">🗺️ We kennen elkaars basisverhaal</button>
+      <button class="choice-btn" onclick="selectKennis(3,this)">🔮 We kennen elkaar goed maar blijven ontdekken</button>
+    </div>
+    <button class="btn btn-gold" id="niveau-btn" onclick="confirmNiveau()" style="display:none;">Dit klopt ✦</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: MENU — KIES MODUS
+════════════════════════════════════════════════ -->
+<div id="screen-menu" class="screen">
+  <div class="pad gap" style="width:100%;max-width:420px;padding-top:50px;">
+    <div style="text-align:center;">
+      <div id="menu-level-badge"></div>
+      <h1 style="font-size:1.5rem;margin-top:8px;">Wat gaan jullie doen?</h1>
+      <p class="sub">Kies samen een modus</p>
+    </div>
+
+    <div class="mode-card" onclick="startMode('kaarten')">
+      <div class="mode-icon">🃏</div>
+      <div class="mode-title">Kennismakingskaarten</div>
+      <div class="mode-desc">Draai een kaart om en bespreek samen de vraag. Warm, diep en verrassend.</div>
+    </div>
+
+    <div class="mode-card" onclick="startMode('quiz')">
+      <div class="mode-icon">🏆</div>
+      <div class="mode-title">Wie kent wie het beste?</div>
+      <div class="mode-desc">Beide vullen antwoorden in over zichzelf — en raden wat de ander zei. Wie wint?</div>
+    </div>
+
+    <div class="mode-card" onclick="startMode('raad')">
+      <div class="mode-icon">🔮</div>
+      <div class="mode-title">Raad je partner</div>
+      <div class="mode-desc">Eén persoon antwoordt, de ander raadt. Hoe goed ken jij je geliefde?</div>
+    </div>
+
+    <div style="text-align:center;margin-top:4px;">
+      <p class="sub">🔥 <span id="vonkjes-count">0</span> vonkjes verzameld</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: KAARTEN MODUS
+════════════════════════════════════════════════ -->
+<div id="screen-kaarten" class="screen">
+  <div class="pad gap" style="width:100%;max-width:420px;padding-top:40px;align-items:center;">
+
+    <div style="width:100%;display:flex;justify-content:space-between;align-items:center;">
+      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-menu')" style="width:auto;padding:8px 14px;">← Menu</button>
+      <div class="dots" id="kaarten-dots"></div>
+      <div style="font-size:0.8rem;color:#a090b8;" id="kaarten-counter">1 / 10</div>
+    </div>
+
+    <div id="kaarten-cat" class="cat-badge" style="margin-top:4px;"></div>
+
+    <div class="card-wrap" id="kaart" onclick="flipCard()">
+      <div class="card-inner">
+        <div class="card-front">
+          <div class="card-icon">✦</div>
+          <div class="card-tap">Tik om om te draaien</div>
+        </div>
+        <div class="card-back">
+          <div class="card-cat" id="kaart-cat-back"></div>
+          <div class="card-vraag" id="kaart-vraag">...</div>
+          <div class="card-followup" id="kaart-followup"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="kaarten-btns" style="width:100%;display:none;" class="gap">
+      <button class="btn btn-gold" onclick="nextKaart()">Volgende kaart ›</button>
+      <button class="btn btn-ghost btn-sm" onclick="addVonk()">🔥 Vonkje verdienen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: QUIZ — EIGEN ANTWOORD
+════════════════════════════════════════════════ -->
+<div id="screen-quiz-eigen" class="screen">
+  <div class="pad gap" style="width:100%;max-width:420px;padding-top:50px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span class="cat-badge" id="quiz-cat"></span>
+      <span style="font-size:0.85rem;color:#a090b8;" id="quiz-ronde">Ronde 1/10</span>
+    </div>
+
+    <div class="reveal-box">
+      <div class="reveal-label">De vraag</div>
+      <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:#f0e6d3;font-style:italic;" id="quiz-vraag-text">...</div>
+    </div>
+
+    <div>
+      <p style="font-size:0.85rem;color:#a090b8;margin-bottom:8px;">Jouw eigen antwoord:</p>
+      <textarea id="quiz-eigen-input" placeholder="Schrijf hier jouw echte antwoord..."></textarea>
+    </div>
+
+    <button class="btn btn-gold" onclick="submitEigen()">Verder → raad de ander</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: QUIZ — RAAD PARTNER
+════════════════════════════════════════════════ -->
+<div id="screen-quiz-raad" class="screen">
+  <div class="pad gap" style="width:100%;max-width:420px;padding-top:50px;">
+    <div class="reveal-box">
+      <div class="reveal-label">De vraag</div>
+      <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:#f0e6d3;font-style:italic;" id="quiz-raad-vraag">...</div>
+    </div>
+
+    <div>
+      <p style="font-size:0.85rem;color:#a090b8;margin-bottom:8px;">Wat denk jij dat je partner antwoordde? 🔮</p>
+      <textarea id="quiz-raad-input" placeholder="Raad het antwoord van je partner..."></textarea>
+    </div>
+
+    <button class="btn btn-gold" onclick="submitRaad()">Insturen ✦</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: QUIZ — WACHTEN
+════════════════════════════════════════════════ -->
+<div id="screen-quiz-wacht" class="screen">
+  <div class="pad gap" style="width:100%;max-width:420px;padding-top:100px;align-items:center;text-align:center;">
+    <div style="font-size:3rem;">⌛</div>
+    <h2>Wachten op je partner</h2>
+    <p class="sub waiting-dots">Bijna<span>.</span><span>.</span><span>.</span></p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: QUIZ — REVEAL
+════════════════════════════════════════════════ -->
+<div id="screen-quiz-reveal" class="screen">
+  <div class="pad gap" style="width:100%;max-width:420px;padding-top:50px;">
+    <div style="text-align:center;">
+      <h2>De onthulling 🎭</h2>
+      <p class="sub" id="reveal-vraag-title" style="font-style:italic;margin-top:4px;"></p>
+    </div>
+
+    <div class="gap-sm" id="reveal-content"></div>
+
+    <div class="divider"></div>
+    <div style="display:flex;gap:16px;justify-content:center;align-items:center;" id="ronde-score">
+      <div style="text-align:center;">
+        <div style="font-size:0.75rem;color:#a090b8;">Jij</div>
+        <div style="font-size:1.4rem;font-weight:700;color:#d4af37;" id="score-mij">0</div>
+      </div>
+      <div style="font-size:1.5rem;">vs</div>
+      <div style="text-align:center;">
+        <div style="font-size:0.75rem;color:#a090b8;">Partner</div>
+        <div style="font-size:1.4rem;font-weight:700;color:#d4af37;" id="score-partner">0</div>
+      </div>
+    </div>
+
+    <button class="btn btn-gold" id="reveal-next-btn" onclick="nextQuizRonde()">Volgende ronde ›</button>
+    <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-menu')">← Menu</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: QUIZ — EINDSTAND
+════════════════════════════════════════════════ -->
+<div id="screen-quiz-eind" class="screen">
+  <div class="pad gap" style="width:100%;max-width:420px;padding-top:60px;align-items:center;text-align:center;">
+    <div style="font-size:3rem;" id="eind-emoji">🏆</div>
+    <h1 id="eind-titel">Eindstand!</h1>
+    <p class="sub" id="eind-sub"></p>
+    <div style="display:flex;gap:24px;justify-content:center;margin:8px 0;">
+      <div>
+        <div style="font-size:0.75rem;color:#a090b8;">Jij</div>
+        <div style="font-size:2.5rem;font-weight:700;color:#d4af37;" id="eind-score-mij">0</div>
+      </div>
+      <div style="font-size:2rem;align-self:center;">vs</div>
+      <div>
+        <div style="font-size:0.75rem;color:#a090b8;">Partner</div>
+        <div style="font-size:2.5rem;font-weight:700;color:#d4af37;" id="eind-score-partner">0</div>
+      </div>
+    </div>
+    <div class="divider" style="width:100%;"></div>
+    <button class="btn btn-gold" onclick="startMode('quiz')">Nog een ronde ›</button>
+    <button class="btn btn-outline" onclick="showScreen('screen-menu')">Terug naar menu</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: RAAD JE PARTNER
+════════════════════════════════════════════════ -->
+<div id="screen-raad" class="screen">
+  <div class="pad gap" style="width:100%;max-width:420px;padding-top:50px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <button class="btn btn-ghost btn-sm" onclick="showScreen('screen-menu')" style="width:auto;padding:8px 14px;">← Menu</button>
+      <span style="font-size:0.85rem;color:#a090b8;" id="raad-ronde">1/8</span>
+    </div>
+
+    <div id="raad-antwoorder-ui" style="display:none;" class="gap">
+      <div class="reveal-box">
+        <div class="reveal-label">Jouw beurt om te antwoorden</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:#f0e6d3;font-style:italic;" id="raad-vraag-a">...</div>
+      </div>
+      <textarea id="raad-antwoord-input" placeholder="Jouw eerlijke antwoord..."></textarea>
+      <button class="btn btn-gold" onclick="submitRaadAntwoord()">Ingestuurd, partner raadt nu ›</button>
+    </div>
+
+    <div id="raad-rader-ui" style="display:none;" class="gap">
+      <p class="sub" style="color:#d4af37;">Je partner heeft geantwoord...</p>
+      <div class="reveal-box">
+        <div class="reveal-label">De vraag aan je partner</div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:#f0e6d3;font-style:italic;" id="raad-vraag-r">...</div>
+      </div>
+      <textarea id="raad-gok-input" placeholder="Wat denk jij dat hij/zij zei?"></textarea>
+      <button class="btn btn-gold" onclick="submitRaadGok()">Dit is mijn gok ›</button>
+    </div>
+
+    <div id="raad-wacht-ui" style="display:none;text-align:center;" class="gap">
+      <div style="font-size:2rem;">⌛</div>
+      <p class="sub waiting-dots">Wachten<span>.</span><span>.</span><span>.</span></p>
+    </div>
+
+    <div id="raad-reveal-ui" style="display:none;" class="gap">
+      <h2 style="text-align:center;">Reveal! 🎭</h2>
+      <div class="reveal-box">
+        <div class="reveal-label">Het echte antwoord</div>
+        <div class="reveal-answer" id="raad-echt-antwoord"></div>
+      </div>
+      <div class="reveal-box">
+        <div class="reveal-label">Jouw gok</div>
+        <div class="reveal-answer" id="raad-gok-antwoord"></div>
+        <div class="reveal-match" id="raad-match-result"></div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-ghost btn-sm" onclick="raadSelfScore(false)" style="flex:1;">❌ Mis</button>
+        <button class="btn btn-gold btn-sm" onclick="raadSelfScore(true)" style="flex:1;">✓ Raak!</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// TEKST (straks vervangen door i18n object)
+// ══════════════════════════════════════════════
+const TEKST = {
+  niveau_labels: ['','Niveau 1 — Ontdekkers','Niveau 2 — Verkenners','Niveau 3 — Diepduikers'],
+  niveau_emojis: ['','🌱','🌿','🔮'],
+};
+
+// ══════════════════════════════════════════════
+// VRAAGDATABASE — KENNISMAKING (95 vragen)
+// ══════════════════════════════════════════════
+const KENNISMAKING_VRAGEN = [
+  // ── NIVEAU 1 — LUCHTIG & ONTDEKKEND ─────────
+  {id:'k001',n:1,cat:'humor',type:'open',v:'Als jij een dier was, welk dier zou je zijn en waarom?',i:1},
+  {id:'k002',n:1,cat:'smaak',type:'of-of',v:'Zoet of hartig? Koffie of thee? En heb je daar altijd zo over gedacht?',i:1},
+  {id:'k003',n:1,cat:'dagelijks',type:'open',v:'Hoe ziet jouw perfecte zondagochtend eruit?',i:1},
+  {id:'k004',n:1,cat:'humor',type:'open',v:'Wat is het meest bizarre talent dat je hebt — iets wat niemand van je verwacht?',i:1},
+  {id:'k005',n:1,cat:'dromen',type:'open',v:'Als je morgen een jaar vrij had en geld geen rol speelde, wat zou je doen?',i:1},
+  {id:'k006',n:1,cat:'smaak',type:'open',v:'Welk liedje staat er altijd op als je alleen thuis bent?',i:1},
+  {id:'k007',n:1,cat:'humor',type:'open',v:'Wat is het onhandigste wat je ooit hebt gedaan in het bijzijn van iemand die je wilde imponeren?',i:1},
+  {id:'k008',n:1,cat:'dagelijks',type:'open',v:'Ben je iemand die de wekker op de snooze zet, of spring je er meteen uit?',i:1},
+  {id:'k009',n:1,cat:'dromen',type:'open',v:'Welke plek op aarde wil je ooit nog een keer bezoeken, en waarom juist die?',i:1},
+  {id:'k010',n:1,cat:'humor',type:'of-of',v:'Strandvakantie of bergwandeling? En wat zegt dat over jou, denk je?',i:1},
+  {id:'k011',n:1,cat:'smaak',type:'open',v:'Wat is het laatste boek of de laatste serie waar je echt in opging?',i:1},
+  {id:'k012',n:1,cat:'dagelijks',type:'open',v:'Hoe laad jij jezelf op als je uitgeput bent?',i:1},
+  {id:'k013',n:1,cat:'humor',type:'open',v:'Wat is iets wat de meeste mensen leuk vinden maar jij stiekem niet?',i:1},
+  {id:'k014',n:1,cat:'dromen',type:'open',v:'Als je als kind gevraagd werd wat je later wilde worden — klopte dat een beetje?',i:1},
+  {id:'k015',n:1,cat:'smaak',type:'rangschik',v:'Rangschik: Netflix avond thuis, avondje uit met vrienden, avontuur buitenshuis. Wat kiest jouw hart?',i:1},
+  {id:'k016',n:1,cat:'dagelijks',type:'open',v:'Ben je iemand die zijn telefoon altijd bij zich heeft of ben je er soms bewust van weg?',i:1},
+  {id:'k017',n:1,cat:'humor',type:'open',v:'Wat is het meest absurde iets waar je ooit geld aan hebt uitgegeven en niet spijt van had?',i:1},
+  {id:'k018',n:1,cat:'dromen',type:'open',v:'Als jij een restaurant zou openen, wat voor restaurant zou dat zijn?',i:1},
+  {id:'k019',n:1,cat:'humor',type:'of-of',v:'Laat slapen en laat opstaan, of vroeg naar bed en vroeg opstaan?',i:1},
+  {id:'k020',n:1,cat:'dagelijks',type:'open',v:'Wat ruikt voor jou naar thuis?',i:1},
+
+  // ── NIVEAU 2 — IETS DIEPER ───────────────────
+  {id:'k021',n:2,cat:'waarden',type:'open',v:'Wat is iets wat je echt belangrijk vindt in een vriendschap, maar zelden hardop zegt?',i:2},
+  {id:'k022',n:2,cat:'jeugd',type:'open',v:'Welke herinnering uit je jeugd komt soms zomaar in je op?',i:2},
+  {id:'k023',n:2,cat:'dromen',type:'open',v:'Is er iets wat je ooit wilde bereiken maar op een gegeven moment losgelaten hebt? Mis je dat?',i:2},
+  {id:'k024',n:2,cat:'waarden',type:'open',v:'Wat geeft jou energie? En wat vreet het van je — ook als het ogenschijnlijk leuk is?',i:2},
+  {id:'k025',n:2,cat:'liefde',type:'open',v:'Hoe weet jij dat iemand van je houdt — wat doet of zegt diegene dan?',i:2},
+  {id:'k026',n:2,cat:'dagelijks',type:'open',v:'Wanneer voel jij je het meest jezelf?',i:2},
+  {id:'k027',n:2,cat:'jeugd',type:'open',v:'Hoe was jouw thuis toen je opgroeide? Wat nam je mee, wat liet je achter?',i:2},
+  {id:'k028',n:2,cat:'waarden',type:'open',v:'Is er een overtuiging die je vroeger had maar nu niet meer?',i:2},
+  {id:'k029',n:2,cat:'dromen',type:'open',v:'Waar ben je het meest trots op in je leven tot nu toe?',i:2},
+  {id:'k030',n:2,cat:'humor',type:'open',v:'Wat is iets wat je doet als niemand kijkt?',i:2},
+  {id:'k031',n:2,cat:'liefde',type:'open',v:'Hoe ziet een perfecte dag er voor jou uit als je samen bent met iemand?',i:2},
+  {id:'k032',n:2,cat:'waarden',type:'open',v:'Wat vind jij de grootste verspilling van tijd? En doe je dat zelf ook soms?',i:2},
+  {id:'k033',n:2,cat:'jeugd',type:'open',v:'Heb je een lievelingsplek uit je jeugd die je niet bent vergeten?',i:2},
+  {id:'k034',n:2,cat:'dromen',type:'open',v:'Als je over 10 jaar terugkijkt — wat wil je dan kunnen zeggen dat je gedaan hebt?',i:2},
+  {id:'k035',n:2,cat:'dagelijks',type:'open',v:'Wanneer had je voor het laatste het gevoel dat de tijd stilstond op een goede manier?',i:2},
+  {id:'k036',n:2,cat:'waarden',type:'of-of',v:'Liever iemand die altijd eerlijk is maar soms pijn doet, of iemand die dingen soms voor je verzacht?',i:2},
+  {id:'k037',n:2,cat:'liefde',type:'open',v:'Hoe reageer jij als je je verdrietig voelt — trek je je terug of zoek je contact?',i:2},
+  {id:'k038',n:2,cat:'humor',type:'open',v:'Waar kun jij heel erg slecht tegen — iets wat anderen klein vinden maar jou echt irriteert?',i:2},
+  {id:'k039',n:2,cat:'dromen',type:'open',v:'Is er een versie van jezelf die je altijd voor ogen hebt gehad maar nog niet bent?',i:2},
+  {id:'k040',n:2,cat:'waarden',type:'open',v:'Wat betekent vrijheid voor jou in het dagelijkse leven?',i:2},
+  {id:'k041',n:2,cat:'jeugd',type:'open',v:'Wie had de meeste invloed op wie jij nu bent? Hoe dan?',i:2},
+  {id:'k042',n:2,cat:'liefde',type:'open',v:'Hoe uit jij genegenheid het liefst — en hoe ontvang je het het liefst?',i:2},
+  {id:'k043',n:2,cat:'humor',type:'open',v:'Welk bijdehand antwoord zit er nog steeds in je hoofd dat je niet op tijd kon bedenken?',i:2},
+  {id:'k044',n:2,cat:'waarden',type:'open',v:'Wat is het mooiste compliment dat iemand je ooit gegeven heeft?',i:2},
+  {id:'k045',n:2,cat:'dagelijks',type:'open',v:'Hoe ziet jouw ideale woonplek eruit over 10 jaar?',i:2},
+
+  // ── NIVEAU 3 — DIEP & KWETSBAAR ─────────────
+  {id:'k051',n:3,cat:'diepte',type:'open',v:'Wat is iets wat je zelden of nooit hardop zegt, maar wel voelt?',i:3,f:'Wat houdt je tegen om het te zeggen?'},
+  {id:'k052',n:3,cat:'angst',type:'open',v:'Wat is jouw grootste angst in een intieme relatie?',i:3},
+  {id:'k053',n:3,cat:'diepte',type:'open',v:'Wanneer voelde je je voor het laatste echt gezien door iemand?',i:3},
+  {id:'k054',n:3,cat:'liefde',type:'open',v:'Is er iets wat je altijd wilt zeggen bij een afscheid maar zelden doet?',i:3},
+  {id:'k055',n:3,cat:'angst',type:'open',v:'Wat is het verhaal dat je over jezelf vertelt maar eigenlijk niet meer gelooft?',i:3,f:'Welk verhaal wil je liever geloven?'},
+  {id:'k056',n:3,cat:'diepte',type:'open',v:'Hoe weet jij wanneer je iemand echt vertrouwt?',i:3},
+  {id:'k057',n:3,cat:'liefde',type:'open',v:'Was er een moment in je leven dat je je compleet alleen voelde? Wat deed je daarmee?',i:3},
+  {id:'k058',n:3,cat:'waarden',type:'open',v:'Wat is iets wat je echt nodig hebt in je leven maar moeilijk vindt om te vragen?',i:3},
+  {id:'k059',n:3,cat:'angst',type:'open',v:'Wat is het ergste wat iemand over jou kan denken — en is er een kern van waarheid in?',i:3},
+  {id:'k060',n:3,cat:'diepte',type:'open',v:'Is er iets wat je nog nooit aan iemand verteld hebt — niet omdat het geheim is, maar omdat niemand ooit vroeg?',i:3},
+  {id:'k061',n:3,cat:'liefde',type:'open',v:'Hoe ziet liefde er voor jou uit op een gewone dinsdag?',i:3},
+  {id:'k062',n:3,cat:'diepte',type:'open',v:'Wat heeft je gevormd dat je liever niet had meegemaakt maar ook niet meer zou missen?',i:3},
+  {id:'k063',n:3,cat:'angst',type:'open',v:'Waarvan ben jij bang dat het nooit verandert in jezelf?',i:3},
+  {id:'k064',n:3,cat:'liefde',type:'open',v:'Wanneer voel jij je echt geliefd? Niet in grote gebaren, maar in kleine momenten.',i:3},
+  {id:'k065',n:3,cat:'diepte',type:'open',v:'Als jij een brief aan je 15-jarige zelf kon schrijven — wat zou je zeggen?',i:3},
+  {id:'k066',n:3,cat:'waarden',type:'open',v:'Wat wil je dat mensen zeggen op jouw begrafenis? En leef je daar al naar?',i:3},
+  {id:'k067',n:3,cat:'liefde',type:'open',v:'Wat is het mooiste wat liefde jou ooit gegeven heeft?',i:3},
+  {id:'k068',n:3,cat:'angst',type:'open',v:'Is er iets waarbij je altijd maar doorgaat terwijl je eigenlijk even wil stoppen?',i:3},
+  {id:'k069',n:3,cat:'diepte',type:'open',v:'Wat maakt jou op dit moment onrustig — als je heel eerlijk bent?',i:3},
+  {id:'k070',n:3,cat:'liefde',type:'open',v:'Hoe ziet vergeving er voor jou uit — aan iemand anders, of aan jezelf?',i:3},
+  {id:'k071',n:3,cat:'waarden',type:'open',v:'Wat is het verschil tussen het leven dat jij leeft en het leven dat jij wíl leven?',i:3,f:'Wat houdt je tegen om dat gat te dichten?'},
+  {id:'k072',n:3,cat:'diepte',type:'open',v:'Wat moet iemand weten om jou echt te begrijpen?',i:3},
+
+  // ── NIVEAU 1 — BASIS (aanvulling) ────────────
+  {id:'k073',n:1,cat:'karakter',type:'open',v:'Hoe zou jij jouw jeugd in drie woorden omschrijven?',i:1},
+  {id:'k074',n:1,cat:'karakter',type:'of-of',v:'Ben je meer rustig of druk? Meer spontaan of bedachtzaam?',i:1},
+  {id:'k075',n:1,cat:'smaak',type:'of-of',v:'Houd je meer van stad, dorp, natuur of zee?',i:1},
+  {id:'k076',n:1,cat:'dagelijks',type:'open',v:'Ben je sportief? En welke sport vind je leuk om zelf te doen of te volgen?',i:1},
+  {id:'k077',n:1,cat:'karakter',type:'of-of',v:'Neem jij graag leiding, of werk je liever op de achtergrond?',i:1},
+  {id:'k078',n:1,cat:'karakter',type:'of-of',v:'Werk je liever alleen of samen?',i:1},
+  {id:'k079',n:1,cat:'relatie',type:'of-of',v:'Heb je liever veel contacten of een paar diepe contacten?',i:1},
+  {id:'k080',n:1,cat:'relatie',type:'open',v:'Hoe laat jij merken dat je om iemand geeft?',i:1},
+  {id:'k081',n:1,cat:'relatie',type:'open',v:'Waardoor voel jij je veilig bij iemand?',i:1},
+  {id:'k082',n:1,cat:'karakter',type:'open',v:'Waar kun je verdrietig van worden?',i:1},
+  {id:'k083',n:1,cat:'karakter',type:'open',v:'Waar kun je boos om worden?',i:1},
+  {id:'k084',n:1,cat:'karakter',type:'open',v:'Kun jij makkelijk vergeven, of kost dat tijd?',i:1},
+  {id:'k085',n:1,cat:'waarden',type:'open',v:'Wat betekent eerlijkheid voor jou?',i:1},
+  {id:'k086',n:1,cat:'waarden',type:'open',v:'Wat betekent vertrouwen voor jou?',i:1},
+  {id:'k087',n:1,cat:'dromen',type:'open',v:'Waar hoop je op voor de komende jaren?',i:1},
+  {id:'k088',n:1,cat:'waarden',type:'open',v:'Wat betekent geluk voor jou?',i:1},
+  {id:'k089',n:1,cat:'dromen',type:'open',v:'Wat zou je doen als tijd en geld geen probleem waren?',i:1},
+  {id:'k090',n:1,cat:'jeugd',type:'open',v:'Welke periode in je leven vond je mooi? En welke vond je moeilijk?',i:1},
+  {id:'k091',n:1,cat:'dromen',type:'open',v:'Wat hoop je dat mensen later over jou zeggen?',i:1},
+  {id:'k092',n:1,cat:'relatie',type:'open',v:'Wat vind je het belangrijkste in een relatie?',i:1},
+
+  // ── NIVEAU 2 — GEMIDDELD (aanvulling) ────────
+  {id:'k093',n:2,cat:'dagelijks',type:'open',v:'Wanneer functioneer jij op je best?',i:2},
+  {id:'k094',n:2,cat:'dagelijks',type:'open',v:'Wat moet een ander weten om prettig met jouw ritme samen te leven?',i:2},
+  {id:'k095',n:2,cat:'communicatie',type:'open',v:'Wanneer voel jij dat een gesprek echt goed loopt?',i:2},
+  {id:'k096',n:2,cat:'communicatie',type:'open',v:'Wat maakt dat jij dichtklapt in een gesprek?',i:2},
+  {id:'k097',n:2,cat:'communicatie',type:'of-of',v:'Praat je liever meteen dingen uit, of denk je eerst een tijd na?',i:2},
+  {id:'k098',n:2,cat:'communicatie',type:'open',v:'Wat vind jij moeilijker: zeggen wat je nodig hebt, of horen wat de ander nodig heeft?',i:2},
+  {id:'k099',n:2,cat:'communicatie',type:'open',v:'Hoe kan iemand jou het beste aanspreken als er iets schuurt?',i:2},
+  {id:'k100',n:2,cat:'relatie',type:'open',v:'Wanneer verandert een kennis voor jou in een echte vriend?',i:2},
+  {id:'k101',n:2,cat:'dagelijks',type:'open',v:'Welke sociale verwachting vind jij vermoeiend?',i:2},
+  {id:'k102',n:2,cat:'liefde',type:'open',v:'Wanneer ervaar jij nabijheid zonder dat er veel gezegd wordt?',i:2},
+  {id:'k103',n:2,cat:'liefde',type:'open',v:'Waarin ben jij soms lastig om lief te hebben?',i:2},
+  {id:'k104',n:2,cat:'liefde',type:'open',v:'Wat maakt dat jij je terugtrekt in een relatie?',i:2},
+  {id:'k105',n:2,cat:'conflict',type:'open',v:'Wat is jouw eerste neiging bij spanning — praten, oplossen, vermijden of terugtrekken?',i:2},
+  {id:'k106',n:2,cat:'conflict',type:'open',v:'Wanneer wordt een meningsverschil voor jou persoonlijk?',i:2},
+  {id:'k107',n:2,cat:'conflict',type:'open',v:'Wat helpt jou om rustig te blijven als emoties oplopen?',i:2},
+  {id:'k108',n:2,cat:'conflict',type:'open',v:'Welke onuitgesproken verwachting zorgt bij jou soms voor teleurstelling?',i:2},
+  {id:'k109',n:2,cat:'emoties',type:'open',v:'Welke emotie laat jij makkelijk zien, en welke minder?',i:2},
+  {id:'k110',n:2,cat:'emoties',type:'open',v:'Wat ligt er bij jou vaak onder boosheid?',i:2},
+  {id:'k111',n:2,cat:'emoties',type:'open',v:'Wanneer voel jij je klein of onzeker?',i:2},
+  {id:'k112',n:2,cat:'waarden',type:'open',v:'Hoe neem jij belangrijke beslissingen — meer vanuit je hoofd of vanuit je gevoel?',i:2},
+  {id:'k113',n:2,cat:'waarden',type:'open',v:'Wanneer ben jij geneigd anderen tevreden te houden ten koste van jezelf?',i:2},
+  {id:'k114',n:2,cat:'praktisch',type:'open',v:'Hoe kijk jij aan tegen sparen, uitgeven en genieten?',i:2},
+  {id:'k115',n:2,cat:'praktisch',type:'open',v:'Wat irriteert jou sneller: slordigheid, onduidelijkheid of controle?',i:2},
+  {id:'k116',n:2,cat:'waarden',type:'open',v:'Welke waarde wil jij niet kwijtraken als het leven druk wordt?',i:2},
+  {id:'k117',n:2,cat:'waarden',type:'open',v:'Waar wil jij later liever niet met spijt op terugkijken?',i:2},
+
+  // ── NIVEAU 3 — GEVORDERD (aanvulling) ─────────
+  {id:'k118',n:3,cat:'diepte',type:'open',v:'Welke kant van jezelf laat je minder snel zien, zelfs aan mensen die dichtbij komen?',i:3},
+  {id:'k119',n:3,cat:'diepte',type:'open',v:'Wanneer trek jij je terug, terwijl je eigenlijk verbinding zoekt?',i:3},
+  {id:'k120',n:3,cat:'diepte',type:'open',v:'Welke behoefte vind jij moeilijk om rechtstreeks uit te spreken?',i:3},
+  {id:'k121',n:3,cat:'diepte',type:'open',v:'Wat bescherm jij in jezelf door sterk, grappig, stil of druk te worden?',i:3},
+  {id:'k122',n:3,cat:'diepte',type:'open',v:'Wanneer merk jij verschil tussen hoe je overkomt en hoe je je echt voelt?',i:3},
+  {id:'k123',n:3,cat:'hechting',type:'open',v:'Wat maakt het voor jou spannend om iemand echt dichtbij te laten komen?',i:3},
+  {id:'k124',n:3,cat:'hechting',type:'open',v:'Wanneer verlang je naar nabijheid, maar gedraag je je juist onafhankelijk?',i:3},
+  {id:'k125',n:3,cat:'hechting',type:'open',v:'Wat zou iemand moeten begrijpen over jouw manier van hechten?',i:3},
+  {id:'k126',n:3,cat:'conflict',type:'open',v:'Wanneer zeg jij \'het geeft niet\', terwijl het wel iets met je doet?',i:3},
+  {id:'k127',n:3,cat:'conflict',type:'open',v:'Wat vind jij moeilijker: sorry zeggen, sorry ontvangen of opnieuw vertrouwen?',i:3},
+  {id:'k128',n:3,cat:'diepte',type:'open',v:'Welke strijd voer je soms onder de oppervlakte, zonder dat de ander het weet?',i:3},
+  {id:'k129',n:3,cat:'conflict',type:'open',v:'Wanneer word jij harder dan je eigenlijk wilt zijn?',i:3},
+  {id:'k130',n:3,cat:'liefde',type:'open',v:'Wat betekent liefde voor jou wanneer het gevoel tijdelijk minder sterk is?',i:3},
+  {id:'k131',n:3,cat:'liefde',type:'open',v:'Wanneer voelt trouw voor jou als vrijheid, en wanneer als druk?',i:3},
+  {id:'k132',n:3,cat:'liefde',type:'open',v:'Wat maakt dat jij je gekozen voelt?',i:3},
+  {id:'k133',n:3,cat:'diepte',type:'open',v:'Waar ligt bij jou de grens tussen aanpassen en jezelf verliezen?',i:3},
+  {id:'k134',n:3,cat:'angst',type:'open',v:'Welke grens stel je te laat omdat je de sfeer goed wilt houden?',i:3},
+  {id:'k135',n:3,cat:'angst',type:'open',v:'Wat heb jij nodig om nee te zeggen zonder je meteen schuldig te voelen?',i:3},
+  {id:'k136',n:3,cat:'jeugd',type:'open',v:'Welke ervaring heeft jou voorzichtiger gemaakt in contact met mensen?',i:3},
+  {id:'k137',n:3,cat:'jeugd',type:'open',v:'Welke oude pijn kan in nieuwe situaties onverwacht meespelen?',i:3},
+  {id:'k138',n:3,cat:'jeugd',type:'open',v:'Welke boodschap kreeg je vroeger mee zonder dat iemand die letterlijk uitsprak?',i:3},
+  {id:'k139',n:3,cat:'diepte',type:'open',v:'Waar verlang je naar, maar durf je niet te snel op te hopen?',i:3},
+  {id:'k140',n:3,cat:'dromen',type:'open',v:'Welke droom heb je misschien begraven omdat hij te kwetsbaar voelde?',i:3},
+  {id:'k141',n:3,cat:'schaamte',type:'open',v:'Waarover schaam jij je sneller dan nodig is?',i:3},
+  {id:'k142',n:3,cat:'schaamte',type:'open',v:'Welke complimenten kun je moeilijk ontvangen omdat ze dichtbij komen?',i:3},
+  {id:'k143',n:3,cat:'schaamte',type:'open',v:'Wanneer verberg jij teleurstelling om niet behoeftig te lijken?',i:3},
+  {id:'k144',n:3,cat:'diepte',type:'open',v:'Wat zou je willen kunnen zeggen zonder bang te zijn dat het te veel is?',i:3},
+  {id:'k145',n:3,cat:'diepte',type:'open',v:'Wat zou een ander aan jou mogen spiegelen als dat liefdevol gebeurt?',i:3},
+];
+
+// ══════════════════════════════════════════════
+// QUIZ VRAGEN — WIE KENT WIE HET BESTE (55 vragen)
+// ══════════════════════════════════════════════
+const QUIZ_VRAGEN = [
+  {id:'q001',cat:'smaak',v:'Wat is mijn absolute lievelingseten?'},
+  {id:'q002',cat:'smaak',v:'Welk liedje zet ik op als ik me goed voel?'},
+  {id:'q003',cat:'angst',v:'Waar ben ik stiekem een beetje bang voor?'},
+  {id:'q004',cat:'dagelijks',v:'Wat is mijn ochtendgewoonste die ik bijna nooit overla?'},
+  {id:'q005',cat:'smaak',v:'Welke film kan ik keer op keer kijken?'},
+  {id:'q006',cat:'humor',v:'Wat is mijn meest terugkerende irritatie in het dagelijkse leven?'},
+  {id:'q007',cat:'dromen',v:'Welk land staat bovenaan mijn verlanglijstje?'},
+  {id:'q008',cat:'smaak',v:'Koffie of thee — en hoe drink ik het het liefst?'},
+  {id:'q009',cat:'dagelijks',v:'Hoe laat ga ik normaal naar bed?'},
+  {id:'q010',cat:'humor',v:'Wat is mijn guilty pleasure die ik normaal verberg?'},
+  {id:'q011',cat:'liefde',v:'Hoe wil ik het liefst getroost worden als ik me slecht voel?'},
+  {id:'q012',cat:'dromen',v:'Welk beroep had ik als kind altijd willen hebben?'},
+  {id:'q013',cat:'smaak',v:'Wat is mijn favoriete seizoen en waarom?'},
+  {id:'q014',cat:'dagelijks',v:'Hoe besteed ik mijn vrije zondagochtend het liefst?'},
+  {id:'q015',cat:'humor',v:'Wat is mijn meest bizarre, onaantrekkelijke gewoonte?'},
+  {id:'q016',cat:'dromen',v:'Als ik morgen mocht stoppen met werken, wat zou ik dan doen?'},
+  {id:'q017',cat:'waarden',v:'Wat is voor mij het allerbelangrijkste in een relatie?'},
+  {id:'q018',cat:'smaak',v:'Welk type restaurant ga ik altijd graag naartoe?'},
+  {id:'q019',cat:'angst',v:'Wat vind ik echt moeilijk — iets wat me regelmatig raakt?'},
+  {id:'q020',cat:'humor',v:'Waar kan ik echt niet bij stilstaan zonder te lachen?'},
+  {id:'q021',cat:'jeugd',v:'Wat is een herinnering uit mijn jeugd die ik steeds opnieuw vertel?'},
+  {id:'q022',cat:'dagelijks',v:'Hoe reageer ik als ik gestrest ben — trek ik me terug of zoek ik afleiding?'},
+  {id:'q023',cat:'smaak',v:'Welke serie of film kan ik maar niet afkrijgen maar stop toch niet?'},
+  {id:'q024',cat:'dromen',v:'Wat is mijn geheime talent waar ik een beetje trots op ben?'},
+  {id:'q025',cat:'waarden',v:'Wat is iets wat ik absoluut niet kan vergeven?'},
+  {id:'q026',cat:'humor',v:'Wat doe ik als niemand kijkt en ik alleen thuis ben?'},
+  {id:'q027',cat:'liefde',v:'Hoe geef ik het liefst liefde — wat doe ik dan?'},
+  {id:'q028',cat:'smaak',v:'Welk gerecht maak ik als ik iemand wil imponeren?'},
+  {id:'q029',cat:'dagelijks',v:'Wat is mijn favoriete plek in huis om te ontspannen?'},
+  {id:'q030',cat:'angst',v:'Waar word ik wakker van 's nachts als het niet goed gaat?'},
+  {id:'q031',cat:'humor',v:'Wat is het gekste wat ik ooit gekocht heb?'},
+  {id:'q032',cat:'waarden',v:'Wat is voor mij echte vriendschap — in één zin?'},
+  {id:'q033',cat:'dromen',v:'Welk boek heeft mij het meest veranderd of geraakt?'},
+  {id:'q034',cat:'smaak',v:'Waar doe ik het liefst boodschappen?'},
+  {id:'q035',cat:'dagelijks',v:'Hoe weet je dat ik een slechte dag heb — wat doe ik dan?'},
+  {id:'q036',cat:'humor',v:'Wat is mijn standaardreactie als ik iets niet weet?'},
+  {id:'q037',cat:'liefde',v:'Hoe zie ik mijn ideale avond eruit als ik thuis ben met een geliefde?'},
+  {id:'q038',cat:'dromen',v:'Wat is een droom die ik nog niet hardop heb uitgesproken?'},
+  {id:'q039',cat:'smaak',v:'Sport kijken of zelf sporten — en wat dan?'},
+  {id:'q040',cat:'waarden',v:'Wat is voor mij absoluut niet onderhandelbaar in mijn leven?'},
+  {id:'q041',cat:'humor',v:'Welk woord of uitdrukking gebruik ik te veel?'},
+  {id:'q042',cat:'jeugd',v:'Welk karakter uit een film of boek vond ik vroeger mijn held?'},
+  {id:'q043',cat:'dagelijks',v:'Hoe zie mijn ideale werkdag eruit?'},
+  {id:'q044',cat:'angst',v:'Wat is het ergste scenario dat soms door mijn hoofd schiet?'},
+  {id:'q045',cat:'smaak',v:'Welk land of welke cultuur fascineert me het meest?'},
+  {id:'q046',cat:'humor',v:'Wat is mijn meest embarrassing moment dat ik inmiddels grappig vind?'},
+  {id:'q047',cat:'liefde',v:'Hoe toon ik dat ik iemand vertrouw — wat doe ik dan meer?'},
+  {id:'q048',cat:'dromen',v:'Als ik een extra leven had, wat voor leven zou dat zijn?'},
+  {id:'q049',cat:'waarden',v:'Wat is iets waarop ik nooit compromis sluit?'},
+  {id:'q050',cat:'dagelijks',v:'Wat is het eerste dat ik doe als ik thuiskom?'},
+  {id:'q051',cat:'humor',v:'Welke geluiden kan ik écht niet uitstaan?'},
+  {id:'q052',cat:'smaak',v:'Zoet of hartig ontbijt?'},
+  {id:'q053',cat:'jeugd',v:'Wat was mijn lievelingssnoep als kind?'},
+  {id:'q054',cat:'liefde',v:'Wat wil ik dat een partner altijd onthoudt over mij?'},
+  {id:'q055',cat:'dromen',v:'Wat is het project of plan dat al jaren in mijn hoofd zit?'},
+];
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+const state = {
+  niveau: 0, duur: 0, kennis: 0,
+  player: '1', code: null, solo: false,
+  vonkjes: 0,
+  // Kaarten
+  kaartQueue: [], kaartIdx: 0,
+  // Quiz
+  quizQueue: [], quizRonde: 0,
+  quizScoreMij: 0, quizScorePartner: 0,
+  quizEigenAntwoord: '', quizRaadAntwoord: '',
+  quizPartnerData: null,
+  // Raad
+  raadQueue: [], raadIdx: 0,
+  raadAntwoorder: '1', raadScore: 0,
+};
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('active'); el.scrollTop = 0; }
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function catEmoji(cat) {
+  const map = {
+    humor:'😄', smaak:'🍷', dagelijks:'☀️', dromen:'🌙', waarden:'🌿',
+    jeugd:'🎈', liefde:'❤️', angst:'🌊', diepte:'🔮', werk:'💼',
+  };
+  return map[cat] || '✦';
+}
+
+function getNiveau() {
+  // Combineer duur + kennis → 1, 2 of 3
+  return Math.round((state.duur + state.kennis) / 2);
+}
+
+// ══════════════════════════════════════════════
+// KOPPELCODE
+// ══════════════════════════════════════════════
+let socket = null;
+
+function loadKoppelScript(cb) {
+  if (window.KoppelClient) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'sd-client.js'; // was koppel.js
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
+function startKoppel(mode) {
+  showScreen('screen-koppel');
+  document.getElementById('koppel-create-ui').style.display = 'none';
+  document.getElementById('koppel-join-ui').style.display = 'none';
+
+  loadKoppelScript(() => {
+    KoppelClient.on('session_created', ({code}) => {
+      state.code = code;
+      document.getElementById('display-code').textContent = code;
+    });
+    KoppelClient.on('both_connected', () => {
+      document.getElementById('waiting-partner').style.display = 'none';
+      document.getElementById('both-connected-ui').style.display = 'block';
+    });
+    KoppelClient.on('session_joined', () => {
+      document.getElementById('join-waiting').style.display = 'none';
+      document.getElementById('join-connected').style.display = 'block';
+    });
+    KoppelClient.on('session_error', ({message}) => {
+      document.getElementById('koppel-error').textContent = message;
+      document.getElementById('koppel-error').style.display = 'block';
+      document.getElementById('join-waiting').style.display = 'none';
+    });
+    KoppelClient.on('player_done', ({player, data}) => {
+      handlePartnerData(player, data);
+    });
+    KoppelClient.on('session_update', ({state: s}) => {
+      const partnerKey = state.player === '1' ? 'p2' : 'p1';
+      if (s[partnerKey]?.done) handlePartnerData(partnerKey === 'p1' ? '1' : '2', s[partnerKey]);
+    });
+
+    if (mode === 'create') {
+      document.getElementById('koppel-title').textContent = 'Sessie aanmaken';
+      document.getElementById('koppel-create-ui').style.display = 'block';
+      state.player = '1';
+      KoppelClient.create('kennismaking');
+    } else {
+      document.getElementById('koppel-title').textContent = 'Code invoeren';
+      document.getElementById('koppel-join-ui').style.display = 'block';
+      state.player = '2';
+    }
+  });
+}
+
+function doJoin() {
+  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+  if (code.length < 4) return;
+  document.getElementById('join-waiting').style.display = 'block';
+  document.getElementById('koppel-error').style.display = 'none';
+  state.code = code;
+  KoppelClient.join(code, 'kennismaking');
+}
+
+function startSolo() {
+  state.solo = true;
+  goNiveau();
+}
+
+function goNiveau() {
+  // Check if niveau already in profile
+  const saved = loadNiveau();
+  if (saved) {
+    state.niveau = saved.niveau;
+    state.duur = saved.duur;
+    state.kennis = saved.kennis;
+    goMenu();
+  } else {
+    showScreen('screen-niveau');
+  }
+}
+
+// ══════════════════════════════════════════════
+// NIVEAU
+// ══════════════════════════════════════════════
+function saveNiveau(data) {
+  try { localStorage.setItem('km_niveau', JSON.stringify(data)); } catch(e){}
+}
+function loadNiveau() {
+  try { return JSON.parse(localStorage.getItem('km_niveau')); } catch(e){ return null; }
+}
+
+function selectDuur(val, el) {
+  document.querySelectorAll('#duur-choices .choice-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  state.duur = val;
+  checkNiveauReady();
+}
+
+function selectKennis(val, el) {
+  document.querySelectorAll('#kennis-choices .choice-btn').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  state.kennis = val;
+  checkNiveauReady();
+}
+
+function checkNiveauReady() {
+  const btn = document.getElementById('niveau-btn');
+  if (state.duur > 0 && state.kennis > 0) btn.style.display = 'block';
+}
+
+function confirmNiveau() {
+  state.niveau = getNiveau();
+  saveNiveau({niveau: state.niveau, duur: state.duur, kennis: state.kennis});
+  goMenu();
+}
+
+// ══════════════════════════════════════════════
+// MENU
+// ══════════════════════════════════════════════
+function goMenu() {
+  const n = state.niveau || 1;
+  const badge = document.getElementById('menu-level-badge');
+  badge.innerHTML = `<span class="level-pill level-${n}">${TEKST.niveau_emojis[n]} ${TEKST.niveau_labels[n]}</span>`;
+  document.getElementById('vonkjes-count').textContent = state.vonkjes;
+  showScreen('screen-menu');
+}
+
+// ══════════════════════════════════════════════
+// MODUS STARTEN
+// ══════════════════════════════════════════════
+function startMode(mode) {
+  if (mode === 'kaarten') startKaarten();
+  else if (mode === 'quiz') startQuiz();
+  else if (mode === 'raad') startRaad();
+}
+
+// ══════════════════════════════════════════════
+// KAARTEN MODUS
+// ══════════════════════════════════════════════
+function startKaarten() {
+  const n = state.niveau || 1;
+  // Haal vragen op voor dit niveau + lager (niveau 1 ook bij 2 en 3)
+  let pool = KENNISMAKING_VRAGEN.filter(q => q.n <= n);
+  state.kaartQueue = shuffle(pool).slice(0, 12);
+  state.kaartIdx = 0;
+  renderKaart();
+  showScreen('screen-kaarten');
+}
+
+function renderKaart() {
+  const q = state.kaartQueue[state.kaartIdx];
+  if (!q) return;
+
+  // Reset flip
+  const wrap = document.getElementById('kaart');
+  wrap.classList.remove('flipped');
+  document.getElementById('kaarten-btns').style.display = 'none';
+
+  // Inhoud
+  document.getElementById('kaart-cat-back').textContent = `${catEmoji(q.cat)} ${q.cat}`;
+  document.getElementById('kaarten-cat').innerHTML = `${catEmoji(q.cat)} ${q.cat}`;
+  document.getElementById('kaart-vraag').textContent = q.v;
+  document.getElementById('kaart-followup').textContent = q.f ? `→ ${q.f}` : '';
+
+  // Counter
+  document.getElementById('kaarten-counter').textContent = `${state.kaartIdx+1} / ${state.kaartQueue.length}`;
+
+  // Dots
+  const dots = document.getElementById('kaarten-dots');
+  dots.innerHTML = '';
+  const show = Math.min(state.kaartQueue.length, 10);
+  for (let i = 0; i < show; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i < state.kaartIdx ? ' done' : '') + (i === state.kaartIdx ? ' active' : '');
+    dots.appendChild(d);
+  }
+}
+
+function flipCard() {
+  const wrap = document.getElementById('kaart');
+  wrap.classList.toggle('flipped');
+  if (wrap.classList.contains('flipped')) {
+    setTimeout(() => { document.getElementById('kaarten-btns').style.display = 'flex'; }, 400);
+  } else {
+    document.getElementById('kaarten-btns').style.display = 'none';
+  }
+}
+
+function nextKaart() {
+  state.kaartIdx++;
+  if (state.kaartIdx >= state.kaartQueue.length) {
+    // Terug naar menu
+    state.vonkjes += 3;
+    goMenu();
+    return;
+  }
+  renderKaart();
+}
+
+function addVonk() {
+  state.vonkjes++;
+  document.getElementById('vonkjes-count').textContent = state.vonkjes;
+  const btn = event.target;
+  btn.classList.add('vonk');
+  setTimeout(() => btn.classList.remove('vonk'), 400);
+  btn.textContent = '🔥 +1 vonkje!';
+  setTimeout(() => btn.textContent = '🔥 Vonkje verdienen', 1500);
+}
+
+// ══════════════════════════════════════════════
+// QUIZ MODUS — WIE KENT WIE HET BESTE
+// ══════════════════════════════════════════════
+function startQuiz() {
+  state.quizQueue = shuffle(QUIZ_VRAGEN).slice(0, 10);
+  state.quizRonde = 0;
+  state.quizScoreMij = 0;
+  state.quizScorePartner = 0;
+  state.quizPartnerData = null;
+  nextQuizRonde();
+}
+
+function nextQuizRonde() {
+  if (state.quizRonde >= state.quizQueue.length) {
+    showQuizEind();
+    return;
+  }
+  const q = state.quizQueue[state.quizRonde];
+  document.getElementById('quiz-cat').innerHTML = `${catEmoji(q.cat)} ${q.cat}`;
+  document.getElementById('quiz-vraag-text').textContent = q.v;
+  document.getElementById('quiz-raad-vraag').textContent = q.v;
+  document.getElementById('quiz-ronde').textContent = `Ronde ${state.quizRonde+1}/10`;
+  document.getElementById('quiz-eigen-input').value = '';
+  document.getElementById('quiz-raad-input').value = '';
+  state.quizEigenAntwoord = '';
+  state.quizPartnerData = null;
+  showScreen('screen-quiz-eigen');
+}
+
+function submitEigen() {
+  const val = document.getElementById('quiz-eigen-input').value.trim();
+  if (!val) return;
+  state.quizEigenAntwoord = val;
+  showScreen('screen-quiz-raad');
+}
+
+function submitRaad() {
+  const val = document.getElementById('quiz-raad-input').value.trim();
+  if (!val) return;
+  state.quizRaadAntwoord = val;
+
+  const myData = {
+    type: 'quiz',
+    ronde: state.quizRonde,
+    eigen: state.quizEigenAntwoord,
+    raad: state.quizRaadAntwoord,
+    vraagId: state.quizQueue[state.quizRonde].id,
+  };
+
+  if (!state.solo && window.KoppelClient && state.code) {
+    KoppelClient.done(myData);
+    showScreen('screen-quiz-wacht');
+    // Partner data komt via handlePartnerData
+  } else {
+    // Solo modus: direct doorgaan
+    showQuizReveal(myData, null);
+  }
+}
+
+function handlePartnerData(player, data) {
+  if (!data || data.type !== 'quiz') return;
+  if (data.ronde !== state.quizRonde) return;
+  state.quizPartnerData = data;
+  // Ben ik op het wachtscherm?
+  const myData = {
+    type: 'quiz',
+    ronde: state.quizRonde,
+    eigen: state.quizEigenAntwoord,
+    raad: state.quizRaadAntwoord,
+  };
+  showQuizReveal(myData, data);
+}
+
+function showQuizReveal(mine, partner) {
+  const q = state.quizQueue[state.quizRonde];
+  document.getElementById('reveal-vraag-title').textContent = q.v;
+
+  let html = '';
+  let mijPunt = 0, partnerPunt = 0;
+
+  if (partner) {
+    // Mijn antwoord + partner's gok
+    html += `<div class="reveal-box">
+      <div class="reveal-label">Jouw echte antwoord</div>
+      <div class="reveal-answer">${mine.eigen}</div>
+    </div>`;
+    html += `<div class="reveal-box">
+      <div class="reveal-label">Partner raadde voor jou</div>
+      <div class="reveal-answer">${partner.raad}</div>
+    </div>`;
+    html += `<div class="reveal-box">
+      <div class="reveal-label">Partner's echte antwoord</div>
+      <div class="reveal-answer">${partner.eigen}</div>
+    </div>`;
+    html += `<div class="reveal-box">
+      <div class="reveal-label">Jij raadde voor partner</div>
+      <div class="reveal-answer">${mine.raad}</div>
+    </div>`;
+    html += `<p class="sub" style="text-align:center;">Wie had het bij het rechte eind? Beoordeel zelf ↓</p>`;
+    html += `<div style="display:flex;gap:10px;">
+      <button class="btn btn-ghost btn-sm" onclick="quizScore(false,false)" style="flex:1;font-size:0.78rem;">Allebei mis</button>
+      <button class="btn btn-ghost btn-sm" onclick="quizScore(true,false)" style="flex:1;font-size:0.78rem;">Ik had gelijk</button>
+      <button class="btn btn-ghost btn-sm" onclick="quizScore(false,true)" style="flex:1;font-size:0.78rem;">Partner had gelijk</button>
+      <button class="btn btn-gold btn-sm" onclick="quizScore(true,true)" style="flex:1;font-size:0.78rem;">Allebei goed!</button>
+    </div>`;
+    document.getElementById('reveal-next-btn').style.display = 'none';
+  } else {
+    // Solo modus
+    html += `<div class="reveal-box">
+      <div class="reveal-label">Jouw antwoord</div>
+      <div class="reveal-answer">${mine.eigen}</div>
+    </div>`;
+    html += `<div class="reveal-box">
+      <div class="reveal-label">Jouw gok voor partner</div>
+      <div class="reveal-answer">${mine.raad}</div>
+    </div>`;
+    document.getElementById('reveal-next-btn').style.display = 'block';
+  }
+
+  document.getElementById('reveal-content').innerHTML = html;
+  document.getElementById('score-mij').textContent = state.quizScoreMij;
+  document.getElementById('score-partner').textContent = state.quizScorePartner;
+  showScreen('screen-quiz-reveal');
+}
+
+function quizScore(mijGoed, partnerGoed) {
+  if (mijGoed) state.quizScoreMij++;
+  if (partnerGoed) state.quizScorePartner++;
+  document.getElementById('score-mij').textContent = state.quizScoreMij;
+  document.getElementById('score-partner').textContent = state.quizScorePartner;
+  document.getElementById('reveal-next-btn').style.display = 'block';
+  // Verberg score knoppen
+  event.target.closest('div').style.display = 'none';
+}
+
+function showQuizEind() {
+  const mij = state.quizScoreMij;
+  const partner = state.quizScorePartner;
+  let emoji, titel, sub;
+
+  if (mij === partner) {
+    emoji = '🤝'; titel = 'Gelijkspel!';
+    sub = 'Jullie kennen elkaar even goed. Dat is bijzonder mooi.';
+  } else if (mij > partner) {
+    emoji = '🏆'; titel = 'Jij wint!';
+    sub = `Jij kent je partner beter. ${mij} vs ${partner}. Maar het echte spel is altijd blijven ontdekken.`;
+  } else {
+    emoji = '💫'; titel = 'Je partner wint!';
+    sub = `Partner weet meer over jou dan jij over hem/haar. ${partner} vs ${mij}. Goed gespreksstof!`;
+  }
+
+  document.getElementById('eind-emoji').textContent = emoji;
+  document.getElementById('eind-titel').textContent = titel;
+  document.getElementById('eind-sub').textContent = sub;
+  document.getElementById('eind-score-mij').textContent = mij;
+  document.getElementById('eind-score-partner').textContent = partner;
+  state.vonkjes += mij + partner;
+  showScreen('screen-quiz-eind');
+}
+
+// ══════════════════════════════════════════════
+// RAAD JE PARTNER MODUS
+// ══════════════════════════════════════════════
+function startRaad() {
+  state.raadQueue = shuffle(KENNISMAKING_VRAGEN.filter(q => q.n <= (state.niveau||1))).slice(0, 8);
+  state.raadIdx = 0;
+  state.raadAntwoorder = '1'; // Speler 1 begint met antwoorden
+  state.raadScore = 0;
+  renderRaad();
+  showScreen('screen-raad');
+}
+
+function renderRaad() {
+  const q = state.raadQueue[state.raadIdx];
+  if (!q) { goMenu(); return; }
+
+  document.getElementById('raad-ronde').textContent = `${state.raadIdx+1}/${state.raadQueue.length}`;
+
+  // Verberg alle ui's
+  ['raad-antwoorder-ui','raad-rader-ui','raad-wacht-ui','raad-reveal-ui'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+
+  const iAmAntwoorder = state.solo || state.player === state.raadAntwoorder;
+
+  if (iAmAntwoorder) {
+    document.getElementById('raad-vraag-a').textContent = q.v;
+    document.getElementById('raad-antwoord-input').value = '';
+    document.getElementById('raad-antwoorder-ui').style.display = 'block';
+  } else {
+    document.getElementById('raad-vraag-r').textContent = q.v;
+    document.getElementById('raad-gok-input').value = '';
+    document.getElementById('raad-rader-ui').style.display = 'block';
+  }
+}
+
+function submitRaadAntwoord() {
+  const val = document.getElementById('raad-antwoord-input').value.trim();
+  if (!val) return;
+  state._raadEchtAntwoord = val;
+
+  if (!state.solo && window.KoppelClient && state.code) {
+    KoppelClient.done({type:'raad', idx: state.raadIdx, antwoord: val});
+    document.getElementById('raad-antwoorder-ui').style.display = 'none';
+    document.getElementById('raad-wacht-ui').style.display = 'block';
+  } else {
+    // Solo: meteen door naar rader
+    document.getElementById('raad-antwoorder-ui').style.display = 'none';
+    document.getElementById('raad-vraag-r').textContent = state.raadQueue[state.raadIdx].v;
+    document.getElementById('raad-gok-input').value = '';
+    document.getElementById('raad-rader-ui').style.display = 'block';
+  }
+}
+
+function submitRaadGok() {
+  const val = document.getElementById('raad-gok-input').value.trim();
+  if (!val) return;
+  state._raadGok = val;
+
+  if (!state.solo && window.KoppelClient && state.code) {
+    KoppelClient.done({type:'raad_gok', idx: state.raadIdx, gok: val});
+    document.getElementById('raad-rader-ui').style.display = 'none';
+    document.getElementById('raad-wacht-ui').style.display = 'block';
+  } else {
+    showRaadReveal(state._raadEchtAntwoord, val);
+  }
+}
+
+function showRaadReveal(echt, gok) {
+  document.getElementById('raad-echt-antwoord').textContent = echt;
+  document.getElementById('raad-gok-antwoord').textContent = gok;
+  document.getElementById('raad-match-result').textContent = '';
+  ['raad-antwoorder-ui','raad-rader-ui','raad-wacht-ui'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById('raad-reveal-ui').style.display = 'block';
+}
+
+function raadSelfScore(raak) {
+  if (raak) {
+    state.raadScore++;
+    state.vonkjes += 2;
+    document.getElementById('raad-match-result').innerHTML = '<span class="match-yes">✓ Raak! +2 vonkjes 🔥</span>';
+  } else {
+    document.getElementById('raad-match-result').innerHTML = '<span class="match-no">Niet helemaal — mooi gespreksstof!</span>';
+  }
+  // Volgende ronde
+  setTimeout(() => {
+    state.raadIdx++;
+    // Wissel antwoorder
+    state.raadAntwoorder = state.raadAntwoorder === '1' ? '2' : '1';
+    renderRaad();
+  }, 1500);
+}
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+window.addEventListener('load', () => {
+  if (window.ProfielClient) ProfielClient.init();
+  // Herstel vonkjes
+  try { state.vonkjes = parseInt(localStorage.getItem('km_vonkjes') || '0'); } catch(e){}
+});
+
+// Sla vonkjes op bij verlaten
+window.addEventListener('beforeunload', () => {
+  try { localStorage.setItem('km_vonkjes', state.vonkjes); } catch(e){}
+});
+</script>
+
+<!-- Laad koppel + profiel scripts als beschikbaar -->
+<script>
+window.KOPPEL_BACKEND_URL = 'https://snakesandladdders-production.up.railway.app';
+</script>
+<script src="profiel.js" onerror="window.ProfielClient=null"></script>
+<script src="toon-helper.js"></script>
+<script>
+// AUTO-START — loopt na alle scripts
+(function() {
+  const gc = localStorage.getItem('comm_code');
+  if (!gc) return;
+  const s = window._kmState;
+  const gn = window._kmGoNiveau;
+  if (!s || !gn) return;
+  s.code   = gc;
+  s.solo   = (gc === '1111');
+  s.player = '1';
+  SDClient.announceGame('kennismaking', 'Leer Elkaar Kennen');
+  gn();
+})();
+</script>
+<script>
+// ── AUTO-START: na alles geladen, skip koppelscherm als gekoppeld ──
+// Maak state globaal toegankelijk zodat andere script-blokken het kunnen benaderen
+window._kmState    = state;
+window._kmGoNiveau = goNiveau;
+window._kmShowScr  = showScreen;
+</script>
+</body>
+</html>

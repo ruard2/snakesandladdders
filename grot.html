@@ -1,0 +1,1473 @@
+﻿<!DOCTYPE html>
+<html lang="nl">
+<head>
+<script src="config.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>De Grot — Relatierondes</title>
+<script src="koppel.js"></script>
+<script src="profiel.js"></script>
+<script src="toon-helper.js"></script>
+<style>
+/* ── Reset + base ─────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --grot-bg:       #1a1a2e;
+  --grot-surface:  #16213e;
+  --grot-card:     #0f3460;
+  --grot-accent:   #e94560;
+  --grot-gold:     #f5a623;
+  --grot-text:     #e0e0e0;
+  --grot-muted:    #8892a4;
+  --grot-border:   rgba(255,255,255,0.08);
+  --radius:        16px;
+  --radius-sm:     10px;
+  --transition:    0.3s ease;
+}
+html, body {
+  height: 100%; min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--grot-bg);
+  color: var(--grot-text);
+  overflow-x: hidden;
+}
+
+/* ── Screens ──────────────────────────────────────────── */
+.screen { display: none; min-height: 100vh; padding: 20px 16px 40px; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* ── Header ───────────────────────────────────────────── */
+.grot-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 24px;
+}
+.grot-header .back-btn {
+  background: rgba(255,255,255,0.06); border: none;
+  color: var(--grot-muted); border-radius: 50%;
+  width: 36px; height: 36px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; transition: var(--transition);
+}
+.grot-header .back-btn:hover { background: rgba(255,255,255,0.12); color: var(--grot-text); }
+.grot-header h1 { font-size: 1.1rem; font-weight: 600; }
+.grot-header .ronde-teller {
+  margin-left: auto; font-size: 0.78rem; color: var(--grot-muted);
+  background: rgba(255,255,255,0.06); padding: 4px 10px; border-radius: 20px;
+}
+
+/* ── Progress bar ─────────────────────────────────────── */
+.progress-bar-wrap {
+  background: rgba(255,255,255,0.06); border-radius: 4px;
+  height: 4px; margin-bottom: 24px; overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%; background: var(--grot-accent);
+  border-radius: 4px; transition: width 0.6s ease;
+}
+.progress-milestones {
+  display: flex; justify-content: space-between;
+  font-size: 0.68rem; color: var(--grot-muted); margin-top: 4px; margin-bottom: 16px;
+}
+
+/* ── Cards ────────────────────────────────────────────── */
+.card {
+  background: var(--grot-surface);
+  border: 1px solid var(--grot-border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.card-accent {
+  background: linear-gradient(135deg, #16213e, #0f3460);
+  border: 1px solid rgba(233,69,96,0.3);
+}
+
+/* ── Knoppen ──────────────────────────────────────────── */
+.btn {
+  display: block; width: 100%; padding: 14px 20px;
+  border: none; border-radius: var(--radius-sm);
+  font-size: 1rem; font-weight: 600; cursor: pointer;
+  transition: var(--transition); text-align: center;
+}
+.btn-primary {
+  background: var(--grot-accent); color: white;
+}
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-secondary {
+  background: rgba(255,255,255,0.06); color: var(--grot-text);
+  border: 1px solid var(--grot-border);
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.12); }
+.btn-ghost {
+  background: transparent; color: var(--grot-muted);
+  font-size: 0.85rem; font-weight: 500; padding: 10px;
+}
+.btn-sm { padding: 9px 16px; font-size: 0.88rem; width: auto; display: inline-block; }
+
+/* ── Antwoord opties ──────────────────────────────────── */
+.optie-lijst { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+.optie-btn {
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid var(--grot-border);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  color: var(--grot-text); cursor: pointer;
+  transition: var(--transition); text-align: left;
+  font-size: 0.9rem; line-height: 1.4;
+}
+.optie-btn:hover { border-color: var(--grot-accent); background: rgba(233,69,96,0.08); }
+.optie-btn.selected {
+  border-color: var(--grot-accent); background: rgba(233,69,96,0.15);
+  color: white;
+}
+
+/* ── Domain grid ──────────────────────────────────────── */
+.domein-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px; margin: 16px 0;
+}
+.domein-card {
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid var(--grot-border);
+  border-radius: var(--radius-sm); padding: 14px 12px;
+  cursor: pointer; transition: var(--transition);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.domein-card:hover { border-color: var(--grot-accent); background: rgba(233,69,96,0.08); }
+.domein-card.selected { border-color: var(--grot-gold); background: rgba(245,166,35,0.1); }
+.domein-emoji { font-size: 1.4rem; }
+.domein-naam { font-size: 0.78rem; font-weight: 600; color: var(--grot-text); }
+.domein-vraag { font-size: 0.68rem; color: var(--grot-muted); }
+
+/* ── Reveal secties ───────────────────────────────────── */
+.reveal-sectie {
+  border-radius: var(--radius-sm); padding: 16px;
+  margin-bottom: 12px;
+}
+.reveal-sectie.spiegel { background: rgba(255,255,255,0.05); }
+.reveal-sectie.kans    { background: rgba(80,200,120,0.1); border: 1px solid rgba(80,200,120,0.2); }
+.reveal-sectie.uitdaging { background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.2); }
+.reveal-sectie.experiment { background: rgba(233,69,96,0.1); border: 1px solid rgba(233,69,96,0.2); }
+.reveal-sectie h4 {
+  font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 8px; font-weight: 600;
+}
+.reveal-sectie.kans h4    { color: #50c878; }
+.reveal-sectie.uitdaging h4 { color: var(--grot-gold); }
+.reveal-sectie.experiment h4 { color: var(--grot-accent); }
+.reveal-sectie.spiegel h4  { color: var(--grot-muted); }
+.reveal-sectie p { font-size: 0.9rem; line-height: 1.55; }
+
+/* ── Vergelijking (koppel) ────────────────────────────── */
+.vergelijk-row {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin: 12px 0;
+}
+.vergelijk-cel {
+  background: rgba(255,255,255,0.04);
+  border-radius: var(--radius-sm); padding: 12px;
+  font-size: 0.82rem;
+}
+.vergelijk-cel .wie { font-size: 0.68rem; color: var(--grot-muted); margin-bottom: 4px; }
+
+/* ── Tags/chips ───────────────────────────────────────── */
+.chip-rij { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.chip {
+  font-size: 0.72rem; padding: 3px 10px;
+  border-radius: 20px; font-weight: 500;
+}
+.chip-beh  { background: rgba(100,149,237,0.2); color: #a8c0f5; }
+.chip-besch { background: rgba(255,140,0,0.2); color: #ffc070; }
+.chip-skill { background: rgba(80,200,120,0.2); color: #90e0b0; }
+
+/* ── Modus knoppen ────────────────────────────────────── */
+.modus-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+.modus-card {
+  background: rgba(255,255,255,0.04);
+  border: 1.5px solid var(--grot-border);
+  border-radius: var(--radius); padding: 20px 16px;
+  cursor: pointer; transition: var(--transition); text-align: center;
+}
+.modus-card:hover { border-color: var(--grot-accent); background: rgba(233,69,96,0.08); }
+.modus-card .modus-icon { font-size: 2rem; margin-bottom: 8px; }
+.modus-card .modus-naam { font-size: 0.92rem; font-weight: 700; }
+.modus-card .modus-sub  { font-size: 0.72rem; color: var(--grot-muted); margin-top: 4px; }
+
+/* ── Wachtkamer ───────────────────────────────────────── */
+.spinner {
+  width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1);
+  border-top-color: var(--grot-accent); border-radius: 50%;
+  animation: spin 1s linear infinite; margin: 24px auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.koppel-code-display {
+  font-size: 2.5rem; font-weight: 800; letter-spacing: 0.15em;
+  color: var(--grot-gold); text-align: center;
+  background: rgba(245,166,35,0.1); border-radius: var(--radius-sm);
+  padding: 16px; margin: 16px 0;
+}
+
+/* ── Profiel update ───────────────────────────────────── */
+.profiel-update-chip {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.04); border-radius: var(--radius-sm);
+  padding: 12px 14px; margin: 8px 0;
+}
+.profiel-update-chip .pu-label { font-size: 0.88rem; font-weight: 600; }
+.profiel-update-chip .pu-sub   { font-size: 0.72rem; color: var(--grot-muted); }
+
+/* ── Voortgang milestone ──────────────────────────────── */
+.milestone-badge {
+  background: linear-gradient(135deg, var(--grot-accent), #c0392b);
+  border-radius: var(--radius); padding: 20px; text-align: center;
+  margin: 16px 0;
+}
+.milestone-badge .ms-icon { font-size: 2rem; margin-bottom: 8px; }
+.milestone-badge .ms-titel { font-size: 1.1rem; font-weight: 700; }
+.milestone-badge .ms-sub   { font-size: 0.82rem; opacity: 0.85; margin-top: 4px; }
+
+/* ── Koppelcode invoer ────────────────────────────────── */
+.code-input {
+  font-size: 1.8rem; font-weight: 800; letter-spacing: 0.2em;
+  text-align: center; background: rgba(255,255,255,0.06);
+  border: 2px solid var(--grot-border); border-radius: var(--radius-sm);
+  color: var(--grot-text); padding: 14px;
+  width: 100%; text-transform: uppercase;
+}
+.code-input:focus { outline: none; border-color: var(--grot-accent); }
+
+/* ── Tekst hulp ───────────────────────────────────────── */
+.helper-tekst {
+  font-size: 0.78rem; color: var(--grot-muted);
+  font-style: italic; margin: 6px 0 14px;
+}
+.sectie-label {
+  font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--grot-muted); margin-bottom: 8px; font-weight: 600;
+}
+.grote-tekst { font-size: 1.1rem; line-height: 1.6; color: var(--grot-text); }
+.subtitel { font-size: 0.82rem; color: var(--grot-muted); margin-bottom: 16px; }
+
+/* ── Divider ──────────────────────────────────────────── */
+.divider { height: 1px; background: var(--grot-border); margin: 16px 0; }
+
+/* ── Terug naar kaart ─────────────────────────────────── */
+.home-link {
+  display: block; text-align: center;
+  color: var(--grot-muted); font-size: 0.82rem;
+  text-decoration: none; margin-top: 20px;
+}
+.home-link:hover { color: var(--grot-text); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 1 — INTRO
+═══════════════════════════════════════════════ -->
+<div id="screen-intro" class="screen active">
+  <div class="grot-header">
+    <a href="world.html" style="text-decoration:none">
+      <button class="back-btn">←</button>
+    </a>
+    <h1>🔮 De Grot</h1>
+    <div class="ronde-teller" id="intro-teller">0 rondes</div>
+  </div>
+
+  <div class="card card-accent" style="margin-bottom:16px;">
+    <div style="font-size:2.2rem;margin-bottom:10px;">🔮</div>
+    <div style="font-size:1.15rem;font-weight:700;margin-bottom:8px;" id="intro-welkom-titel">Welkom in De Grot</div>
+    <p style="font-size:0.88rem;color:var(--grot-muted);line-height:1.55;" id="intro-welkom-tekst">
+      Hier ontdek je jezelf en elkaar via concrete situaties uit het dagelijks leven.
+      Geen hokjes, geen diagnoses — alleen herkenning.
+    </p>
+  </div>
+
+  <div id="intro-voortgang-sectie" style="display:none;margin-bottom:16px;">
+    <div class="sectie-label">Jouw voortgang</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="intro-progress-fill" style="width:0%"></div>
+    </div>
+    <div class="progress-milestones">
+      <span>Start</span>
+      <span>5 → mini-profiel</span>
+      <span>12 → relatiekaart</span>
+    </div>
+    <div id="intro-profiel-chips" class="chip-rij" style="margin-top:8px;"></div>
+  </div>
+
+  <div style="margin-bottom:16px;">
+    <div class="sectie-label">Hoe werkt het</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;gap:10px;align-items:flex-start;">
+        <span style="font-size:1.1rem;">📖</span>
+        <span style="font-size:0.85rem;color:var(--grot-muted);">Je leest een situatie die veel mensen kennen</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;">
+        <span style="font-size:1.1rem;">🤔</span>
+        <span style="font-size:0.85rem;color:var(--grot-muted);">Je kiest wat het meest herkenbaar is — geen goed of fout</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;">
+        <span style="font-size:1.1rem;">✨</span>
+        <span style="font-size:0.85rem;color:var(--grot-muted);">Je krijgt een spiegel: wat vertelt jouw reactie over jou?</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-start;">
+        <span style="font-size:1.1rem;">🗺️</span>
+        <span style="font-size:0.85rem;color:var(--grot-muted);">Na 12 rondes samen: een relatiekaart voor jullie allebei</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="naarModus()">Begin een ronde</button>
+  <a href="world.html" class="home-link">← Terug naar de kaart</a>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 2 — MODUS KIEZEN
+═══════════════════════════════════════════════ -->
+<div id="screen-modus" class="screen">
+  <div class="grot-header">
+    <button class="back-btn" onclick="showScreen('screen-intro')">←</button>
+    <h1>Hoe speel je?</h1>
+  </div>
+
+  <p class="subtitel">Speel je alleen of samen met je partner?</p>
+
+  <div class="modus-grid">
+    <div class="modus-card" onclick="kiesModus('solo')">
+      <div class="modus-icon">🧘</div>
+      <div class="modus-naam">Alleen</div>
+      <div class="modus-sub">Ontdek je eigen patronen</div>
+    </div>
+    <div class="modus-card" onclick="kiesModus('samen')">
+      <div class="modus-icon">💑</div>
+      <div class="modus-naam">Samen</div>
+      <div class="modus-sub">Vergelijk jullie reacties</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 3A — KOPPELCODE AANMAKEN (samen, player 1)
+═══════════════════════════════════════════════ -->
+<div id="screen-koppel-aanmaken" class="screen">
+  <div class="grot-header">
+    <button class="back-btn" onclick="showScreen('screen-modus')">←</button>
+    <h1>Samen spelen</h1>
+  </div>
+
+  <p class="subtitel">Deel deze code met je partner zodat jullie hetzelfde zien.</p>
+
+  <div class="koppel-code-display" id="koppel-code-toon">——</div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="spinner" style="width:24px;height:24px;border-width:2px;margin:0;flex-shrink:0;"></div>
+      <div>
+        <div style="font-size:0.88rem;font-weight:600;" id="koppel-status-tekst">Wachten op partner...</div>
+        <div style="font-size:0.72rem;color:var(--grot-muted);">Partner moet de code invoeren in De Grot</div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-secondary" onclick="naarDomein()" id="btn-start-zonder-partner">Toch alleen spelen</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 3B — KOPPELCODE INVOEREN (samen, player 2)
+═══════════════════════════════════════════════ -->
+<div id="screen-koppel-invoeren" class="screen">
+  <div class="grot-header">
+    <button class="back-btn" onclick="showScreen('screen-modus')">←</button>
+    <h1>Code invoeren</h1>
+  </div>
+
+  <p class="subtitel">Voer de 6-cijferige code in die je partner deelt.</p>
+
+  <input class="code-input" type="text" id="koppel-code-input"
+    maxlength="6" placeholder="ABCDEF"
+    oninput="this.value=this.value.toUpperCase()"
+    onkeydown="if(event.key==='Enter')joinsessie()">
+
+  <div style="height:12px;"></div>
+  <button class="btn btn-primary" onclick="joinSessie()">Verbinden</button>
+  <div id="koppel-join-fout" style="color:var(--grot-accent);font-size:0.82rem;margin-top:8px;display:none;"></div>
+
+  <div class="divider" style="margin:20px 0;"></div>
+  <button class="btn btn-ghost" onclick="kiesModus('solo')">Toch alleen spelen</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 4 — DOMEIN KIEZEN
+═══════════════════════════════════════════════ -->
+<div id="screen-domein" class="screen">
+  <div class="grot-header">
+    <button class="back-btn" onclick="showScreen('screen-modus')">←</button>
+    <h1>Kies een thema</h1>
+  </div>
+
+  <p class="subtitel">Of kies willekeurig — de app kiest dan voor jou.</p>
+
+  <button class="btn btn-secondary" style="margin-bottom:12px;" onclick="kiesDomein('random')">
+    🎲 Verrassing — willekeurig thema
+  </button>
+
+  <div class="domein-grid" id="domein-grid">
+    <!-- Gevuld via JS -->
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 5 — SITUATIE
+═══════════════════════════════════════════════ -->
+<div id="screen-situatie" class="screen">
+  <div class="grot-header">
+    <button class="back-btn" onclick="showScreen('screen-domein')">←</button>
+    <h1 id="sit-domein-naam">D1</h1>
+    <div class="ronde-teller" id="sit-type-badge">spanning</div>
+  </div>
+
+  <div class="card card-accent" style="margin-bottom:16px;">
+    <div class="sectie-label" id="sit-domein-vraag">Zie je mij?</div>
+    <div style="font-size:1.3rem;font-weight:800;margin-bottom:12px;" id="sit-titel">Telefoon tijdens mijn verhaal</div>
+    <p class="grote-tekst" id="sit-narratief"></p>
+  </div>
+
+  <!-- Safety badge: verschijnt alleen bij gevoelige cases -->
+  <div id="sit-safety-badge" style="display:none;"></div>
+
+  <p style="font-size:0.8rem;color:var(--grot-muted);margin-bottom:16px;font-style:italic;" id="sit-helper">
+    Kies straks wat het meest herkenbaar is — niet wat het netst klinkt.
+  </p>
+
+  <button class="btn btn-primary" id="sit-start-btn" onclick="startVragen()">Dit herken ik — begin</button>
+  <button class="btn btn-ghost" onclick="skipCase()">Sla over →</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 6 — VRAAG
+═══════════════════════════════════════════════ -->
+<div id="screen-vraag" class="screen">
+  <div class="grot-header">
+    <button class="back-btn" onclick="vorigeVraag()">←</button>
+    <h1 id="vraag-stap-label">Vraag 1</h1>
+    <div class="ronde-teller" id="vraag-nr-badge">1/2</div>
+  </div>
+
+  <div class="progress-bar-wrap" style="margin-bottom:20px;">
+    <div class="progress-bar-fill" id="vraag-progress" style="width:50%;background:var(--grot-gold);"></div>
+  </div>
+
+  <p style="font-size:1.05rem;font-weight:700;line-height:1.45;margin-bottom:6px;" id="vraag-prompt"></p>
+  <p class="helper-tekst" id="vraag-helper"></p>
+
+  <div class="optie-lijst" id="optie-lijst">
+    <!-- Gevuld via JS -->
+  </div>
+
+  <button class="btn btn-primary" id="btn-volgende-vraag" onclick="volgendeVraag()" disabled>Verder →</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 7 — WACHTEN OP PARTNER (couple)
+═══════════════════════════════════════════════ -->
+<div id="screen-wacht-partner" class="screen">
+  <div class="grot-header">
+    <button class="back-btn" onclick="null">×</button>
+    <h1>Wachten...</h1>
+  </div>
+
+  <div class="card" style="text-align:center;padding:32px 20px;">
+    <div class="spinner"></div>
+    <div style="font-size:1rem;font-weight:600;margin-bottom:8px;">Jouw antwoorden zijn opgeslagen</div>
+    <p style="font-size:0.85rem;color:var(--grot-muted);">
+      Wachten tot je partner ook klaar is...<br>
+      <span id="partner-naam-wacht">Partner</span> is aan het antwoorden.
+    </p>
+  </div>
+
+  <div style="height:16px;"></div>
+  <button class="btn btn-ghost" onclick="gaDirectNaarReveal()">Toch de reveal tonen →</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 8 — SOLO REVEAL
+═══════════════════════════════════════════════ -->
+<div id="screen-reveal-solo" class="screen">
+  <div class="grot-header">
+    <button class="back-btn" onclick="null" style="visibility:hidden;">←</button>
+    <h1>Jouw spiegel</h1>
+  </div>
+
+  <!-- Wat jij koos (brug tussen antwoord en reveal) -->
+  <div id="reveal-keuzes" style="margin-bottom:14px;">
+    <!-- Gevuld via JS: toont de gekozen antwoord-labels -->
+  </div>
+
+  <!-- Kern: mirror + bescherming + behoefte samen -->
+  <div class="reveal-sectie spiegel" style="margin-bottom:10px;">
+    <h4>Wat dit kan zeggen</h4>
+    <p id="reveal-spiegel" style="margin-bottom:10px;"></p>
+    <!-- Bescherming en behoefte: alleen tonen als ze niet-generiek zijn -->
+    <div id="reveal-bescherming-behoefte" style="display:none;border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;margin-top:4px;">
+      <p id="reveal-bescherming" style="font-size:0.82rem;color:var(--grot-muted);margin-bottom:6px;"></p>
+      <p id="reveal-behoefte"    style="font-size:0.82rem;color:var(--grot-muted);"></p>
+    </div>
+  </div>
+
+  <!-- Zachte afsluitzin -->
+  <p id="reveal-gentle" style="font-size:0.85rem;font-style:italic;color:var(--grot-muted);margin-bottom:14px;padding:0 4px;display:none;"></p>
+
+  <div class="reveal-sectie kans">
+    <h4>✓ Jouw kans</h4>
+    <p id="reveal-kans"></p>
+  </div>
+
+  <div class="reveal-sectie uitdaging">
+    <h4>◇ Jouw uitdaging</h4>
+    <p id="reveal-uitdaging"></p>
+  </div>
+
+  <div class="reveal-sectie experiment">
+    <h4>→ Experiment voor deze week</h4>
+    <p id="reveal-experiment"></p>
+  </div>
+
+  <!-- Safety nawoord: verschijnt bij diepe/crisis cases -->
+  <div id="reveal-safety-nawoord" style="display:none;"></div>
+
+  <div style="margin-top:14px;" id="reveal-tags-sectie">
+    <div class="sectie-label">Toegevoegd aan jouw profiel</div>
+    <div id="reveal-tags-chips" class="chip-rij"></div>
+  </div>
+
+  <div style="height:16px;"></div>
+  <button class="btn btn-primary" onclick="naarRondeKlaar()">Opgeslagen — verder</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 9 — KOPPEL REVEAL
+═══════════════════════════════════════════════ -->
+<div id="screen-reveal-koppel" class="screen">
+  <div class="grot-header">
+    <button class="back-btn" onclick="null" style="visibility:hidden;">←</button>
+    <h1>Jullie vergeleken</h1>
+  </div>
+
+  <div class="card" style="margin-bottom:12px;">
+    <div class="sectie-label">Wat jullie allebei invulden</div>
+    <div class="vergelijk-row">
+      <div class="vergelijk-cel">
+        <div class="wie">Jij</div>
+        <div id="koppel-antwoord-jij"></div>
+      </div>
+      <div class="vergelijk-cel">
+        <div class="wie">Partner</div>
+        <div id="koppel-antwoord-partner"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="reveal-sectie spiegel" style="margin-bottom:10px;">
+    <h4>Wat jullie kunnen ontdekken</h4>
+    <p id="koppel-comparison-intro"></p>
+  </div>
+
+  <div class="reveal-sectie kans">
+    <h4>✓ Jullie gedeelde kans</h4>
+    <p id="koppel-kans"></p>
+  </div>
+
+  <div class="reveal-sectie uitdaging">
+    <h4>◇ Jullie gedeelde uitdaging</h4>
+    <p id="koppel-uitdaging"></p>
+  </div>
+
+  <div class="reveal-sectie experiment">
+    <h4>→ Experiment voor jullie</h4>
+    <p id="koppel-experiment"></p>
+  </div>
+
+  <div style="height:16px;"></div>
+  <button class="btn btn-primary" onclick="naarRondeKlaar()">Opgeslagen — verder</button>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 10 — RONDE KLAAR + PROFIEL UPDATE
+═══════════════════════════════════════════════ -->
+<div id="screen-ronde-klaar" class="screen">
+  <div class="grot-header">
+    <button class="back-btn" onclick="null" style="visibility:hidden;">←</button>
+    <h1>Ronde klaar</h1>
+  </div>
+
+  <div id="milestone-sectie" style="display:none;">
+    <!-- Gevuld bij 5 en 12 rondes -->
+  </div>
+
+  <div class="sectie-label" style="margin-bottom:10px;">Jouw profiel na deze ronde</div>
+  <div id="profiel-update-lijst">
+    <!-- Gevuld via JS -->
+  </div>
+
+  <div class="progress-bar-wrap" style="margin:16px 0 4px;">
+    <div class="progress-bar-fill" id="ronde-klaar-progress" style="width:0%"></div>
+  </div>
+  <div class="progress-milestones">
+    <span>Start</span>
+    <span id="ronde-klaar-5-label">5 rondes</span>
+    <span>12 rondes</span>
+  </div>
+  <div style="font-size:0.78rem;color:var(--grot-muted);margin-bottom:20px;" id="ronde-klaar-volgende"></div>
+
+  <button class="btn btn-primary" onclick="nieuweRonde()">Nog een ronde</button>
+  <button class="btn btn-secondary" style="margin-top:10px;" onclick="showScreen('screen-intro')">Pauzeren</button>
+  <a href="world.html" class="home-link">← Terug naar de kaart</a>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ── Tekst (i18n) ──────────────────────────────────���─────
+// Vervang dit object voor EN, FR, etc.
+const TEKST = {
+  welkom_terug:    (n) => `Welkom terug — ${n} ronde${n!==1?'s':''} gespeeld`,
+  welkom_eerste:   'Welkom in De Grot',
+  welkom_sub_terug: 'Je profiel bouwt verder op met elke ronde.',
+  welkom_sub_eerste: 'Hier ontdek je jezelf en elkaar via concrete situaties uit het dagelijks leven. Geen hokjes, geen diagnoses — alleen herkenning.',
+  milestone_5:     { icon:'✨', titel:'Mini-profiel beschikbaar!', sub:'Je hebt genoeg gespeeld voor een eerste indruk van jouw profiel.' },
+  milestone_12:    { icon:'🗺️', titel:'Relatiekaart beschikbaar!', sub:'Je hebt genoeg samen gespeeld om jullie relatiekaart te bekijken.' },
+  nog_nodig_5:     (n) => `Nog ${5-n} ronde${5-n!==1?'s':''} voor je mini-profiel`,
+  nog_nodig_12:    (n) => `Nog ${12-n} ronde${12-n!==1?'s':''} voor de relatiekaart`,
+  profiel_bereikt: 'Mini-profiel beschikbaar',
+  kaart_bereikt:   'Relatiekaart beschikbaar',
+  toon_kans:       'kans',
+  type_labels: {
+    positive: 'kans',
+    tension:  'spanning',
+    deep:     'diepte',
+  },
+};
+
+// ── Tag labels (NL) — spiegelt profiles.js TAG_LABELS ───
+const TAG_LABELS = {
+  'needs.attention':'Aandacht','needs.closeness':'Nabijheid','needs.reassurance':'Geruststelling',
+  'needs.recognition':'Erkenning','needs.respect':'Respect','needs.safety':'Veiligheid',
+  'needs.freedom':'Vrijheid','needs.autonomy':'Autonomie','needs.appreciation':'Waardering',
+  'needs.connection':'Verbinding','needs.understanding':'Begrepen worden','needs.trust':'Vertrouwen',
+  'protections.withdraw':'Terugtrekken','protections.protest':'Protest','protections.perform':'Presteren',
+  'protections.control':'Controle','protections.avoid':'Vermijden','protections.silence':'Stilte',
+  'protections.pleasing':'Pleasen','protections.resignation':'Loslaten','protections.distraction':'Afleiding',
+  'sensitive_points.not_seen':'Niet gezien','sensitive_points.not_important':'Niet belangrijk',
+  'sensitive_points.rejection':'Afwijzing','sensitive_points.not_chosen':'Niet gekozen',
+  'sensitive_points.too_much':'Te veel zijn','sensitive_points.alone':'Alleen staan',
+  'patterns.pursue_withdraw':'Najagen ↔ Terugtrekken','patterns.P1':'Najagen ↔ Terugtrekken',
+  'skills.asking_directly':'Direct vragen','skills.generous_interpretation':'Welwillend kijken',
+  'skills.vulnerability':'Kwetsbaarheid','skills.listening':'Echt luisteren',
+  'centers.heart':'Hart','centers.head':'Hoofd','centers.body':'Buik',
+};
+
+// ── Step labels (NL, leesbaar) ──────────────────────────
+// Vertaalt technische step-names naar menselijke vragen
+const STAP_LABELS = {
+  reaction:        'Wat gebeurt er in jou?',
+  interpretation:  'Wat maak je ervan?',
+  emotion:         'Wat voel je?',
+  protection:      'Hoe bescherm je jezelf?',
+  need:            'Welke behoefte?',
+  sensitive_point: 'Wat raakt je?',
+};
+
+// ── Generieke mirror-patronen detecteren ─────────────────
+// Als de mirror-tekst van de case generiek boilerplate is,
+// bouwen we een persoonlijkere spiegel op basis van de gekozen antwoorden
+function isGeneriekeOutput(tekst) {
+  if (!tekst) return true;
+  return tekst.includes('Deze situatie raakt aan de vraag van')
+      || tekst.includes('Je reactie probeert iets waardevols te beschermen: verbinding, veiligheid')
+      || tekst.includes('Onder je reactie zit waarschijnlijk een behoefte die serieus genomen');
+}
+
+// ── Domein definities (emoji + kleur) ───────────────────
+const DOMEIN_META = {
+  D1:  { emoji:'👁️',  naam:'Aandacht',        kleur:'#7b68ee' },
+  D2:  { emoji:'🤝',  naam:'Verbinding',       kleur:'#ff6b9d' },
+  D3:  { emoji:'🛡️',  naam:'Veiligheid',       kleur:'#48c9b0' },
+  D4:  { emoji:'🕊️',  naam:'Vrijheid',         kleur:'#f0e68c' },
+  D5:  { emoji:'⭐',  naam:'Waardering',        kleur:'#ffa500' },
+  D6:  { emoji:'💬',  naam:'Communicatie',      kleur:'#87ceeb' },
+  D7:  { emoji:'🔧',  naam:'Conflict & herstel',kleur:'#cd853f' },
+  D8:  { emoji:'❤️',  naam:'Intimiteit',        kleur:'#ff4757' },
+  D9:  { emoji:'🏡',  naam:'Gezin',             kleur:'#98d8c8' },
+  D10: { emoji:'🌳',  naam:'Familie',           kleur:'#6bcb77' },
+  D11: { emoji:'💰',  naam:'Geld & bezit',      kleur:'#daa520' },
+  D12: { emoji:'🎯',  naam:'Werk & ambitie',    kleur:'#4169e1' },
+  D13: { emoji:'🌟',  naam:'Geloof & zingeving',kleur:'#da70d6' },
+  D14: { emoji:'🚀',  naam:'Toekomst & dromen', kleur:'#40e0d0' },
+  D15: { emoji:'🌊',  naam:'Verlies & verandering', kleur:'#708090' },
+};
+
+// ── State ───────────────────────────────────────────────
+const STATE = {
+  modus:            'solo',
+  domeinId:         null,
+  huidigeCase:      null,
+  vraagIndex:       0,
+  geselecteerd:     {},    // questionId → optionId
+  verzameldeTagsHuidigeRonde: {},
+  gespeeldeIds:     new Set(),
+  allesCases:       [],
+  alleDomeinen:     [],
+  koppelCode:       null,
+  isPlayer1:        false,
+  partnerKlaar:     false,
+  partnerData:      null,
+  rondeCount:       0,
+};
+
+// ── Init ────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  // Zorg dat de Begin-knop altijd werkt, ook als onclick niet vuur
+  const beginBtn = document.querySelector('#screen-intro .btn-primary');
+  if (beginBtn) beginBtn.addEventListener('click', () => naarModus());
+
+  try { ProfielClient.init(); } catch(e) { console.warn('[grot] ProfielClient.init fout:', e); }
+
+  // Gespeelde cases ophalen uit localStorage
+  const opgeslagen = localStorage.getItem('grot_gespeeld');
+  if (opgeslagen) STATE.gespeeldeIds = new Set(JSON.parse(opgeslagen));
+
+  STATE.rondeCount = parseInt(localStorage.getItem('grot_rondes') || '0');
+
+  // Intro bijwerken
+  try { updateIntroScherm(); } catch(e) { console.warn('[grot] updateIntroScherm fout:', e); }
+
+  // Koppel.js listeners klaarzetten (connect later bij samen-modus)
+  if (window.KoppelClient) {
+    setupKoppelListeners();
+  }
+
+  // Content laden
+  try {
+    const resp = await fetch(getBackend() + '/api/content/cases');
+    if (resp.ok) {
+      const data = await resp.json();
+      STATE.allesCases = data.cases || [];
+    }
+    const respD = await fetch(getBackend() + '/api/content/domains');
+    if (respD.ok) {
+      const dataD = await respD.json();
+      STATE.alleDomeinen = dataD.domains || [];
+    }
+  } catch (e) {
+    console.warn('[grot] Content laden mislukt, gebruik inline fallback');
+  }
+
+  bouwDomeinGrid();
+});
+
+function getBackend() {
+  return window.KOPPEL_BACKEND_URL || 'https://snakesandladdders-production.up.railway.app';
+}
+
+// ── Scherm navigatie ────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('active'); window.scrollTo(0,0); }
+}
+
+// ── Intro scherm ────────────────────────────────────────
+function updateIntroScherm() {
+  const n = STATE.rondeCount;
+  const teller = document.getElementById('intro-teller');
+  if (teller) teller.textContent = n + ' ronde' + (n!==1?'s':'');
+
+  const titel = document.getElementById('intro-welkom-titel');
+  const sub   = document.getElementById('intro-welkom-tekst');
+  if (n > 0 && titel) {
+    titel.textContent = TEKST.welkom_terug(n);
+    if (sub) sub.textContent = TEKST.welkom_sub_terug;
+  }
+
+  // Voortgang tonen als er rondes zijn
+  const voortgangSectie = document.getElementById('intro-voortgang-sectie');
+  if (n > 0 && voortgangSectie) {
+    voortgangSectie.style.display = 'block';
+    const pct = Math.min((n / 12) * 100, 100);
+    const fill = document.getElementById('intro-progress-fill');
+    if (fill) fill.style.width = pct + '%';
+  }
+
+  // Haal profiel op voor chips
+  const profiel = ProfielClient.getLocal();
+  if (profiel) {
+    const chips = document.getElementById('intro-profiel-chips');
+    if (chips) {
+      chips.innerHTML = '';
+      (profiel.topBehoeften || []).slice(0, 3).forEach(b => {
+        chips.innerHTML += `<span class="chip chip-beh">${b.label}</span>`;
+      });
+      (profiel.topBeschermingen || []).slice(0, 2).forEach(b => {
+        chips.innerHTML += `<span class="chip chip-besch">${b.label}</span>`;
+      });
+    }
+  }
+}
+
+// ── Modus kiezen ────────────────────────────────────────
+function naarModus() { showScreen('screen-modus'); }
+
+function kiesModus(modus) {
+  STATE.modus = modus;
+  if (modus === 'solo') {
+    naarDomein();
+  } else {
+    // Samen: kies of aanmaken of invoeren
+    toonSamenKeuze();
+  }
+}
+
+function toonSamenKeuze() {
+  // Simpel: vraag of ze code hebben of niet
+  const heeftCode = confirm('Heeft je partner al een code aangemaakt?\n\nOK = Ja, ik voer een code in\nAnnuleren = Nee, ik maak een code aan');
+  if (heeftCode) {
+    showScreen('screen-koppel-invoeren');
+  } else {
+    maakSessie();
+  }
+}
+
+function maakSessie() {
+  showScreen('screen-koppel-aanmaken');
+  STATE.isPlayer1 = true;
+  if (window.KoppelClient) {
+    KoppelClient.create('grot');
+  }
+}
+
+function joinSessie() {
+  const code = document.getElementById('koppel-code-input').value.trim().toUpperCase();
+  if (code.length !== 6) {
+    toonKoppelFout('Voer een code van 6 tekens in.');
+    return;
+  }
+  if (window.KoppelClient) {
+    KoppelClient.join(code);
+  }
+  document.getElementById('koppel-join-fout').style.display = 'none';
+}
+
+function toonKoppelFout(msg) {
+  const el = document.getElementById('koppel-join-fout');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+// ── Koppel.js listeners ──────────────────────────────────
+function setupKoppelListeners() {
+  KoppelClient.on('session_created', ({ code }) => {
+    STATE.koppelCode = code;
+    const el = document.getElementById('koppel-code-toon');
+    if (el) el.textContent = code;
+  });
+
+  KoppelClient.on('session_joined', ({ code }) => {
+    STATE.koppelCode = code;
+    naarDomein();
+  });
+
+  KoppelClient.on('both_connected', () => {
+    const status = document.getElementById('koppel-status-tekst');
+    if (status) status.textContent = 'Partner verbonden! Start de ronde.';
+    const btn = document.getElementById('btn-start-zonder-partner');
+    if (btn) btn.textContent = 'Start ronde samen →';
+    btn.onclick = naarDomein;
+    // Wissel userId uit zodat relatiekaart.html de partner kent
+    KoppelClient.progress({ type: 'user_id_exchange', userId: ProfielClient.getUserId() });
+  });
+
+  KoppelClient.on('complete', ({ state }) => {
+    // Beide klaar — toon koppel reveal
+    const partnerKey = STATE.isPlayer1 ? 'p2' : 'p1';
+    STATE.partnerData = state[partnerKey];
+    STATE.partnerKlaar = true;
+    toonKoppelReveal();
+  });
+
+  KoppelClient.on('partner_progress', ({ progress }) => {
+    if (!progress) return;
+    // userId uitwisseling
+    if (progress.type === 'user_id_exchange' && progress.userId) {
+      localStorage.setItem('grot_partner_id', progress.userId);
+    }
+    // Case synchronisatie (player 2 neemt zelfde case als player 1)
+    if (progress.type === 'case_selected' && !STATE.isPlayer1 && progress.caseId) {
+      const gevonden = STATE.allesCases.find(c => c.case_id === progress.caseId);
+      if (gevonden) laadCase(gevonden);
+    }
+  });
+
+  KoppelClient.on('error', ({ message }) => toonKoppelFout(message));
+}
+
+// ── Domein ──────────────────────────────────────────────
+function naarDomein() { showScreen('screen-domein'); }
+
+function bouwDomeinGrid() {
+  const grid = document.getElementById('domein-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const domeinen = STATE.alleDomeinen.length > 0 ? STATE.alleDomeinen :
+    Object.entries(DOMEIN_META).map(([id, m]) => ({ id, name: m.naam, central: '?' }));
+
+  domeinen.forEach(d => {
+    const meta = DOMEIN_META[d.id] || { emoji:'🔹', naam: d.name || d.id, kleur:'#888' };
+    const card = document.createElement('div');
+    card.className = 'domein-card';
+    card.innerHTML = `
+      <div class="domein-emoji">${meta.emoji}</div>
+      <div class="domein-naam">${meta.naam}</div>
+      <div class="domein-vraag">${d.central || ''}</div>
+    `;
+    card.onclick = () => kiesDomein(d.id);
+    grid.appendChild(card);
+  });
+}
+
+function kiesDomein(domeinId) {
+  STATE.domeinId = domeinId;
+  const c = kiesCase(domeinId);
+  if (!c) {
+    alert('Geen casussen beschikbaar voor dit thema. Kies een ander.');
+    return;
+  }
+  laadCase(c);
+
+  // Sync met partner (player 1 bepaalt de case)
+  if (STATE.modus === 'samen' && STATE.isPlayer1 && window.KoppelClient) {
+    KoppelClient.progress({ type: 'case_selected', caseId: c.case_id });
+  }
+}
+
+function kiesCase(domeinId) {
+  let pool = STATE.allesCases;
+  if (domeinId !== 'random') {
+    pool = pool.filter(c => c.domain && c.domain.domain_id === domeinId);
+  }
+  // Filter al gespeelde cases
+  let beschikbaar = pool.filter(c => !STATE.gespeeldeIds.has(c.case_id));
+  if (beschikbaar.length === 0) {
+    // Reset als alles gespeeld is
+    pool.forEach(c => STATE.gespeeldeIds.delete(c.case_id));
+    beschikbaar = pool;
+  }
+  // Random keuze
+  return beschikbaar[Math.floor(Math.random() * beschikbaar.length)] || null;
+}
+
+// ── Situatie laden ───────────────────────────────────────
+function laadCase(casus) {
+  STATE.huidigeCase = casus;
+  STATE.vraagIndex = 0;
+  STATE.geselecteerd = {};
+  STATE.verzameldeTagsHuidigeRonde = {};
+
+  const meta = DOMEIN_META[casus.domain?.domain_id] || { naam: casus.domain?.domain_name || '', emoji: '' };
+  const typLabel = TEKST.type_labels[casus.case_type] || casus.case_type;
+
+  document.getElementById('sit-domein-naam').textContent = meta.emoji + ' ' + (casus.domain?.domain_name || '');
+  document.getElementById('sit-domein-vraag').textContent = casus.domain?.central_question || '';
+  document.getElementById('sit-type-badge').textContent = typLabel;
+  document.getElementById('sit-titel').textContent = casus.situation?.title || '';
+  document.getElementById('sit-narratief').textContent = casus.situation?.narrative || casus.situation?.short_text || '';
+
+  // ── Modus badge: ronde vs kaart ──────────────────────
+  const isRonde = heeftUniekeVragen(casus);
+  document.getElementById('sit-type-badge').textContent =
+    isRonde ? typLabel : `${typLabel} · kaart`;
+
+  // ── Safety laag ───────────────────────────────────────
+  const safetyInfo = window.TOON ? TOON.safety(casus) : { klasse: 'normaal', teksten: null };
+  STATE.huidigeRondeSafety = safetyInfo;
+
+  const badgeEl = document.getElementById('sit-safety-badge');
+  const btnEl   = document.getElementById('sit-start-btn');
+
+  if (safetyInfo.klasse !== 'normaal' && safetyInfo.teksten) {
+    badgeEl.style.display = 'block';
+    badgeEl.innerHTML = TOON.safetyBadgeHtml(safetyInfo.klasse, 'dark');
+    if (safetyInfo.teksten.btn) btnEl.textContent = safetyInfo.teksten.btn;
+  } else {
+    badgeEl.style.display = 'none';
+    btnEl.textContent = isRonde ? 'Dit herken ik — begin' : 'Lees en reflecteer →';
+  }
+
+  showScreen('screen-situatie');
+}
+
+function skipCase() {
+  if (STATE.domeinId) kiesDomein(STATE.domeinId);
+}
+
+// ── Detecteer of case 'unieke' vragen heeft ──────────────
+// Alleen D1 cases hebben volledig uitgewerkte unieke opties.
+// D2-D15 hebben template-boilerplate — die tonen we als kaart.
+// Domeinen met volledig uitgewerkte, unieke vragen:
+const UITGEWERKTE_DOMEINEN = new Set(['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10', 'D11', 'D12', 'D13', 'D14', 'D15']);
+
+function heeftUniekeVragen(casus) {
+  if (!casus) return false;
+  const domein = casus.domain?.domain_id || '';
+  return UITGEWERKTE_DOMEINEN.has(domein);
+}
+
+// ── Vragen ───────────────────────────────────────────────
+function startVragen() {
+  if (heeftUniekeVragen(STATE.huidigeCase)) {
+    // Volledige ronde met echte vragen
+    toonVraag(0);
+  } else {
+    // Kaart-modus: één eenvoudige herkenningsvraag, dan direct reveal
+    toonHerkenningsvraag();
+  }
+}
+
+// ── Kaart-modus: universele herkenningsvraag ─────────────
+// Voor D2-D15 cases: één vraag die domein-tags genereert.
+// De opties zijn relevant voor het domein, niet case-specifiek.
+const HERKENNING_OPTIES = {
+  positive: [
+    { label: 'Dit raakt me positief — ik herken dit gevoel van verbinding',    tags: { 'needs.connection': 2, 'needs.reassurance': 1, 'skills.vulnerability': 1 } },
+    { label: 'Ik herken dit, maar voel ook iets van angst het te verliezen',    tags: { 'needs.safety': 2, 'sensitive_points.not_chosen': 1 } },
+    { label: 'Dit raak ik nauwelijks aan — het voelt ver van mij',              tags: { 'needs.closeness': 1, 'protections.withdraw': 1 } },
+    { label: 'Ik herken de situatie maar weet niet goed wat ik ervan vind',     tags: { 'centers.head': 1, 'needs.understanding': 1 } },
+  ],
+  tension: [
+    { label: 'Dit herken ik goed — deze spanning ken ik van dichtbij',         tags: { 'protections.withdraw': 2, 'needs.attention': 1, 'patterns.pursue_withdraw': 1 } },
+    { label: 'Ik word boos of gefrustreerd in dit soort momenten',              tags: { 'protections.protest': 2, 'needs.respect': 1, 'centers.body': 1 } },
+    { label: 'Ik trek me terug en wacht af',                                    tags: { 'protections.silence': 2, 'needs.safety': 1 } },
+    { label: 'Ik ga het gesprek aan, maar vind het moeilijk',                   tags: { 'skills.asking_directly': 2, 'needs.connection': 1 } },
+  ],
+  deep: [
+    { label: 'Dit raakt iets dieps — ik herken dit van heel dichtbij',         tags: { 'needs.closeness': 2, 'sensitive_points.alone': 1, 'centers.heart': 1 } },
+    { label: 'Dit roept verdriet of pijn op',                                   tags: { 'sensitive_points.not_seen': 2, 'needs.reassurance': 1 } },
+    { label: 'Ik scherm me hier bewust voor af',                                tags: { 'protections.avoid': 2, 'protections.withdraw': 1 } },
+    { label: 'Dit is herkenbaar maar ik wil er liever niet te lang bij stilstaan', tags: { 'protections.humor': 1, 'needs.safety': 1 } },
+  ],
+};
+
+function toonHerkenningsvraag() {
+  const c = STATE.huidigeCase;
+  const caseType = c?.case_type || 'tension';
+  const opties = HERKENNING_OPTIES[caseType] || HERKENNING_OPTIES.tension;
+  const domeinNaam = c?.domain?.domain_name || '';
+
+  // Gebruik het vraag-scherm maar met onze herkenningsvraag
+  document.getElementById('vraag-stap-label').textContent = 'Herkenning';
+  document.getElementById('vraag-nr-badge').textContent = '1/1';
+  document.getElementById('vraag-prompt').textContent =
+    `Hoe herkenbaar is deze situatie voor jou?`;
+  document.getElementById('vraag-helper').textContent =
+    'Kies wat het dichtst bij jouw eerste reactie komt.';
+
+  document.getElementById('vraag-progress').style.width = '50%';
+
+  // Fake question_id voor de herkenningsvraag
+  const fakeQId = 'herkenning';
+  const lijst = document.getElementById('optie-lijst');
+  lijst.innerHTML = '';
+
+  opties.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'optie-btn';
+    btn.textContent = opt.label;
+    if (STATE.geselecteerd[fakeQId] === opt.label) btn.classList.add('selected');
+    btn.onclick = () => {
+      // Sla tags op
+      Object.entries(opt.tags).forEach(([k, v]) => {
+        STATE.verzameldeTagsHuidigeRonde[k] = (STATE.verzameldeTagsHuidigeRonde[k] || 0) + v;
+      });
+      // Domein-tag
+      if (c?.domain?.domain_id) {
+        const dKey = `domains.${c.domain.domain_id.toLowerCase()}`;
+        STATE.verzameldeTagsHuidigeRonde[dKey] = 1;
+      }
+      STATE.geselecteerd[fakeQId] = opt.label;
+      lijst.querySelectorAll('.optie-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      document.getElementById('btn-volgende-vraag').disabled = false;
+    };
+    lijst.appendChild(btn);
+  });
+
+  document.getElementById('btn-volgende-vraag').disabled = true;
+  document.getElementById('btn-volgende-vraag').textContent = 'Klaar →';
+  document.getElementById('btn-volgende-vraag').onclick = rondeAntwoordenKlaar;
+
+  showScreen('screen-vraag');
+}
+
+function toonVraag(index) {
+  const vragen = STATE.huidigeCase?.questions || [];
+  if (index >= vragen.length) {
+    rondeAntwoordenKlaar();
+    return;
+  }
+  STATE.vraagIndex = index;
+  const vraag = vragen[index];
+
+  // Leesbaar label (NL), niet de raw step-naam
+  const stapLabel = STAP_LABELS[vraag.step] || (index === 0 ? 'Eerste reactie' : 'Verdieping');
+  document.getElementById('vraag-stap-label').textContent = stapLabel;
+  document.getElementById('vraag-nr-badge').textContent = `${index+1}/${vragen.length}`;
+  document.getElementById('vraag-prompt').textContent = vraag.prompt || '';
+  document.getElementById('vraag-helper').textContent = vraag.helper_text || '';
+
+  const pct = ((index) / vragen.length) * 100;
+  document.getElementById('vraag-progress').style.width = pct + '%';
+
+  // Opties renderen
+  const lijst = document.getElementById('optie-lijst');
+  lijst.innerHTML = '';
+  (vraag.options || []).forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'optie-btn';
+    btn.textContent = opt.label;
+    if (STATE.geselecteerd[vraag.question_id] === opt.option_id) {
+      btn.classList.add('selected');
+    }
+    btn.onclick = () => selecteerOptie(vraag.question_id, opt.option_id, opt.tags, btn);
+    lijst.appendChild(btn);
+  });
+
+  // Volgende-knop state
+  const btnVolgend = document.getElementById('btn-volgende-vraag');
+  btnVolgend.disabled = !STATE.geselecteerd[vraag.question_id];
+  btnVolgend.textContent = index < vragen.length - 1 ? 'Verder →' : 'Klaar →';
+
+  showScreen('screen-vraag');
+}
+
+function selecteerOptie(questionId, optionId, tags, clickedBtn) {
+  STATE.geselecteerd[questionId] = optionId;
+
+  // Tags ophalen vanuit de casus
+  // (zoek de optie opnieuw om te vermijden dat we stale referentie hebben)
+  const vraag = (STATE.huidigeCase?.questions || []).find(q => q.question_id === questionId);
+  if (vraag) {
+    const opt = (vraag.options || []).find(o => o.option_id === optionId);
+    if (opt && opt.tags) {
+      Object.entries(opt.tags).forEach(([key, val]) => {
+        STATE.verzameldeTagsHuidigeRonde[key] = (STATE.verzameldeTagsHuidigeRonde[key] || 0) + val;
+      });
+    }
+  }
+
+  // Visueel
+  clickedBtn.closest('.optie-lijst')?.querySelectorAll('.optie-btn')
+    .forEach(b => b.classList.remove('selected'));
+  clickedBtn.classList.add('selected');
+  document.getElementById('btn-volgende-vraag').disabled = false;
+}
+
+function volgendeVraag() {
+  const vragen = STATE.huidigeCase?.questions || [];
+  if (STATE.vraagIndex < vragen.length - 1) {
+    toonVraag(STATE.vraagIndex + 1);
+  } else {
+    rondeAntwoordenKlaar();
+  }
+}
+
+function vorigeVraag() {
+  if (STATE.vraagIndex > 0) {
+    toonVraag(STATE.vraagIndex - 1);
+  } else {
+    showScreen('screen-situatie');
+  }
+}
+
+// ── Antwoorden klaar ─────────────────────────────────────
+async function rondeAntwoordenKlaar() {
+  const c = STATE.huidigeCase;
+
+  // Tags opslaan
+  await ProfielClient.saveTags({
+    caseId:    c.case_id,
+    domain:    c.domain?.domain_id,
+    caseType:  c.case_type,
+    tags:      STATE.verzameldeTagsHuidigeRonde,
+    modus:     STATE.modus,
+    koppelCode: STATE.koppelCode,
+  });
+
+  // Ronde tellen
+  STATE.rondeCount++;
+  localStorage.setItem('grot_rondes', String(STATE.rondeCount));
+
+  // Case markeren als gespeeld
+  STATE.gespeeldeIds.add(c.case_id);
+  localStorage.setItem('grot_gespeeld', JSON.stringify([...STATE.gespeeldeIds]));
+
+  if (STATE.modus === 'samen' && STATE.koppelCode) {
+    // Stuur antwoord naar partner via koppel
+    const spelerKey = STATE.isPlayer1 ? '1' : '2';
+    KoppelClient.done({
+      caseId:        c.case_id,
+      geselecteerd:  STATE.geselecteerd,
+      tags:          STATE.verzameldeTagsHuidigeRonde,
+      // Geef ook de geselecteerde label-teksten mee voor de reveal
+      antwoordLabels: Object.entries(STATE.geselecteerd).map(([qId, oId]) => {
+        const v = (c.questions||[]).find(q=>q.question_id===qId);
+        const o = v ? (v.options||[]).find(op=>op.option_id===oId) : null;
+        return o ? o.label : oId;
+      }),
+    });
+
+    if (STATE.partnerKlaar) {
+      toonKoppelReveal();
+    } else {
+      showScreen('screen-wacht-partner');
+    }
+  } else {
+    toonSoloReveal();
+  }
+}
+
+function gaDirectNaarReveal() {
+  toonSoloReveal();
+}
+
+// ── Solo reveal ──────────────────────────────────────────
+function toonSoloReveal() {
+  const c = STATE.huidigeCase;
+  const output = c?.outputs?.solo || {};
+  const safetyInfo = STATE.huidigeRondeSafety || { klasse: 'normaal', teksten: null };
+  const safe = window.TOON ? TOON.veilig.bind(TOON) : (t) => t;
+  const vragen = c?.questions || [];
+
+  // ── 1. Brug: toon wat de gebruiker koos ─────────────────
+  const keuzeEl = document.getElementById('reveal-keuzes');
+  const gekozenLabels = Object.entries(STATE.geselecteerd).map(([qId, oId]) => {
+    const v = vragen.find(q => q.question_id === qId);
+    const o = v ? (v.options || []).find(op => op.option_id === oId) : null;
+    return o ? o.label : null;
+  }).filter(Boolean);
+
+  if (gekozenLabels.length > 0) {
+    keuzeEl.innerHTML = `
+      <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px 14px;border-left:3px solid var(--grot-gold);">
+        <div style="font-size:0.65rem;color:var(--grot-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Jij koos</div>
+        ${gekozenLabels.map(l => `<div style="font-size:0.88rem;margin-bottom:4px;">» ${l}</div>`).join('')}
+      </div>`;
+  } else {
+    keuzeEl.innerHTML = '';
+  }
+
+  // ── 2. Spiegel (mirror) ──────────────────────────────────
+  // Als case-mirror generiek is: bouw persoonlijker alternatief
+  let spiegelTekst = output.mirror || '';
+  if (isGeneriekeOutput(spiegelTekst)) {
+    // Gebruik top tag + domein voor persoonlijkere spiegel
+    const topTag = Object.entries(STATE.verzameldeTagsHuidigeRonde)
+      .sort((a, b) => b[1] - a[1])[0];
+    const domeinVraag = c?.domain?.central_question || '';
+    if (topTag && window.TOON) {
+      const cat = topTag[0].split('.')[0];
+      const typeMap = { needs: 'behoefte', protections: 'bescherming', sensitive_points: 'gevoelig', patterns: 'patroon' };
+      spiegelTekst = TOON.spiegel(TOON.t.spiegel[typeMap[cat] ? typeMap[cat] : 'behoefte']
+        ? (typeMap[cat] && TOON.t.spiegel[typeMap[cat]])
+          ? topTag[0].split('.')[1] || topTag[0]
+          : topTag[0].split('.')[1] || topTag[0]
+        : topTag[0].split('.')[1] || topTag[0],
+        typeMap[cat] || 'behoefte');
+    }
+    if (!spiegelTekst && domeinVraag) {
+      spiegelTekst = `Onder deze situatie kan de vraag schuilen: ${domeinVraag.toLowerCase()}`;
+    }
+  }
+  document.getElementById('reveal-spiegel').textContent = safe(spiegelTekst);
+
+  // ── 3. Bescherming + behoefte (als niet-generiek) ────────
+  const beschTekst = output.protection_reflection || '';
+  const behTekst   = output.need_reflection       || '';
+  const beschBehEl = document.getElementById('reveal-bescherming-behoefte');
+
+  if (!isGeneriekeOutput(beschTekst) || !isGeneriekeOutput(behTekst)) {
+    beschBehEl.style.display = 'block';
+    document.getElementById('reveal-bescherming').textContent = isGeneriekeOutput(beschTekst) ? '' : safe(beschTekst);
+    document.getElementById('reveal-behoefte').textContent    = isGeneriekeOutput(behTekst)   ? '' : safe(behTekst);
+    // Verberg loze regels
+    document.getElementById('reveal-bescherming').style.display = isGeneriekeOutput(beschTekst) ? 'none' : 'block';
+    document.getElementById('reveal-behoefte').style.display    = isGeneriekeOutput(behTekst)   ? 'none' : 'block';
+  } else {
+    beschBehEl.style.display = 'none';
+  }
+
+  // ── 4. Gentle phrase (zachte afsluitzin) ─────────────────
+  const gentleEl = document.getElementById('reveal-gentle');
+  const gentleTekst = output.gentle_phrase || '';
+  if (gentleTekst) {
+    gentleEl.textContent = safe(gentleTekst);
+    gentleEl.style.display = 'block';
+  } else {
+    gentleEl.style.display = 'none';
+  }
+
+  // ── 5. Kans, uitdaging, experiment ───────────────────────
+  document.getElementById('reveal-kans').textContent       = safe(output.chance      || '');
+  document.getElementById('reveal-uitdaging').textContent  = safe(output.challenge   || '');
+  document.getElementById('reveal-experiment').textContent = safe(output.experiment  || '');
+
+  // ── 6. Tags chips ─────────────────────────────────────────
+  const chipsEl = document.getElementById('reveal-tags-chips');
+  chipsEl.innerHTML = '';
+  const topTags = Object.entries(STATE.verzameldeTagsHuidigeRonde)
+    .sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  topTags.forEach(([key]) => {
+    const cat      = key.split('.')[0];
+    const leesbaar = TAG_LABELS[key] || key.split('.')[1]?.replace(/_/g,' ') || key;
+    let cls = 'chip-beh';
+    if (cat === 'protections')     cls = 'chip-besch';
+    if (cat === 'skills')          cls = 'chip-skill';
+    if (cat === 'sensitive_points') cls = 'chip-besch';
+    chipsEl.innerHTML += `<span class="chip ${cls}">${leesbaar}</span>`;
+  });
+
+  // ── 7. Safety nawoord ─────────────────────────────────────
+  const nawoordEl = document.getElementById('reveal-safety-nawoord');
+  nawoordEl.style.display = 'none';
+  nawoordEl.innerHTML = '';
+  if (window.TOON && safetyInfo.klasse !== 'normaal' && safetyInfo.teksten) {
+    nawoordEl.style.display = 'block';
+    let html = '';
+    if (safetyInfo.teksten.reveal) {
+      html += `<div style="font-size:0.84rem;color:var(--grot-muted);font-style:italic;margin-bottom:8px;">${safetyInfo.teksten.reveal}</div>`;
+    }
+    if (safetyInfo.klasse === 'crisis') html += TOON.crisisHtml('dark');
+    nawoordEl.innerHTML = html;
+  }
+
+  showScreen('screen-reveal-solo');
+}
+
+// ── Koppel reveal ─────────────────────────────────────────
+function toonKoppelReveal() {
+  const c    = STATE.huidigeCase;
+  const cout = c?.outputs?.couple || {};
+  const pd   = STATE.partnerData;
+
+  document.getElementById('koppel-comparison-intro').textContent = cout.comparison_intro || '';
+  document.getElementById('koppel-kans').textContent             = cout.shared_chance || '';
+  document.getElementById('koppel-uitdaging').textContent        = cout.shared_challenge || '';
+  document.getElementById('koppel-experiment').textContent       = cout.shared_experiment || '';
+
+  // Jij vs partner antwoorden
+  const mijnLabels = Object.entries(STATE.geselecteerd).map(([qId, oId]) => {
+    const v = (c?.questions||[]).find(q=>q.question_id===qId);
+    const o = v ? (v.options||[]).find(op=>op.option_id===oId) : null;
+    return o ? `<div style="margin-bottom:6px;font-size:0.85rem;">${o.label}</div>` : '';
+  }).join('');
+
+  const partnerLabels = pd?.antwoordLabels
+    ? pd.antwoordLabels.map(l => `<div style="margin-bottom:6px;font-size:0.85rem;">${l}</div>`).join('')
+    : '<div style="font-size:0.82rem;color:var(--grot-muted);">Antwoorden niet beschikbaar</div>';
+
+  document.getElementById('koppel-antwoord-jij').innerHTML     = mijnLabels;
+  document.getElementById('koppel-antwoord-partner').innerHTML = partnerLabels;
+
+  showScreen('screen-reveal-koppel');
+}
+
+// ── Ronde klaar ───────────────────────────────────────────
+function naarRondeKlaar() {
+  const n = STATE.rondeCount;
+  const profiel = ProfielClient.getLocal();
+
+  // Milestone check
+  const milestone = document.getElementById('milestone-sectie');
+  milestone.style.display = 'none';
+  if (n === 5) {
+    const ms = TEKST.milestone_5;
+    milestone.style.display = 'block';
+    milestone.innerHTML = `
+      <div class="milestone-badge">
+        <div class="ms-icon">${ms.icon}</div>
+        <div class="ms-titel">${ms.titel}</div>
+        <div class="ms-sub">${ms.sub}</div>
+      </div>`;
+  } else if (n === 12) {
+    const ms = TEKST.milestone_12;
+    milestone.style.display = 'block';
+    milestone.innerHTML = `
+      <div class="milestone-badge" style="background:linear-gradient(135deg,var(--grot-card),#1a0a3c);">
+        <div class="ms-icon">${ms.icon}</div>
+        <div class="ms-titel">${ms.titel}</div>
+        <div class="ms-sub">${ms.sub}</div>
+        <a href="relatiekaart.html" class="btn btn-primary btn-sm" style="margin-top:12px;display:inline-block;text-decoration:none;">Bekijk relatiekaart →</a>
+      </div>`;
+  }
+
+  // Profiel update tonen
+  const lijst = document.getElementById('profiel-update-lijst');
+  lijst.innerHTML = '';
+  if (profiel) {
+    const items = [
+      ...(profiel.topBehoeften||[]).slice(0,2).map(b => ({ icon:'💙', label: b.label, sub: 'Behoefte', cls:'chip-beh' })),
+      ...(profiel.topBeschermingen||[]).slice(0,1).map(b => ({ icon:'🛡️', label: b.label, sub: 'Bescherming', cls:'chip-besch' })),
+      ...(profiel.topSkills||[]).slice(0,1).map(b => ({ icon:'✓', label: b.label, sub: 'Vaardigheid', cls:'chip-skill' })),
+    ];
+    if (items.length === 0) {
+      lijst.innerHTML = '<p style="color:var(--grot-muted);font-size:0.85rem;">Profiel wordt bijgewerkt...</p>';
+    } else {
+      items.forEach(item => {
+        lijst.innerHTML += `
+          <div class="profiel-update-chip">
+            <span style="font-size:1.3rem;">${item.icon}</span>
+            <div>
+              <div class="pu-label">${item.label}</div>
+              <div class="pu-sub">${item.sub}</div>
+            </div>
+          </div>`;
+      });
+    }
+  }
+
+  // Progress
+  const pct = Math.min((n / 12) * 100, 100);
+  document.getElementById('ronde-klaar-progress').style.width = pct + '%';
+  const volgende = document.getElementById('ronde-klaar-volgende');
+  if (n < 5)       volgende.textContent = TEKST.nog_nodig_5(n);
+  else if (n < 12) volgende.textContent = TEKST.nog_nodig_12(n);
+  else             volgende.textContent = TEKST.kaart_bereikt;
+
+  // 5-label aanpassen als bereikt
+  const label5 = document.getElementById('ronde-klaar-5-label');
+  if (n >= 5 && label5) label5.textContent = '✓ Mini-profiel';
+
+  updateIntroScherm();
+  showScreen('screen-ronde-klaar');
+}
+
+// ── Nieuwe ronde ──────────────────────────────────────────
+function nieuweRonde() {
+  STATE.huidigeCase = null;
+  STATE.geselecteerd = {};
+  STATE.verzameldeTagsHuidigeRonde = {};
+  STATE.partnerKlaar = false;
+  STATE.partnerData = null;
+
+  // Bij samen-modus: reset koppel state voor volgende ronde
+  if (STATE.modus === 'samen' && STATE.koppelCode && window.KoppelClient) {
+    KoppelClient.reset();
+  }
+
+  showScreen('screen-domein');
+}
+</script>
+</body>
+</html>
