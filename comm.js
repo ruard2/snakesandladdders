@@ -126,6 +126,10 @@
         #__cl_sett p{color:#6a7860;font-size:.82rem;font-style:italic;font-family:inherit;}
 
         /* ── Progress card ─────────────────────────────────── */
+        #__cl_prog_backdrop{
+          position:fixed;inset:0;z-index:10299;display:none;
+        }
+        #__cl_prog_backdrop.open{display:block;}
         #__cl_progress{
           position:fixed;bottom:72px;left:50%;transform:translateX(-50%);
           z-index:10300;width:calc(100% - 40px);max-width:320px;
@@ -134,6 +138,11 @@
           display:none;
         }
         #__cl_progress.open{display:block;}
+        #__cl_prog_close{
+          position:absolute;top:10px;right:12px;background:none;border:none;
+          color:#6a7860;font-size:1.1rem;cursor:pointer;line-height:1;padding:2px 6px;
+        }
+        #__cl_prog_close:hover{color:#c0d860;}
         .cl-prog-title{color:#c0d860;font-size:.82rem;font-weight:700;letter-spacing:.06em;
           text-transform:uppercase;margin-bottom:12px;text-align:center;font-family:inherit;}
         .cl-prog-item{margin-bottom:10px;}
@@ -191,8 +200,12 @@
         </div>
       </div>
 
+      <!-- Progress card backdrop (klik buiten = sluiten) -->
+      <div id="__cl_prog_backdrop" onclick="CommLayer.closeProgress()"></div>
+
       <!-- Progress card -->
       <div id="__cl_progress">
+        <button id="__cl_prog_close" onclick="CommLayer.closeProgress()">✕</button>
         <div class="cl-prog-title">Op weg naar bellen 📞</div>
         <div class="cl-prog-item">
           <div class="cl-prog-label">
@@ -650,12 +663,17 @@
         // Bellen nog niet ontgrendeld: toon progress card
         C.progOpen = !C.progOpen;
         document.getElementById('__cl_progress')?.classList.toggle('open', C.progOpen);
+        document.getElementById('__cl_prog_backdrop')?.classList.toggle('open', C.progOpen);
         if (C.progOpen) updateProgCard();
         return;
       }
       if (C.inCall) stopCall(); else startCall();
     },
-    closeProgress() { C.progOpen=false; document.getElementById('__cl_progress')?.classList.remove('open'); },
+    closeProgress() {
+      C.progOpen = false;
+      document.getElementById('__cl_progress')?.classList.remove('open');
+      document.getElementById('__cl_prog_backdrop')?.classList.remove('open');
+    },
     answerCall() {
       stopRing();
       document.getElementById('__cl_incoming')?.classList.remove('show');

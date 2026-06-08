@@ -406,7 +406,7 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
 
     <!-- Chat / Call buttons -->
     <button class="onth-action-btn" id="onth-chat" onclick="openChat(null)">chat</button>
-    <button class="onth-action-btn" id="onth-call" onclick="debugCall()">bellen</button>
+    <button class="onth-action-btn" id="onth-call" onclick="CommLayer.toggleCall()">bellen</button>
   </div>
 </div>
 
@@ -1100,27 +1100,6 @@ function buildReveal() {
   }
   window.KoppelClient ? go() : loadKoppelScript(go);
 })();
-
-function debugCall() {
-  console.log('[CALL] button clicked');
-  console.log('[CALL] CommLayer defined:', typeof window.CommLayer);
-  const prog = document.getElementById('__cl_progress');
-  console.log('[CALL] __cl_progress element:', prog);
-  if (prog) {
-    const cs = window.getComputedStyle(prog);
-    console.log('[CALL] progress z-index:', cs.zIndex, 'display:', cs.display, 'visibility:', cs.visibility);
-  }
-  if (!window.CommLayer) {
-    showToast('❌ CommLayer niet geladen — herlaad de pagina');
-    return;
-  }
-  CommLayer.toggleCall();
-  // Check of progress nu open is
-  setTimeout(() => {
-    const p = document.getElementById('__cl_progress');
-    if (p) console.log('[CALL] na toggleCall — class:', p.className, 'display:', window.getComputedStyle(p).display);
-  }, 50);
-}
 
 // Sla naam op in localStorage als gezet
 window.addEventListener('beforeunload', () => {
