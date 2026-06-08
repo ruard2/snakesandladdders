@@ -79,28 +79,19 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
   display: block;
 }
 
-/* Back button — wooden sign top-left */
+/* Back button — invisible hotspot over wooden sign in image */
 .kies-back {
   position: absolute;
   top: 3.1%; left: 6.9%;
   width: 15.9%; height: 4.2%;
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(180deg, #b07d3a 0%, #8b5e20 100%);
-  border: 2px solid #5c3a0e;
-  border-radius: 8px;
-  box-shadow: 2px 3px 8px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.18);
-  color: #fef0c8;
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(0.55rem, 1.4vw, 0.78rem);
-  font-weight: 600;
+  background: transparent;
+  border: none;
   text-decoration: none;
-  letter-spacing: 0.02em;
   z-index: 10;
   cursor: pointer;
-  transition: filter .15s;
+  -webkit-tap-highlight-color: transparent;
 }
-.kies-back:hover { filter: brightness(1.12); }
-.kies-back:active { transform: scale(0.97); }
+.kies-back:active { opacity: 0.7; }
 
 /* Selection slots — 3 parchment squares */
 .kies-slots {
@@ -146,97 +137,48 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
   gap: 1.1%;
 }
 
-/* Individual value card — parchment tile */
+/* Chip — invisible hotspot over chip drawn in image */
 .chip {
-  background: linear-gradient(160deg, #fef8e4 0%, #f5e8b8 60%, #eedda0 100%);
-  border: 2px solid #9b7428;
+  background: transparent;
+  border: none;
   border-radius: 9px;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 3%;
   cursor: pointer;
-  transition: all .18s ease;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.6);
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   position: relative;
-  overflow: hidden;
-  padding: 4% 2%;
+  transition: all .18s ease;
 }
-.chip::before {
-  content: '';
-  position: absolute; inset: 2px;
-  border: 1px solid rgba(155, 116, 40, 0.25);
-  border-radius: 7px;
-  pointer-events: none;
-}
-.chip:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 14px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.6);
-}
-.chip:active { transform: scale(0.94); }
+/* Selected: golden overlay so user sees their choice */
 .chip.gekozen {
-  background: linear-gradient(160deg, #fff8d6 0%, #fce97a 60%, #f0d040 100%);
-  border: 2.5px solid #c8960a;
-  box-shadow: 0 0 14px rgba(212,175,55,0.5), 0 3px 8px rgba(0,0,0,0.25),
-              inset 0 1px 0 rgba(255,255,255,0.7);
+  background: rgba(212, 175, 55, 0.45);
+  box-shadow: inset 0 0 0 2px #c8960a;
+  border-radius: 9px;
 }
-.chip.gekozen::after {
-  content: '✦';
-  position: absolute; top: 2px; right: 4px;
-  font-size: 0.45rem; color: #c8960a; opacity: 0.8;
-}
-.chip-emoji {
-  font-size: clamp(1.1rem, 3vw, 1.6rem);
-  line-height: 1;
-}
-.chip-naam {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(0.42rem, 1.15vw, 0.62rem);
-  font-weight: 600;
-  color: #5c3a0e;
-  text-align: center;
-  line-height: 1.2;
-}
-.chip.gekozen .chip-naam { color: #3a2200; }
+.chip:active { opacity: 0.7; }
+/* Hide emoji/naam — image already shows them */
+.chip-emoji, .chip-naam { display: none; }
 
-/* CTA button — carved wooden plaque */
+/* CTA — invisible hotspot over button drawn in image */
 .kies-cta {
   position: absolute;
   top: 72.4%;
   left: 19.9%;
   width: 59.9%;
   height: 5%;
+  /* Dim whole area when disabled so image button looks inactive */
+  transition: opacity .2s;
 }
+.kies-cta.disabled { opacity: 0.45; pointer-events: none; }
 #kies-btn {
   width: 100%; height: 100%;
-  background: linear-gradient(180deg, #d4a030 0%, #a87020 50%, #c89030 100%);
-  border: 2.5px solid #7a4e10;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,230,100,0.4);
-  color: #fef0c8;
-  font-family: 'Cinzel', 'Playfair Display', serif;
-  font-size: clamp(0.75rem, 2vw, 1.05rem);
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  background: transparent;
+  border: none;
+  color: transparent;   /* text hidden — image shows the label */
   cursor: pointer;
-  transition: all .2s;
-  position: relative;
-  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
-#kies-btn:disabled {
-  background: linear-gradient(180deg, #a08840 0%, #7a6630 100%);
-  border-color: #5a4818;
-  color: rgba(254,240,200,0.5);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-  cursor: default;
-}
-#kies-btn:not(:disabled):hover {
-  filter: brightness(1.12);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,230,100,0.5);
-}
-#kies-btn:not(:disabled):active { transform: scale(0.97); }
+#kies-btn:disabled { cursor: default; }
+#kies-btn:not(:disabled):active { opacity: 0.7; }
 
 /* chip count feedback: wiggle when trying to add 4th */
 @keyframes kies-wiggle { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-3px)} 75%{transform:translateX(3px)} }
@@ -501,7 +443,9 @@ function updateSlots() {
     if (wid) { sl.classList.add('vol'); sl.textContent = wById(wid).emoji; }
     else      { sl.classList.remove('vol'); sl.textContent = i + 1; }
   }
-  document.getElementById('kies-btn').disabled = S.gekozen.length < 3;
+  const btn = document.getElementById('kies-btn');
+  btn.disabled = S.gekozen.length < 3;
+  btn.closest('.kies-cta').classList.toggle('disabled', S.gekozen.length < 3);
 }
 
 // ── KOPPEL
