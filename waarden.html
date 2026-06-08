@@ -470,6 +470,7 @@ function buildVragen(overlap, jijUniek, partnerUniek) {
     });
     KoppelClient.on('session_joined', ({ code, player }) => {
       S.code=code; S.player=player;
+      SDClient.announceGame('waarden', 'Je Waarden');
     });
     KoppelClient.on('both_connected', () => startKiezen());
     KoppelClient.on('session_complete', ({ state }) => {

@@ -1134,7 +1134,7 @@ function goPresCard(idx) {
   KoppelClient.on('error',           ({ message }) => setStatus('Fout: ' + message));
   KoppelClient.on('disconnected',    () => setStatus('Verbinding verbroken'));
   KoppelClient.on('session_created', ({ code, player }) => { S.player=player; SDClient.announceGame('kwaliteiten','Je Kwaliteiten'); });
-  KoppelClient.on('session_joined',  ({ code, player }) => { S.player=player; });
+  KoppelClient.on('session_joined',  ({ code, player }) => { S.player=player; SDClient.announceGame('kwaliteiten','Je Kwaliteiten'); });
 
   // Partner question picks
   KoppelClient.on('partner_progress', ({ progress }) => {

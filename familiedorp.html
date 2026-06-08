@@ -1144,7 +1144,7 @@ function buildNapraat() {
 
   setupCb();
   KoppelClient.on('session_created',({code,player})=>{S.code=code;S.player=player;SDClient.announceGame('familiedorp','Je Familieboom');});
-  KoppelClient.on('session_joined', ({code,player})=>{S.code=code;S.player=player;});
+  KoppelClient.on('session_joined', ({code,player})=>{S.code=code;S.player=player;SDClient.announceGame('familiedorp','Je Familieboom');});
   KoppelClient.joinOrCreate(gc+'.F','familiedorp');
 })();
 </script>

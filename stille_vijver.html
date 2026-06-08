@@ -898,7 +898,7 @@ function naarChat() {
 
   setupCallbacks();
   KoppelClient.on('session_created',({code,player})=>{STATE.player=player;saveSession(code,player);SDClient.announceGame('stille_vijver','Stille Vijver');});
-  KoppelClient.on('session_joined', ({code,player})=>{STATE.player=player;saveSession(code,player);});
+  KoppelClient.on('session_joined', ({code,player})=>{STATE.player=player;saveSession(code,player);SDClient.announceGame('stille_vijver','Stille Vijver');});
   KoppelClient.joinOrCreate(gc+'.V','stille_vijver');
 })();
 </script>

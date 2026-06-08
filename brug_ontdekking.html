@@ -593,7 +593,7 @@ function showCommBar(show){
 
   function go(){
     KoppelClient.on('session_created',({code,player})=>{S.code=code;S.player=player;SDClient.announceGame('brug_ontdekking', 'Brug van Ontdekking');});
-    KoppelClient.on('session_joined', ({code,player})=>{S.code=code;S.player=player;});
+    KoppelClient.on('session_joined', ({code,player})=>{S.code=code;S.player=player;SDClient.announceGame('brug_ontdekking', 'Brug van Ontdekking');});
     KoppelClient.on('both_connected', ()=>startKiezen());
     KoppelClient.on('session_complete',({state})=>{const pk=S.player==='1'?'p2':'p1';if(state[pk]?.done&&state[pk]?.stenen){S.partner=state[pk].stenen;buildReveal();showS('s-reveal');}});
     // session_update = één speler klaar, wacht op allebei via session_complete
