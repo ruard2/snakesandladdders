@@ -532,7 +532,13 @@
             : 'https://snakesandladdders-production.up.railway.app');
       }
       const BACKEND_URL = window.KOPPEL_BACKEND_URL;
-      const sock = io(BACKEND_URL, { transports: ['websocket', 'polling'] });
+      const sock = io(BACKEND_URL, {
+        transports: ['polling', 'websocket'], // polling-eerst — Railway-compatibel
+        upgrade: true,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 1500,
+        timeout: 20000,
+      });
       window._commSocket = sock;
 
       sock.on('connect', () => {
