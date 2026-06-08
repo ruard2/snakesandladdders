@@ -536,7 +536,7 @@
       }
       const BACKEND_URL = window.KOPPEL_BACKEND_URL;
       const sock = io(BACKEND_URL, {
-        transports: ['polling', 'websocket'], // polling-eerst — Railway-compatibel
+        transports: ['polling', 'websocket'],
         upgrade: true,
         reconnectionAttempts: 10,
         reconnectionDelay: 1500,
@@ -544,72 +544,66 @@
       });
       window._commSocket = sock;
 
+      // ── STRUCTUREEL: listeners EENMALIG registreren, BUITEN connect handler
+      // Bij reconnect vuurt 'connect' opnieuw — listeners binnen connect
+      // stapelen dan op → dubbele berichten. Oplossing: alleen emit binnen connect.
+
+      sock.on('webrtc_offer', async ({ offer }) => {
+        if (!C.inCall && C.callingPref) {
+          C.stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }).catch(() => null);
+          if (!C.stream) return;
+          initPc();
+          await C.pc.setRemoteDescription(offer);
+          const answer = await C.pc.createAnswer();
+          await C.pc.setLocalDescription(answer);
+          sock.emit('webrtc_answer', { code: C.code, answer });
+          C.inCall = true; localStorage.setItem(K.call, 'true'); updateCallBtns();
+        } else if (!C.inCall) {
+          C.ringing = true; C._pendingOffer = offer;
+          updateCallBtns(); playRing();
+          document.getElementById('__cl_incoming')?.classList.add('show');
+        } else {
+          if (!C.pc) initPc();
+          await C.pc.setRemoteDescription(offer);
+          const answer = await C.pc.createAnswer();
+          await C.pc.setLocalDescription(answer);
+          sock.emit('webrtc_answer', { code: C.code, answer });
+        }
+      });
+      sock.on('webrtc_answer', async ({ answer }) => { if (C.pc) await C.pc.setRemoteDescription(answer).catch(() => {}); });
+      sock.on('webrtc_ice',    async ({ candidate }) => { if (C.pc) await C.pc.addIceCandidate(candidate).catch(() => {}); });
+      sock.on('call_state_update', (state) => {
+        Object.assign(CS, state);
+        updateProgCard();
+        updateSettUnlock();
+        updateCallBtns();
+        updateSettBadge();
+      });
+      sock.on('call_unlocked_celebration', () => showFireworks());
+      sock.on('session_created', () => { C.koppelReady = true; });
+      sock.on('session_joined',  () => { C.koppelReady = true; });
+
+      sock.on('chat_message', ({ player, text }) => {
+        if (typeof text === 'string' && text.startsWith('__GAME__:')) {
+          console.log('[CommLayer] game invite received:', text);
+          const parts = text.split(':');
+          const gameKey  = parts[1] || '';
+          const gameName = parts[2] || gameKey;
+          (window.__gameInviteCbs || []).forEach(fn => { try { fn({ game: gameKey, name: gameName }); } catch(e){ console.error('[CommLayer] invite cb error', e); } });
+          return;
+        }
+        const side = player === C.player ? 'me' : 'them';
+        const log = loadLog(); log.push({ text, side }); saveLog(log);
+        addBubble(text, side);
+        if (!C.chatOpen && side === 'them') {
+          C.unread++; localStorage.setItem(K.unread, C.unread); updateBadge();
+        }
+        (window.__commChatCbs || []).forEach(fn => { try { fn({ player, text, side }); } catch(e){} });
+      });
+
+      // ── connect handler: alleen de room join (herhaalt bij reconnect)
       sock.on('connect', () => {
-        // Doe join_session met de globale code (alleen om in de room te zitten)
         sock.emit('join_or_create', { code: C.code, app: 'comm' });
-        // koppelReady wordt gezet na server bevestiging (session_created/joined)
-
-        sock.on('webrtc_offer', async ({ offer }) => {
-          if (!C.inCall && C.callingPref) {
-            C.stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }).catch(() => null);
-            if (!C.stream) return;
-            initPc();
-            await C.pc.setRemoteDescription(offer);
-            const answer = await C.pc.createAnswer();
-            await C.pc.setLocalDescription(answer);
-            sock.emit('webrtc_answer', { code: C.code, answer });
-            C.inCall = true; localStorage.setItem(K.call, 'true'); updateCallBtns();
-          } else if (!C.inCall) {
-            C.ringing = true; C._pendingOffer = offer;
-            updateCallBtns(); playRing();
-            document.getElementById('__cl_incoming')?.classList.add('show');
-          } else {
-            if (!C.pc) initPc();
-            await C.pc.setRemoteDescription(offer);
-            const answer = await C.pc.createAnswer();
-            await C.pc.setLocalDescription(answer);
-            sock.emit('webrtc_answer', { code: C.code, answer });
-          }
-        });
-        sock.on('webrtc_answer', async ({ answer }) => { if (C.pc) await C.pc.setRemoteDescription(answer).catch(() => {}); });
-        sock.on('webrtc_ice',    async ({ candidate }) => { if (C.pc) await C.pc.addIceCandidate(candidate).catch(() => {}); });
-        sock.on('call_state_update', (state) => {
-          Object.assign(CS, state);
-          updateProgCard();
-          updateSettUnlock();
-          updateCallBtns();
-          // Badge op settings cog als cooldown voorbij + conditions met
-          updateSettBadge();
-        });
-        sock.on('call_unlocked_celebration', () => showFireworks());
-
-        // Zet koppelReady zodra server bevestigt dat we in de room zitten
-        sock.on('session_created', () => { C.koppelReady = true; });
-        sock.on('session_joined',  () => { C.koppelReady = true; });
-
-        sock.on('chat_message', ({ player, text }) => {
-          // Game invite relay — special prefix __GAME__:key:name
-          // Backend uses socket.to() so this only arrives at the partner — no player check needed
-          if (typeof text === 'string' && text.startsWith('__GAME__:')) {
-            console.log('[CommLayer] game invite received:', text);
-            const parts = text.split(':');
-            const gameKey  = parts[1] || '';
-            const gameName = parts[2] || gameKey;
-            const cbs = window.__gameInviteCbs || [];
-            console.log('[CommLayer] calling', cbs.length, 'invite callbacks');
-            cbs.forEach(fn => { try { fn({ game: gameKey, name: gameName }); } catch(e){ console.error('[CommLayer] invite cb error', e); } });
-            return; // never show in chat UI
-          }
-          const side = player === C.player ? 'me' : 'them';
-          const log = loadLog(); log.push({ text, side }); saveLog(log);
-          addBubble(text, side);
-          if (!C.chatOpen && side === 'them') {
-            C.unread++; localStorage.setItem(K.unread, C.unread); updateBadge();
-          }
-          // Notify board-level chat listeners
-          (window.__commChatCbs || []).forEach(fn => { try { fn({ player, text, side }); } catch(e){} });
-        });
-
         if (C.callActive && !C.inCall) startCall();
       });
     }
