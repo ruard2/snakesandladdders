@@ -460,7 +460,8 @@ KoppelClient.on('session_joined', ({ code, player, state }) => {
 ### Sessie vol na refresh (polling transport)
 Met polling transport detecteert de server disconnects pas na `pingTimeout` (60s).  
 Fix zit in `sd-client.js` (beforeunload → `player_leaving`) + server `disconnectedAt` tracking.  
-**Nooit** `['websocket', 'polling']` — gebruik altijd `['polling', 'websocket']` op Railway.
+**Nooit** `['websocket', 'polling']` — gebruik altijd `['polling', 'websocket']` op Railway.  
+**Let op:** dit geldt voor ALLE socket-verbindingen: `sd-client.js`, `comm.js`, en elk nieuw bestand dat `io()` aanroept.
 
 ---
 
