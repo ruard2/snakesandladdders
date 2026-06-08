@@ -92,6 +92,14 @@
         #__cl_chat_hd{display:flex;align-items:center;justify-content:space-between;
           padding:10px 16px 4px;flex-shrink:0;}
         #__cl_chat_hd span{font-size:.8rem;color:#c8a040;font-weight:700;}
+        #__cl_chat_fab{position:fixed;bottom:16px;right:16px;z-index:10199;
+          background:#1a2a18;border:1.5px solid rgba(200,160,64,.4);border-radius:50px;
+          padding:8px 14px;cursor:pointer;display:flex;align-items:center;gap:6px;
+          font-size:.8rem;color:#c8a040;font-weight:700;box-shadow:0 2px 12px rgba(0,0,0,.5);
+          transition:transform .15s;}
+        #__cl_chat_fab:active{transform:scale(.93);}
+        #__cl_fab_badge{background:#e07070;color:#fff;border-radius:10px;padding:1px 7px;
+          font-size:.65rem;font-weight:bold;display:none;}
         #__cl_chat_hd button{background:none;border:none;color:#6a7860;font-size:1.1rem;cursor:pointer;}
         #__cl_msgs{flex:1;overflow-y:auto;padding:6px 14px;}
         .cl_msg{padding:5px 10px;margin:3px 0;border-radius:11px;font-size:.82rem;max-width:78%;}
@@ -177,6 +185,9 @@
         .co-btn.call-active{animation:cl_pulse 2s ease-in-out infinite;}
       </style>
 
+      <button id="__cl_chat_fab" onclick="CommLayer.toggleChat()">
+        💬 Chat <span id="__cl_fab_badge" data-comm-badge></span>
+      </button>
       <div id="__cl_chat">
         <div id="__cl_chat_hd">
           <span>💬 Chat</span>
@@ -351,12 +362,16 @@
     if (scroll) msgs.scrollTop = msgs.scrollHeight;
   }
 
-  // ── Badge bijwerken (op alle knoppen met data-comm-chat)
+  // ── Badge bijwerken (op alle knoppen met data-comm-badge + FAB)
   function updateBadge() {
+    const n = C.unread;
     document.querySelectorAll('[data-comm-badge]').forEach(el => {
-      el.textContent = C.unread > 0 ? (C.unread > 9 ? '9+' : C.unread) : '';
-      el.style.display = C.unread > 0 ? 'inline' : 'none';
+      el.textContent = n > 0 ? (n > 9 ? '9+' : n) : '';
+      el.style.display = n > 0 ? 'inline' : 'none';
     });
+    // FAB tonen als er ongelezen berichten zijn en chat gesloten is
+    const fab = document.getElementById('__cl_chat_fab');
+    if (fab) fab.style.display = (n > 0 && !C.chatOpen) ? 'flex' : 'none';
   }
 
   // ── Belknop bijwerken (op alle knoppen met data-comm-call)
@@ -525,7 +540,7 @@
 
   // ── Eigen socket voor globale comm (los van KoppelClient) ──
   function connectKoppel() {
-    if (!C.code || C.koppelReady) return;
+    if (!C.code || C.koppelReady || window._commSocket) return; // nooit twee sockets maken
 
     function go() {
       if (!window.KOPPEL_BACKEND_URL) {
@@ -583,7 +598,9 @@
       sock.on('session_created', () => { C.koppelReady = true; });
       sock.on('session_joined',  () => { C.koppelReady = true; });
 
-      sock.on('chat_message', ({ player, text }) => {
+      const _seenMsgIds = new Set(); // dedup — voorkomt dubbele weergave ongeacht oorzaak
+      sock.on('chat_message', ({ player, text, msgId }) => {
+        if (msgId) { if (_seenMsgIds.has(msgId)) return; _seenMsgIds.add(msgId); }
         if (typeof text === 'string' && text.startsWith('__GAME__:')) {
           console.log('[CommLayer] game invite received:', text);
           const parts = text.split(':');
