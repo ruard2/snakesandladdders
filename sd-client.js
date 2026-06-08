@@ -47,7 +47,13 @@ const SDClient = window.SDClient || (() => {
       if (_socket) { _socket.once('connect', cb); return; }
 
       console.log('[SD] connecting to', BACKEND);
-      _socket = io(BACKEND, { transports: ['websocket', 'polling'] });
+      _socket = io(BACKEND, {
+        transports: ['polling', 'websocket'], // polling eerst — Railway-compatibel
+        upgrade: true,                        // upgrade daarna naar websocket
+        reconnectionAttempts: 10,
+        reconnectionDelay: 1500,
+        timeout: 20000,
+      });
       window._sdSocket = _socket;   // expose for debugging
 
       _socket.once('connect', () => {
