@@ -263,6 +263,19 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
   display: flex; align-items: center; justify-content: center;
 }
 
+/* ── Toast notificatie */
+#sd-toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: #1e1e3a; border: 1px solid rgba(212,175,55,0.5);
+  color: #f0e6d3; padding: 11px 20px; border-radius: 22px;
+  font-size: 0.85rem; text-align: center; line-height: 1.4;
+  z-index: 50000; pointer-events: none; white-space: nowrap;
+  max-width: 85vw; white-space: normal;
+  opacity: 0; transition: opacity .25s;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+#sd-toast.show { opacity: 1; }
+
 /* ── Shared / reveal chips kept for non-image screens */
 .rev-chip{border-radius:20px;padding:7px 14px;font-size:0.82rem;font-weight:600;
   display:flex;align-items:center;gap:6px;border:1.5px solid;}
@@ -367,7 +380,7 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
     <img src="images/onthulling.webp" class="onthulling-bg" alt="">
 
     <!-- Back button -->
-    <a href="#" class="onth-back" id="onth-back">← Terug</a>
+    <a href="world.html" class="onth-back" id="onth-back">← Kaart</a>
 
     <!-- Jouw waarden (3 slots) -->
     <div class="onth-slot" id="ov0"></div>
@@ -393,7 +406,7 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
 
     <!-- Chat / Call buttons -->
     <button class="onth-action-btn" id="onth-chat" onclick="openChat(null)">chat</button>
-    <button class="onth-action-btn" id="onth-call" onclick="CommLayer.toggleCall()">bellen</button>
+    <button class="onth-action-btn" id="onth-call" onclick="tryCall()">bellen</button>
   </div>
 </div>
 
@@ -408,6 +421,9 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
     <button class="btn btn-ghost" style="font-size:.85rem;padding:10px;" onclick="location.reload()">Opnieuw spelen</button>
   </div>
 </div>
+
+<!-- Toast -->
+<div id="sd-toast"></div>
 
 <!-- ══════════════════ CHAT OVERLAY ══════════════════ -->
 <div id="chat-overlay">
@@ -1089,6 +1105,58 @@ function buildReveal() {
 window.addEventListener('beforeunload', () => {
   if (S.myName) localStorage.setItem('comm_naam', S.myName);
 });
+
+// ══════════════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════════════
+let _toastTimer = null;
+function showToast(msg, durationMs) {
+  durationMs = durationMs || 3500;
+  const el = document.getElementById('sd-toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), durationMs);
+}
+
+// ══════════════════════════════════════════════════════════
+//  CALL — spelregel: eerst chatten
+// ══════════════════════════════════════════════════════════
+const MIN_BERICHTEN_VOOR_BEL = 3; // minimaal 3 berichten uitgewisseld
+
+function tryCall() {
+  // Solo: geen bellen
+  if (S.solo) {
+    showToast('💬 Bellen werkt alleen met een partner.');
+    return;
+  }
+  // Geen actieve sessie
+  if (!S.code) {
+    showToast('💬 Verbind eerst met je partner om te bellen.');
+    return;
+  }
+  // Spelregel: chat eerst genoeg
+  const eigen = chatMessages.filter(m => m.mine).length;
+  const partner = chatMessages.filter(m => !m.mine).length;
+  const totaal = eigen + partner;
+  if (totaal < MIN_BERICHTEN_VOOR_BEL) {
+    const nog = MIN_BERICHTEN_VOOR_BEL - totaal;
+    showToast(
+      '📱 Nog even chatten — wissel nog ' + nog +
+      (nog === 1 ? ' bericht' : ' berichten') +
+      ' uit voor je kunt bellen. 💬',
+      4500
+    );
+    return;
+  }
+  // Alles ok — probeer te bellen
+  if (window.CommLayer && typeof CommLayer.toggleCall === 'function') {
+    CommLayer.toggleCall();
+  } else {
+    showToast('📵 Bellen is nog niet beschikbaar. Probeer het later opnieuw.');
+  }
+}
 </script>
 </body>
 </html>
