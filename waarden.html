@@ -186,6 +186,7 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
 .onth-action-btn {
   position: absolute; background: transparent; border: none;
   cursor: pointer; z-index: 10; -webkit-tap-highlight-color: transparent;
+  font-size: 0; color: transparent;
 }
 .onth-action-btn:active { opacity: 0.6; }
 
@@ -822,37 +823,64 @@ function setupVraagSwipe(n) {
   const state = vraagState[n];
   if (!zone) return;
 
-  let touchStartX = 0, touchStartT = 0, moved = false;
+  // Voorkom dubbele registratie bij herbouwen
+  if (zone._swipeInit) return;
+  zone._swipeInit = true;
 
-  const onStart = (clientX) => {
-    touchStartX = clientX; touchStartT = Date.now(); moved = false;
-  };
-  const onMove = (clientX) => {
-    if (Math.abs(clientX - touchStartX) > 5) moved = true;
-  };
-  const onEnd = (clientX) => {
-    const dx = clientX - touchStartX;
-    const dt = Date.now() - touchStartT;
-    if (!moved && Math.abs(dx) < 8) {
-      // Tap → open chat with current question
-      openChat(state.items[state.idx]);
-      return;
+  let startX = 0, startT = 0, active = false, moved = false;
+
+  // ── Touch
+  zone.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX; startT = Date.now();
+    active = true; moved = false;
+  }, {passive: true});
+
+  zone.addEventListener('touchmove', e => {
+    if (active && Math.abs(e.touches[0].clientX - startX) > 6) moved = true;
+  }, {passive: true});
+
+  zone.addEventListener('touchend', e => {
+    if (!active) return; active = false;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dt = Date.now() - startT;
+    if (!moved && Math.abs(dx) < 10) {
+      openChat(state.items[state.idx]); return;
     }
-    // Swipe threshold: 40px or fast flick
-    if (Math.abs(dx) > 40 || (Math.abs(dx) > 15 && dt < 250)) {
+    if (Math.abs(dx) > 35 || (Math.abs(dx) > 12 && dt < 300)) {
       goToSlide(n, state.idx + (dx < 0 ? 1 : -1));
     }
-  };
+  });
 
-  // Touch
-  zone.addEventListener('touchstart', e => onStart(e.touches[0].clientX), {passive:true});
-  zone.addEventListener('touchmove',  e => onMove(e.touches[0].clientX),  {passive:true});
-  zone.addEventListener('touchend',   e => onEnd(e.changedTouches[0].clientX));
+  // ── Mouse
+  zone.addEventListener('mousedown', e => {
+    startX = e.clientX; startT = Date.now();
+    active = true; moved = false;
+    e.preventDefault();
+  });
 
-  // Mouse
-  zone.addEventListener('mousedown', e => { onStart(e.clientX); e.preventDefault(); });
-  zone.addEventListener('mousemove', e => { if(e.buttons===1) onMove(e.clientX); });
-  zone.addEventListener('mouseup',   e => onEnd(e.clientX));
+  // mousemove + mouseup op document zodat sleepen buiten de zone werkt
+  document.addEventListener('mousemove', e => {
+    if (active && Math.abs(e.clientX - startX) > 6) moved = true;
+  });
+
+  document.addEventListener('mouseup', e => {
+    if (!active) return; active = false;
+    // Controleer of de drag binnen deze zone begon
+    const dx = e.clientX - startX;
+    const dt = Date.now() - startT;
+    if (!moved && Math.abs(dx) < 10) {
+      // Alleen als loslaten ook over de zone was → open chat
+      const r = zone.getBoundingClientRect();
+      if (e.clientX >= r.left && e.clientX <= r.right &&
+          e.clientY >= r.top  && e.clientY <= r.bottom) {
+        openChat(state.items[state.idx]);
+      }
+      return;
+    }
+    if (Math.abs(dx) > 35 || (Math.abs(dx) > 12 && dt < 300)) {
+      goToSlide(n, state.idx + (dx < 0 ? 1 : -1));
+    }
+  });
 }
 
 // ══════════════════════════════════════════════════════════
