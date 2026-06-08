@@ -332,7 +332,44 @@ function closeChat() {
 
 ---
 
-## 8. Bestandsstructuur
+## 8. Railway WebSocket — transport volgorde
+
+Railway's proxy blokkeert soms directe WebSocket-upgrades, waardoor spelers elkaar niet zien (`"WebSocket closed before connection established"`).
+
+### Regel: altijd polling-eerst
+
+**`sd-client.js`** (client):
+```javascript
+_socket = io(BACKEND, {
+  transports: ['polling', 'websocket'], // polling eerst — Railway-compatibel
+  upgrade: true,                        // upgrade daarna automatisch naar websocket
+  reconnectionAttempts: 10,
+  reconnectionDelay: 1500,
+  timeout: 20000,
+});
+```
+
+**`koppel-backend/server.js`** (server):
+```javascript
+const io = new Server(server, {
+  cors: { origin: '*', methods: ['GET', 'POST'] },
+  pingTimeout:    60000,
+  pingInterval:   25000,
+  upgradeTimeout: 30000,
+  transports:     ['polling', 'websocket'], // zelfde volgorde als client
+});
+```
+
+### Hoe het werkt
+1. Verbinding start via HTTP long-polling (werkt altijd via Railway)
+2. Socket.io upgradet automatisch naar WebSocket zodra dat lukt
+3. In devtools zie je eerst een XHR-request, daarna een WS-verbinding
+
+**Nooit** `['websocket', 'polling']` — dat probeert WS first en faalt op Railway.
+
+---
+
+## 9. Bestandsstructuur
 
 ```
 koppel-frontend/
@@ -354,7 +391,7 @@ koppel-frontend/
 
 ---
 
-## 9. Veelgemaakte fouten
+## 10. Veelgemaakte fouten
 
 | Fout | Oorzaak | Oplossing |
 |---|---|---|
@@ -364,3 +401,4 @@ koppel-frontend/
 | Dubbele swipe-listeners | `setupVraagSwipe` meerdere keren aangeroepen | Check `zone._swipeInit` vlag |
 | Slot toont nummers (1,2,3) | `textContent = i+1` voor lege slots | Gebruik `textContent = ''` voor leeg |
 | `object-fit: cover` snijdt bij | Gebruik `object-fit: fill` voor pixel-exacte mapping |
+| Spelers zien elkaar niet op Railway | `transports: ['websocket','polling']` — WS first | Zet naar `['polling','websocket']` in sd-client.js én server.js |

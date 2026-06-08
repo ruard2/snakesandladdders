@@ -55,9 +55,11 @@ h2{font-size:1.1rem;font-weight:700;color:#f0e8d0;text-align:center;}
 .stone-item.selected{border-color:#e8c060;background:rgba(232,192,96,.13);
   box-shadow:0 0 14px rgba(232,192,96,.3);}
 .stone-item img{width:100%;max-width:95px;aspect-ratio:1;object-fit:contain;
+  mix-blend-mode:multiply; /* verwijdert witte achtergrond op donkere ondergrond */
   filter:drop-shadow(0 3px 7px rgba(0,0,0,.55));}
 .stone-item.selected img{filter:drop-shadow(0 0 10px rgba(232,192,96,.65)) drop-shadow(0 3px 7px rgba(0,0,0,.55));}
-.stone-label{font-size:.62rem;font-weight:700;color:#b8a870;text-align:center;line-height:1.25;max-width:88px;}
+.stone-label{font-size:.75rem;font-weight:700;color:#b8a870;text-align:center;line-height:1.25;max-width:88px;
+  margin-top:-4px;} /* iets groter + hoger */
 .stone-item.selected .stone-label{color:#e8c060;}
 .stone-check{position:absolute;top:3px;right:3px;width:17px;height:17px;border-radius:50%;
   background:#e8c060;color:#1a1208;font-size:.6rem;display:none;align-items:center;justify-content:center;font-weight:800;}
