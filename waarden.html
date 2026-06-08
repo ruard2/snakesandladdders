@@ -25,7 +25,7 @@ html,body{height:100%;background:#0a0a0a;color:#f0e6d3;font-family:'Inter',sans-
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  z-index: 10;
+  z-index: 10000; /* boven vaste .back-btn (9999) */
 }
 #s-kies.active { display: flex !important; }
 .pad{padding:20px;width:100%;max-width:440px;}
@@ -79,92 +79,78 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
   display: block;
 }
 
-/* Back button — invisible hotspot over wooden sign in image */
+/* Back button — invisible hotspot. JSON: x=65,y=52,w=150,h=71 / 941×1672 */
 .kies-back {
   position: absolute;
-  top: 3.1%; left: 6.9%;
-  width: 15.9%; height: 4.2%;
+  top:  3.11%; left: 6.91%;
+  width: 15.94%; height: 4.25%;
   background: transparent;
   border: none;
   text-decoration: none;
   z-index: 10;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  font-size: 0; color: transparent; /* hide any text */
 }
 .kies-back:active { opacity: 0.7; }
 
-/* Selection slots — 3 parchment squares */
+/* Slots — full-frame overlay, each slot individually positioned */
 .kies-slots {
   position: absolute;
-  top: 26.5%;
-  left: 34.3%;
-  width: 31.5%; /* from slot1 left to slot3 right = (531+83-323)/941 */
-  height: 5%;
-  display: flex;
-  gap: 0;
-  justify-content: space-between;
+  inset: 0;
+  pointer-events: none;
 }
 .slot {
-  width: 30%; aspect-ratio: 1;
-  background: rgba(252, 242, 195, 0.55);
-  border: 2px solid rgba(139, 95, 32, 0.55);
-  border-radius: 8px;
+  position: absolute;
+  pointer-events: auto;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
   display: flex; align-items: center; justify-content: center;
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(0.7rem, 2vw, 1rem);
-  color: rgba(100, 68, 20, 0.6);
+  font-size: clamp(0.9rem, 2.5vw, 1.3rem);
   transition: all .25s;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.12);
+  cursor: default;
+  /* exact sizes from JSON: 83×83 / 941×1672 */
+  width: 8.82%; height: 4.96%;
 }
-.slot.vol {
-  background: rgba(252, 235, 150, 0.75);
-  border-color: #c8960a;
-  color: #5c3a00;
-  font-size: clamp(1rem, 2.8vw, 1.4rem);
-  box-shadow: 0 0 10px rgba(212,175,55,0.35), inset 0 1px 3px rgba(0,0,0,0.1);
-}
+/* Exact positions from JSON */
+#sl0 { left: 34.33%; top: 26.50%; }
+#sl1 { left: 45.38%; top: 26.50%; }
+#sl2 { left: 56.43%; top: 26.50%; }
+.slot.vol { background: rgba(212,175,55,0.35); border-radius: 6px; }
 
-/* Value cards grid */
+/* Chips grid — full-frame overlay, chips individually positioned via JS */
 .chips-grid {
   position: absolute;
-  top: 32.7%;
-  left: 16.9%;
-  width: 65.5%;
-  height: 31.5%; /* rows from y:546 to y:1024+149=1173, range=627, 627/1672=37.5% */
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(4, 1fr);
-  gap: 1.1%;
+  inset: 0;
+  pointer-events: none;
 }
 
-/* Chip — invisible hotspot over chip drawn in image */
+/* Chip — invisible hotspot, positioned absolutely via JS */
 .chip {
+  position: absolute;
   background: transparent;
   border: none;
   border-radius: 9px;
   cursor: pointer;
+  pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
-  position: relative;
-  transition: all .18s ease;
+  transition: background .18s ease;
 }
-/* Selected: golden overlay so user sees their choice */
+/* Selected: golden overlay */
 .chip.gekozen {
-  background: rgba(212, 175, 55, 0.45);
-  box-shadow: inset 0 0 0 2px #c8960a;
-  border-radius: 9px;
+  background: rgba(212, 175, 55, 0.40);
+  box-shadow: inset 0 0 0 2.5px #c8960a;
 }
 .chip:active { opacity: 0.7; }
-/* Hide emoji/naam — image already shows them */
 .chip-emoji, .chip-naam { display: none; }
 
-/* CTA — invisible hotspot over button drawn in image */
+/* CTA — invisible hotspot. JSON: x=187,y=1211,w=564,h=83 / 941×1672 */
 .kies-cta {
   position: absolute;
-  top: 72.4%;
-  left: 19.9%;
-  width: 59.9%;
-  height: 5%;
+  top:  72.43%; left: 19.87%;
+  width: 59.94%; height: 4.96%;
   /* Dim whole area when disabled so image button looks inactive */
   transition: opacity .2s;
 }
@@ -398,15 +384,41 @@ function showScreen(id) {
 }
 function wById(id) { return W16.find(x => x.id === id); }
 
+// Exact pixel positions from design JSON (artboard 941×1672)
+const CHIP_POS = [
+  { l:159, t:546,  w:147, h:149 }, // Eerlijkheid
+  { l:314, t:546,  w:148, h:149 }, // Trouw
+  { l:470, t:546,  w:148, h:149 }, // Familie
+  { l:627, t:546,  w:148, h:149 }, // Humor
+  { l:159, t:705,  w:147, h:149 }, // Respect
+  { l:314, t:705,  w:148, h:149 }, // Avontuur
+  { l:470, t:705,  w:148, h:149 }, // Geloof
+  { l:627, t:705,  w:148, h:149 }, // Warmte
+  { l:159, t:865,  w:147, h:149 }, // Vrijheid
+  { l:314, t:865,  w:148, h:149 }, // Groei
+  { l:470, t:865,  w:148, h:149 }, // Rust
+  { l:627, t:865,  w:148, h:149 }, // Vriendschap
+  { l:159, t:1024, w:147, h:149 }, // Ambitie
+  { l:314, t:1024, w:148, h:149 }, // Verbinding
+  { l:470, t:1024, w:148, h:149 }, // Dankbaarheid
+  { l:627, t:1024, w:148, h:149 }, // Creativiteit
+];
+const AW = 941, AH = 1672; // artboard dimensions
+
 // ── CHIPS
 function buildChips() {
   const grid = document.getElementById('chips-grid');
   grid.innerHTML = '';
-  W16.forEach(waarde => {
+  W16.forEach((waarde, i) => {
+    const p = CHIP_POS[i];
     const el = document.createElement('div');
     el.className = 'chip' + (S.gekozen.includes(waarde.id) ? ' gekozen' : '');
     el.dataset.id = waarde.id;
-    el.innerHTML = '<span class="chip-emoji">' + waarde.emoji + '</span><span class="chip-naam">' + waarde.naam + '</span>';
+    // Position exactly over chip in image
+    el.style.left   = (p.l / AW * 100).toFixed(3) + '%';
+    el.style.top    = (p.t / AH * 100).toFixed(3) + '%';
+    el.style.width  = (p.w / AW * 100).toFixed(3) + '%';
+    el.style.height = (p.h / AH * 100).toFixed(3) + '%';
     el.addEventListener('click', () => toggleChip(waarde.id));
     grid.appendChild(el);
   });
