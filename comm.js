@@ -540,7 +540,8 @@
 
   // ── Eigen socket voor globale comm (los van KoppelClient) ──
   function connectKoppel() {
-    if (!C.code || C.koppelReady || window._commSocket) return; // nooit twee sockets maken
+    console.log('[CommLayer] connectKoppel called', { code: C.code, koppelReady: C.koppelReady, hasSocket: !!window._commSocket });
+    if (!C.code || C.koppelReady || window._commSocket) { console.log('[CommLayer] connectKoppel BLOCKED'); return; }
 
     function go() {
       if (!window.KOPPEL_BACKEND_URL) {
@@ -598,9 +599,11 @@
       sock.on('session_created', () => { C.koppelReady = true; });
       sock.on('session_joined',  () => { C.koppelReady = true; });
 
-      const _seenMsgIds = new Set(); // dedup — voorkomt dubbele weergave ongeacht oorzaak
+      const _seenMsgIds = new Set();
+      console.log('[CommLayer] socket created, id will be:', sock.id || '(pending)');
       sock.on('chat_message', ({ player, text, msgId }) => {
-        if (msgId) { if (_seenMsgIds.has(msgId)) return; _seenMsgIds.add(msgId); }
+        console.log('[CommLayer] chat_message received', { player, text: text?.slice(0,30), msgId, socketId: sock.id, seenBefore: msgId ? _seenMsgIds.has(msgId) : 'no-id' });
+        if (msgId) { if (_seenMsgIds.has(msgId)) { console.warn('[CommLayer] DEDUP blocked duplicate msgId', msgId); return; } _seenMsgIds.add(msgId); }
         if (typeof text === 'string' && text.startsWith('__GAME__:')) {
           console.log('[CommLayer] game invite received:', text);
           const parts = text.split(':');
@@ -620,8 +623,12 @@
 
       // ── connect handler: alleen de room join (herhaalt bij reconnect)
       sock.on('connect', () => {
+        console.log('[CommLayer] socket connected, id:', sock.id, 'joining room:', C.code);
         sock.emit('join_or_create', { code: C.code, app: 'comm' });
         if (C.callActive && !C.inCall) startCall();
+      });
+      sock.on('disconnect', (reason) => {
+        console.log('[CommLayer] socket disconnected:', reason);
       });
     }
 
