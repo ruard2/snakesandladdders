@@ -59,13 +59,17 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
    s-kies — Beginland / Waarden theme
    ═══════════════════════════════════════════════════ */
 
-/* Proportional 9:16 frame — size set by fitKies() in JS, same as world.html #map */
+/* Proportional 9:16 frame — pure CSS sizing, no JS needed */
 .kies-frame {
   position: relative;
   flex-shrink: 0;
   overflow: hidden;
+  /* Width = fits by height on landscape, fits by width on portrait */
+  width: min(calc(100svh * 941 / 1672), 100svw);
+  /* Height auto-calculated from aspect-ratio */
+  aspect-ratio: 941 / 1672;
 }
-/* Background image as <img> inside .kies-frame, same as world.html */
+/* Background image as <img> inside .kies-frame */
 .kies-frame > img.kies-bg {
   position: absolute;
   inset: 0;
