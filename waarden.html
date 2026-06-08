@@ -652,6 +652,34 @@ window.addEventListener('load', fitKies);
   }
   window.KoppelClient ? go() : loadKoppelScript(go);
 })();
+
+// ── DEBUG: klik op frame → zie exacte artboard-coördinaten
+(function() {
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
+    'background:rgba(0,0,0,0.85);color:#ffd700;padding:8px 16px;border-radius:8px;' +
+    'font-family:monospace;font-size:0.8rem;z-index:99999;pointer-events:none;' +
+    'white-space:pre;display:none;';
+  document.body.appendChild(toast);
+
+  document.addEventListener('click', function(e) {
+    const frame = document.querySelector('.kies-frame');
+    if (!frame) return;
+    const r = frame.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right ||
+        e.clientY < r.top  || e.clientY > r.bottom) return;
+    const rx = e.clientX - r.left;
+    const ry = e.clientY - r.top;
+    const ax = Math.round(rx / r.width  * 941);
+    const ay = Math.round(ry / r.height * 1672);
+    const px_pct = (rx / r.width  * 100).toFixed(1) + '%';
+    const py_pct = (ry / r.height * 100).toFixed(1) + '%';
+    toast.textContent = 'artboard: x=' + ax + ' y=' + ay + '\nframe%:  left=' + px_pct + ' top=' + py_pct;
+    toast.style.display = 'block';
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toast.style.display = 'none', 3000);
+  }, true);
+})();
 </script>
 </body>
 </html>
