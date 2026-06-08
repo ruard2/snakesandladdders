@@ -61,6 +61,11 @@ const SDClient = window.SDClient || (() => {
         cb();
       });
 
+      // Vrijgeven slot direct bij refresh/sluiten (polling detecteert disconnect pas na pingTimeout)
+      window.addEventListener('beforeunload', () => {
+        if (_code && _player) _socket.emit('player_leaving', { code: _code, player: _player });
+      });
+
       // ── Session events ───────────────────────────────────
       _socket.on('session_created', ({ code, player, app, state }) => {
         _code = code; _player = player;
