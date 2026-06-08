@@ -81,7 +81,7 @@
     div.innerHTML = `
       <style>
         #__cl_chat {
-          position:fixed;bottom:0;left:0;right:0;z-index:9200;
+          position:fixed;bottom:0;left:0;right:0;z-index:10200;
           max-width:440px;margin:0 auto;
           background:rgba(6,12,5,.97);border-top:1px solid rgba(200,160,64,.18);
           border-radius:18px 18px 0 0;
@@ -103,7 +103,7 @@
         #__cl_send{background:#c8a040;color:#1a1208;border:none;border-radius:50%;
           width:34px;height:34px;font-size:1rem;cursor:pointer;flex-shrink:0;}
 
-        #__cl_incoming{position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.82);
+        #__cl_incoming{position:fixed;inset:0;z-index:10500;background:rgba(0,0,0,.82);
           display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;}
         #__cl_incoming.show{display:flex;}
         #__cl_incoming .ri{font-size:4rem;animation:cl_rng .5s ease-in-out infinite alternate;}
@@ -115,7 +115,7 @@
         .cl_dec{background:rgba(200,80,80,.14);border:2px solid #e07070;color:#e07070;
           border-radius:40px;padding:11px 26px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit;}
 
-        #__cl_sett{position:fixed;bottom:0;left:0;right:0;z-index:9200;
+        #__cl_sett{position:fixed;bottom:0;left:0;right:0;z-index:10200;
           max-width:440px;margin:0 auto;
           background:rgba(6,12,5,.97);border-top:1px solid rgba(200,160,64,.18);
           border-radius:18px 18px 0 0;display:none;padding:22px 20px 28px;
@@ -128,7 +128,7 @@
         /* ── Progress card ─────────────────────────────────── */
         #__cl_progress{
           position:fixed;bottom:72px;left:50%;transform:translateX(-50%);
-          z-index:9300;width:calc(100% - 40px);max-width:320px;
+          z-index:10300;width:calc(100% - 40px);max-width:320px;
           background:rgba(6,14,4,.97);border:1px solid rgba(160,200,80,.2);
           border-radius:16px;padding:16px;box-shadow:0 4px 24px rgba(0,0,0,.55);
           display:none;
@@ -148,7 +148,7 @@
           color:#c8a040;font-family:inherit;line-height:1.5;}
 
         /* ── Fireworks ─────────────────────────────────────── */
-        #__cl_fireworks{position:fixed;inset:0;z-index:9900;pointer-events:none;overflow:hidden;display:none;}
+        #__cl_fireworks{position:fixed;inset:0;z-index:10900;pointer-events:none;overflow:hidden;display:none;}
         #__cl_fireworks.show{display:block;}
         .cl-fw-msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
           text-align:center;z-index:1;}
