@@ -399,12 +399,27 @@ function startKoppel(mode){
   });
 }
 function setupL(){
-  KoppelClient.on('session_created',({code})=>{S.code=code;document.getElementById('k-code').textContent=code;window.CommLayer?.setSession(code,'1');});
+  KoppelClient.on('session_created',({code,state})=>{S.code=code;document.getElementById('k-code').textContent=code;window.CommLayer?.setSession(code,'1');
+    if(state?.p1?.done && state?.p2?.done){onDone(state);}
+  });
   KoppelClient.on('both_connected',()=>{
     document.getElementById('k-wacht').style.display='none';
     const b=document.getElementById('k-beide');b.style.display='flex';b.style.flexDirection='column';
   });
-  KoppelClient.on('session_joined',({code,player})=>{document.getElementById('k-join-w').style.display='none';if(code)window.CommLayer?.setSession(code,player||'2');startKiezen();});
+  KoppelClient.on('session_joined',({code,player,state})=>{
+    document.getElementById('k-join-w').style.display='none';
+    if(code)window.CommLayer?.setSession(code,player||'2');
+    // Na refresh: check of beide spelers al klaar waren
+    if(state?.p1?.done && state?.p2?.done){onDone(state);return;}
+    // Check of ikzelf al klaar was (wacht op partner)
+    const myKey='p'+player;
+    if(state?.[myKey]?.done){
+      const ws=document.getElementById('wacht-stones');
+      if(state[myKey].stenen)ws.innerHTML=state[myKey].stenen.map(id=>{const stone=st(id);return '<div class="chosen-mini-item"><img src="'+img(id)+'"/><span>'+stone.titel+'</span></div>';}).join('');
+      showS('s-wacht');return;
+    }
+    startKiezen();
+  });
   KoppelClient.on('session_error',({message})=>{
     document.getElementById('k-err').textContent=message;
     document.getElementById('k-err').style.display='block';

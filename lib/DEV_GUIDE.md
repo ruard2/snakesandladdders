@@ -391,7 +391,80 @@ koppel-frontend/
 
 ---
 
-## 10. Veelgemaakte fouten
+## 10. Afbeeldingen transparant maken
+
+Stone/chip-afbeeldingen worden vaak aangeleverd als **RGB webp zonder alpha-kanaal** — de witte achtergrond is letterlijk ingebakken.
+
+### Checken
+```python
+from PIL import Image
+img = Image.open('steen.webp')
+print(img.mode)  # RGB = geen alpha, RGBA = wel transparant
+```
+
+### Batch-fix (flood-fill vanuit hoeken)
+```python
+from PIL import Image
+import numpy as np, os
+
+for fname in os.listdir('images/brug'):
+    if not fname.endswith('.webp'): continue
+    img = Image.open(fname).convert('RGBA')
+    data = np.array(img, dtype=np.uint8)
+    r,g,b = data[:,:,0], data[:,:,1], data[:,:,2]
+    near_white = (r > 220) & (g > 220) & (b > 220)
+    h, w = data.shape[:2]
+    visited = np.zeros((h,w), dtype=bool)
+    stack = [(y,x) for y,x in [(0,0),(0,w-1),(h-1,0),(h-1,w-1)] if near_white[y,x]]
+    while stack:
+        y,x = stack.pop()
+        if visited[y,x]: continue
+        visited[y,x] = True
+        for dy,dx in [(-1,0),(1,0),(0,-1),(0,1)]:
+            ny,nx = y+dy, x+dx
+            if 0<=ny<h and 0<=nx<w and not visited[ny,nx] and near_white[ny,nx]:
+                stack.append((ny,nx))
+    data[visited, 3] = 0
+    Image.fromarray(data).save(fname, 'webp', quality=90)
+```
+
+**Drempel 220** werkt voor puur-witte achtergronden. Bij crème/beige achtergrond verlagen naar 200.  
+**Nooit** `mix-blend-mode: multiply` gebruiken als workaround — dat vervormt kleuren.
+
+---
+
+## 11. Refresh-bestendig maken (session_complete missen)
+
+### Probleem
+Na een page refresh mist de client het `session_complete` event — dat werd al verstuurd naar de oude socket. De speler hangt op het wacht-scherm.
+
+### Oplossing: state checken bij herverbinding
+Bij `session_joined` en `session_created` komt de huidige `state` mee. Check altijd of beide spelers al klaar zijn:
+
+```javascript
+KoppelClient.on('session_joined', ({ code, player, state }) => {
+  window.CommLayer?.setSession(code, player);
+
+  // Beide al klaar? Direct naar reveal
+  if (state?.p1?.done && state?.p2?.done) { onDone(state); return; }
+
+  // Ikzelf al klaar? Toon wacht-scherm
+  const myKey = 'p' + player;
+  if (state?.[myKey]?.done) { showS('s-wacht'); return; }
+
+  // Normaal: start het spel
+  startGame();
+});
+```
+
+### Sessie vol na refresh (polling transport)
+Met polling transport detecteert de server disconnects pas na `pingTimeout` (60s).  
+Fix zit in `sd-client.js` (beforeunload → `player_leaving`) + server `disconnectedAt` tracking.  
+**Nooit** `['websocket', 'polling']` — gebruik altijd `['polling', 'websocket']` op Railway.
+
+---
+
+## 12. Veelgemaakte fouten
 
 | Fout | Oorzaak | Oplossing |
 |---|---|---|
@@ -402,3 +475,6 @@ koppel-frontend/
 | Slot toont nummers (1,2,3) | `textContent = i+1` voor lege slots | Gebruik `textContent = ''` voor leeg |
 | `object-fit: cover` snijdt bij | Gebruik `object-fit: fill` voor pixel-exacte mapping |
 | Spelers zien elkaar niet op Railway | `transports: ['websocket','polling']` — WS first | Zet naar `['polling','websocket']` in sd-client.js én server.js |
+| Wacht-scherm hangt na refresh | `session_complete` al verstuurd naar oude socket | Check `state.p1.done && state.p2.done` in `session_joined` callback |
+| "Sessie is al vol" na refresh | Polling detecteert disconnect pas na 60s | `beforeunload` → `player_leaving` emit (zit in sd-client.js) |
+| Afbeelding heeft witte achtergrond | webp opgeslagen als RGB zonder alpha | Flood-fill script (zie sectie 10) |
