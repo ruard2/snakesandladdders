@@ -3,6 +3,7 @@
 <head>
 <script src="config.js"></script>
 <script src="sd-client.js"></script>
+<script src="sd-chat.js"></script>
 <script src="comm.js"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
@@ -76,22 +77,6 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
   color:#f0e6d3;line-height:1.65;}
 .vraag-nr{font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;
   color:#d4af37;font-style:normal;font-family:'Inter',sans-serif;margin-bottom:8px;}
-.chat-box{position:fixed;bottom:0;left:50%;transform:translateX(-50%);
-  width:100%;max-width:440px;z-index:100;
-  padding-top:20px;}
-.chat-toggle{display:flex;align-items:center;justify-content:space-between;
-  padding:10px 16px;cursor:pointer;user-select:none;}
-.chat-toggle-label{font-size:0.8rem;color:#d4af37;display:flex;align-items:center;gap:8px;}
-.chat-msgs{height:0;overflow:hidden;transition:height .3s;padding:0 12px;}
-.chat-msgs.open{height:160px;overflow-y:auto;}
-.chat-msg{padding:5px 10px;margin:3px 0;border-radius:10px;font-size:0.82rem;max-width:80%;}
-.chat-msg.me{background:rgba(212,175,55,0.18);color:#f0d060;margin-left:auto;text-align:right;}
-.chat-msg.them{background:rgba(255,255,255,0.08);color:#d0c8e8;}
-.chat-input-row{display:flex;gap:8px;padding:8px 12px 12px;}
-.chat-input{flex:1;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);
-  border-radius:20px;padding:8px 14px;color:#f0e6d3;font-size:0.85rem;outline:none;}
-.chat-send{background:#d4af37;color:#1a0a2e;border:none;border-radius:50%;
-  width:34px;height:34px;font-size:1rem;cursor:pointer;flex-shrink:0;}
 .mic-btn{display:flex;align-items:center;justify-content:center;gap:10px;
   padding:13px 20px;border-radius:14px;border:none;cursor:pointer;font-size:0.92rem;
   font-weight:600;font-family:'Inter',sans-serif;transition:all .2s;width:100%;max-width:390px;margin:0 auto;}
@@ -199,17 +184,6 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
     </div>
   </div>
 
-  <div class="chat-box" id="chat-box">
-    <div class="chat-toggle" onclick="toggleChat()">
-      <span class="chat-toggle-label">💬 Chat <span id="chat-badge" style="display:none;background:#e07070;color:#fff;border-radius:10px;padding:1px 6px;font-size:0.65rem;">nieuw</span></span>
-      <span id="chat-arrow" style="color:#9080a8;font-size:0.75rem;">▲ open</span>
-    </div>
-    <div class="chat-msgs" id="chat-msgs"></div>
-    <div class="chat-input-row" id="chat-input-row" style="display:none;">
-      <input class="chat-input" id="chat-input" placeholder="Schrijf iets..." onkeydown="if(event.key==='Enter')sendChat()"/>
-      <button class="chat-send" onclick="sendChat()">↑</button>
-    </div>
-  </div>
 </div>
 
 <div id="s-eind" class="screen">
@@ -476,44 +450,6 @@ function buildVragen(overlap, jijUniek, partnerUniek) {
     el.innerHTML = '<div class="vraag-nr">Vraag ' + (i+1) + '</div>' + v;
     container.appendChild(el);
   });
-}
-
-// ── CHAT
-let chatOpen = false;
-function toggleChat() {
-  chatOpen = !chatOpen;
-  document.getElementById('chat-msgs').classList.toggle('open', chatOpen);
-  document.getElementById('chat-input-row').style.display = chatOpen ? 'flex' : 'none';
-  document.getElementById('chat-arrow').textContent = chatOpen ? '▼ sluit' : '▲ open';
-  document.getElementById('chat-badge').style.display = 'none';
-  if (chatOpen) document.getElementById('chat-input').focus();
-}
-
-function sendChat() {
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim();
-  if (!text) return;
-  addChatMsg(text, 'me');
-  input.value = '';
-  if (S.code === '1111') {
-    setTimeout(() => addChatMsg('Interessant! Vertel meer...', 'them'), 900);
-    return;
-  }
-  window.CommLayer?.sendBoardChat(text);
-}
-// Ontvang chat van globale socket (gebruik CommLayer's 'side' om dubbele berichten te voorkomen)
-window.CommLayer?.onChatMessage(({ text, side }) => {
-  if (side === 'them') addChatMsg(text, 'them');
-});
-
-function addChatMsg(text, type) {
-  const msgs = document.getElementById('chat-msgs');
-  const el = document.createElement('div');
-  el.className = 'chat-msg ' + type;
-  el.textContent = text;
-  msgs.appendChild(el);
-  msgs.scrollTop = msgs.scrollHeight;
-  if (!chatOpen && type === 'them') document.getElementById('chat-badge').style.display = 'inline';
 }
 
 // Bellen gaat via CommLayer (geen lokale WebRTC meer)

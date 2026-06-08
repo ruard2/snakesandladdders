@@ -3,6 +3,7 @@
 <head>
 <script src="config.js"></script>
 <script src="sd-client.js"></script>
+<script src="sd-chat.js"></script>
 <script src="comm.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -188,15 +189,6 @@ html, body { height: 100dvh; font-family: 'Segoe UI', system-ui, sans-serif; bac
 .mic-btn-fd.idle { background:rgba(122,196,122,.1); border:1.5px solid rgba(122,196,122,.4); color:#7ac47a; }
 .mic-btn-fd.active { background:rgba(200,80,80,.15); border:1.5px solid rgba(200,80,80,.5); color:#e07070; }
 .mic-status-fd { font-size:.72rem; color:#6B3028; text-align:center; padding:2px 0 6px; }
-.chat-toggle-fd { display:flex; align-items:center; gap:8px; padding:8px 0 4px; cursor:pointer;
-  font-size:.82rem; color:#9A5840; border-top:1px solid rgba(255,255,255,.06); margin-top:4px; }
-.chat-toggle-fd .arr { margin-left:auto; font-size:.7rem; }
-.inline-chat { display:none; flex-direction:column; gap:6px; }
-.inline-chat.open { display:flex; }
-.inline-chat-msgs { max-height:120px; overflow-y:auto; }
-.inline-chat-input-row { display:flex; gap:6px; }
-.inline-chat-input { flex:1; padding:8px 12px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); border-radius:20px; color:white; font-size:.82rem; font-family:inherit; outline:none; }
-.inline-chat-send { width:34px; height:34px; border-radius:50%; background:#8B3525; border:none; color:#f0e8d8; font-size:.9rem; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -351,21 +343,6 @@ html, body { height: 100dvh; font-family: 'Segoe UI', system-ui, sans-serif; bac
       <button class="mic-btn-fd idle" onclick="CommLayer.toggleChat()" style="flex:1;">
         <span class="co-badge" data-comm-badge style="display:none;"></span>💬 Chat
       </button>
-    </div>
-
-    <!-- Chat (inklapbaar) -->
-    <div class="chat-toggle-fd" onclick="fdToggleChat()">
-      💬 Of chat <span id="fd-chat-badge" style="display:none;background:#e07070;color:#fff;border-radius:10px;padding:1px 7px;font-size:.65rem;margin-left:4px;font-weight:bold;"></span><span class="arr" id="fd-chat-arr">▼</span>
-    </div>
-    <div class="inline-chat" id="fd-inline-chat">
-      <div class="inline-chat-msgs" id="fd-chat-msgs">
-        <!-- chat bubbles via JS -->
-      </div>
-      <div class="inline-chat-input-row">
-        <input class="inline-chat-input" id="fd-chat-input" placeholder="Schrijf iets..."
-               onkeydown="if(event.key==='Enter')fdSendChat()"/>
-        <button class="inline-chat-send" onclick="fdSendChat()">↑</button>
-      </div>
     </div>
 
     <div style="font-size:.82rem;color:#9A5840;margin-top:4px;">Of kies een gespreksthema:</div>
@@ -1129,54 +1106,6 @@ function appendRevealBubble(side, text, panelId) {
     wrap.appendChild(b);
     wrap.scrollTop = wrap.scrollHeight;
   });
-}
-
-// Ontvang chat via CommLayer
-window.CommLayer?.onChatMessage(({ text, side }) => {
-  if (side !== 'them') return;  // eigen berichten al lokaal toegevoegd
-  appendRevealBubble('them', text, 'chat-panel-me');
-  fdAddChatMsg(text, 'them');
-  if (!fdChatOpen) {
-    fdChatUnread++;
-    const b = document.getElementById('fd-chat-badge');
-    if (b) { b.textContent = fdChatUnread > 9 ? '9+' : fdChatUnread; b.style.display = 'inline'; }
-  }
-});
-
-// Bellen + chat gaan via CommLayer
-
-// ── Inline chat (napraat)
-let fdChatOpen = false;
-function fdToggleChat() {
-  fdChatOpen = !fdChatOpen;
-  document.getElementById('fd-inline-chat').classList.toggle('open', fdChatOpen);
-  document.getElementById('fd-chat-arr').textContent = fdChatOpen ? '▲' : '▼';
-  if (fdChatOpen) {
-    document.getElementById('fd-chat-input').focus();
-    const b = document.getElementById('fd-chat-badge'); b.style.display='none'; b.textContent='';
-    fdChatUnread = 0;
-  }
-}
-let fdChatUnread = 0;
-
-function fdSendChat() {
-  const inp = document.getElementById('fd-chat-input');
-  const text = inp.value.trim();
-  if (!text) return;
-  fdAddChatMsg(text, 'me');
-  inp.value = '';
-  if (S.adminMode) { setTimeout(() => fdAddChatMsg('Interessant! Vertel meer...', 'them'), 800); return; }
-  window.CommLayer?.sendBoardChat(text);
-}
-
-function fdAddChatMsg(text, side) {
-  const msgs = document.getElementById('fd-chat-msgs');
-  if (!msgs) return;
-  const b = document.createElement('div');
-  b.className = 'chat-bubble ' + side;
-  b.textContent = text;
-  msgs.appendChild(b);
-  msgs.scrollTop = msgs.scrollHeight;
 }
 
 // ══════════════════════════════════════════════════════════

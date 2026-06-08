@@ -3,6 +3,7 @@
 <head>
 <script src="config.js"></script>
 <script src="sd-client.js"></script>
+<script src="sd-chat.js"></script>
 <script src="comm.js"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
@@ -139,20 +140,6 @@ h2{font-size:1.1rem;font-weight:700;color:#f0e8d0;text-align:center;}
 .mic-btn-brug.idle{background:rgba(122,196,122,.1);border:1.5px solid rgba(122,196,122,.38);color:#7ac47a;}
 .mic-btn-brug.active{background:rgba(200,80,80,.14);border:1.5px solid rgba(200,80,80,.45);color:#e07070;}
 .mic-status-brug{font-size:.68rem;color:#6a8050;text-align:center;padding:0 14px 4px;}
-.chat-toggle-brug{display:flex;align-items:center;justify-content:space-between;
-  padding:6px 14px 4px;cursor:pointer;user-select:none;}
-.chat-toggle-brug span{font-size:.78rem;color:#c8a040;}
-.chat-arr{font-size:.68rem;color:#7a9060;}
-.chat-msgs-brug{height:0;overflow:hidden;transition:height .28s;padding:0 12px;}
-.chat-msgs-brug.open{height:140px;overflow-y:auto;}
-.chat-bubble-b{padding:5px 10px;margin:3px 0;border-radius:10px;font-size:.8rem;max-width:80%;}
-.chat-bubble-b.me{background:rgba(200,160,64,.18);color:#e8c060;margin-left:auto;text-align:right;}
-.chat-bubble-b.them{background:rgba(255,255,255,.08);color:#c8c0a0;}
-.chat-input-row-b{display:flex;gap:7px;padding:6px 12px 14px;}
-.chat-input-b{flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
-  border-radius:20px;padding:7px 13px;color:#f0e8d0;font-size:.82rem;outline:none;font-family:inherit;}
-.chat-send-b{background:#c8a040;color:#1a1208;border:none;border-radius:50%;
-  width:32px;height:32px;font-size:.9rem;cursor:pointer;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -292,16 +279,6 @@ h2{font-size:1.1rem;font-weight:700;color:#f0e8d0;text-align:center;}
     <button class="mic-btn-brug idle" onclick="CommLayer.toggleChat()" style="flex:1;">
       <span class="co-badge" data-comm-badge style="display:none;"></span>💬 Chat
     </button>
-  </div>
-  <div class="chat-toggle-brug" onclick="brugToggleChat()">
-    <span>💬 Chat <span id="brug-chat-badge" style="display:none;background:#e07070;color:#fff;border-radius:8px;padding:1px 6px;font-size:.62rem;margin-left:4px;">nieuw</span></span>
-    <span class="chat-arr" id="brug-chat-arr">▼</span>
-  </div>
-  <div class="chat-msgs-brug" id="brug-chat-msgs"></div>
-  <div class="chat-input-row-b" id="brug-chat-row" style="display:none;">
-    <input class="chat-input-b" id="brug-chat-input" placeholder="Schrijf iets..."
-           onkeydown="if(event.key==='Enter')brugSendChat()"/>
-    <button class="chat-send-b" onclick="brugSendChat()">↑</button>
   </div>
 </div>
 
@@ -603,25 +580,6 @@ function afronden(){showS('s-klaar');}
 // ── comm bar: tonen/verbergen
 function showCommBar(show){
   document.getElementById('comm-bar').classList.toggle('show', show);
-}
-
-// Bellen + chat gaan via CommLayer
-// Ontvang chat voor in-game bubble preview (optioneel)
-function brugSendChat(){
-  const inp=document.getElementById('brug-chat-input');
-  const text=inp.value.trim(); if(!text)return;
-  brugAddChat(text,'me'); inp.value='';
-  if(S.code==='1111'||S.solo){setTimeout(()=>brugAddChat('😊','them'),800);return;}
-  window.CommLayer?.sendBoardChat(text);
-}
-window.CommLayer?.onChatMessage(({text,side})=>{
-  if(side==='them') brugAddChat(text,'them');
-});
-function brugAddChat(text,side){
-  const msgs=document.getElementById('brug-chat-msgs');
-  const b=document.createElement('div');b.className='chat-bubble-b '+side;b.textContent=text;
-  msgs.appendChild(b);msgs.scrollTop=msgs.scrollHeight;
-  if(!brugChatOpen&&side==='them') document.getElementById('brug-chat-badge').style.display='inline';
 }
 
 // ── AUTO-START ─────────────────────────────────────────────────

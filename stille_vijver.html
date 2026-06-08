@@ -3,6 +3,7 @@
 <head>
 <script src="config.js"></script>
 <script src="sd-client.js"></script>
+<script src="sd-chat.js"></script>
 <script src="comm.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -182,53 +183,6 @@ body {
 .prompt-answer-label { font-size: .75rem; color: #7a9e9a; margin-bottom: 6px; }
 .prompt-answer-text { font-size: .9rem; color: #e8f0ef; line-height: 1.5; font-style: italic; }
 
-/* ── Chat ── */
-.chat-wrap {
-  display: flex; flex-direction: column; flex: 1;
-  min-height: 0;
-}
-.chat-header {
-  padding: 14px 16px 10px;
-  font-size: .8rem; color: #7a9e9a; text-align: center;
-  border-bottom: 1px solid rgba(255,255,255,.07);
-  flex-shrink: 0;
-}
-.chat-messages {
-  flex: 1; overflow-y: auto; padding: 12px 16px;
-  display: flex; flex-direction: column; gap: 10px;
-  min-height: 0;
-}
-.chat-msg {
-  max-width: 80%; border-radius: 16px; padding: 10px 14px;
-  font-size: .9rem; line-height: 1.45;
-}
-.chat-msg.me {
-  background: #2a7a6a; color: white; align-self: flex-end;
-  border-bottom-right-radius: 4px;
-}
-.chat-msg.them {
-  background: rgba(255,255,255,.1); color: #e8f0ef; align-self: flex-start;
-  border-bottom-left-radius: 4px;
-}
-.chat-msg .msg-name { font-size: .7rem; font-weight: 700; opacity: .65; margin-bottom: 3px; }
-.typing-indicator { color: #7a9e9a; font-size: .8rem; font-style: italic; padding: 0 16px 4px; flex-shrink: 0; }
-.chat-input-row {
-  display: flex; gap: 8px; padding: 10px 16px;
-  border-top: 1px solid rgba(255,255,255,.07);
-  flex-shrink: 0;
-}
-.chat-input-row input {
-  flex: 1; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.15);
-  border-radius: 22px; padding: 11px 16px; color: white; font-size: .9rem;
-  font-family: inherit; outline: none;
-}
-.chat-input-row input::placeholder { color: #4a6a66; }
-.chat-send {
-  width: 42px; height: 42px; border-radius: 50%;
-  background: #2a7a6a; border: none; color: white;
-  font-size: 1.1rem; cursor: pointer; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-}
 
 /* ── Koppel screen ── */
 .koppel-code {
@@ -466,29 +420,6 @@ body {
   </div>
 </div>
 
-<!-- ══ SCREEN: CHAT ══════════════════════════════════════ -->
-<div id="screen-chat" class="screen" style="padding:0;">
-  <div class="chat-wrap">
-    <div class="chat-header" style="display:flex; align-items:center; gap:8px; justify-content:space-between;">
-      <button class="back-btn" style="padding:8px 0;" onclick="goScreen('screen-reflectie')">←</button>
-      <span>🌿 Stille Vijver — vrij gesprek</span>
-      <span style="width:32px;"></span>
-    </div>
-    <div class="chat-messages" id="chat-messages">
-      <div style="text-align:center; color:#4a6a66; font-size:.85rem; margin-top:24px;">
-        De vijver is stil. Begin een gesprek.
-      </div>
-    </div>
-    <div class="typing-indicator" id="typing-indicator" style="display:none;">... typt</div>
-    <div class="chat-input-row">
-      <input id="chat-input" type="text" placeholder="Schrijf iets..."
-        onkeydown="if(event.key==='Enter') sendChat()"
-        oninput="onChatType()" />
-      <button class="chat-send" onclick="sendChat()">↑</button>
-    </div>
-  </div>
-</div>
-
 </div><!-- /app -->
 
 
@@ -605,9 +536,7 @@ function goScreen(id) {
 function setupCallbacks() {
   KoppelClient.on('both_connected', () => showBothConnected());
   KoppelClient.on('complete',       ({ state }) => onBothDone(state));
-  KoppelClient.on('chat_message',   ({ player, text, ts }) => onChatMsg(player, text, ts));
-  KoppelClient.on('typing',         () => showTyping());
-  KoppelClient.on('error',          ({ message }) => showError(message));
+KoppelClient.on('error',          ({ message }) => showError(message));
   KoppelClient.on('disconnected',   () => setStatus('Verbinding verbroken — pagina herladen om opnieuw te verbinden.', '#f87171'));
 }
 
@@ -944,56 +873,8 @@ function showReflecties(mijn, partner) {
 // ══════════════════════════════════════════════════════════
 
 function naarChat() {
-  goScreen('screen-chat');
-  document.getElementById('chat-input').focus();
-}
-
-function sendChat() {
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-  appendMsg('me', text);
-  if (STATE.adminMode) {
-    setTimeout(() => appendMsg('them', '(admin-modus: geen echte partner)'), 600);
-  } else {
-    window.CommLayer?.sendBoardChat(text);
-  }
-}
-// Ontvang via CommLayer
-window.CommLayer?.onChatMessage(({ text, side }) => {
-  if (side === 'them') appendMsg('them', text);
-});
-
-let typingTimeout = null;
-function onChatType() {
-  KoppelClient.sendTyping();
-}
-
-function showTyping() {
-  const el = document.getElementById('typing-indicator');
-  el.style.display = 'block';
-  clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(() => { el.style.display = 'none'; }, 2000);
-}
-
-function onChatMsg(player, text, ts) {
-  // Don't double-render own messages (already shown on send)
-  const isMe = player === STATE.player;
-  if (!isMe) appendMsg('them', text);
-}
-
-function appendMsg(side, text) {
-  const wrap = document.getElementById('chat-messages');
-  // Remove empty-state placeholder
-  const empty = wrap.querySelector('div[style]');
-  if (empty) empty.remove();
-
-  const msg = document.createElement('div');
-  msg.className = `chat-msg ${side}`;
-  msg.textContent = text;
-  wrap.appendChild(msg);
-  wrap.scrollTop = wrap.scrollHeight;
+  // Chat is now handled by sd-chat.js
+  window.SDChat?.open();
 }
 
 // ── AUTO-START ─────────────────────────────────────────────────
