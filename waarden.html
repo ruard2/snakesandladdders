@@ -1,4 +1,4 @@
-﻿﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="nl">
 <head>
 <script src="config.js"></script>
@@ -15,19 +15,6 @@ html,body{height:100%;background:#0a0a0a;color:#f0e6d3;font-family:'Inter',sans-
 .screen{display:none;position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;z-index:1;
   -webkit-overflow-scrolling:touch;}
 .screen.active{display:flex;flex-direction:column;align-items:center;}
-/* kies screen: fixed fullscreen, centers the portrait card */
-#s-kies {
-  position: fixed !important;
-  inset: 0 !important;
-  background: #0a0a0a;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  z-index: 10000; /* boven vaste .back-btn (9999) */
-}
-#s-kies.active { display: flex !important; }
 .pad{padding:20px;width:100%;max-width:440px;}
 h1{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:700;text-align:center;
   background:linear-gradient(135deg,#d4af37,#f5e070,#d4af37);
@@ -51,114 +38,240 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
 .code-input{text-align:center;font-size:1.6rem;letter-spacing:0.3em;text-transform:uppercase;
   font-weight:700;background:rgba(255,255,255,0.08);border:2px solid rgba(212,175,55,0.4);
   border-radius:14px;padding:16px;color:#f0d060;width:100%;font-family:'Inter',sans-serif;}
+.name-input{text-align:center;font-size:1.1rem;background:rgba(255,255,255,0.08);
+  border:2px solid rgba(212,175,55,0.3);border-radius:14px;padding:13px 16px;
+  color:#f0e6d3;width:100%;font-family:'Inter',sans-serif;outline:none;}
+.name-input:focus{border-color:#d4af37;}
+.name-input::placeholder{color:rgba(240,230,211,0.35);}
 .dots span{display:inline-block;animation:bounce 1.2s infinite;}
 .dots span:nth-child(2){animation-delay:.2s;}
 .dots span:nth-child(3){animation-delay:.4s;}
 @keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
-/* ═══════════════════════════════════════════════════
-   s-kies — Beginland / Waarden theme
-   ═══════════════════════════════════════════════════ */
 
-/* Proportional 9:16 frame — pure CSS sizing, no JS needed */
+/* ═══════════════════════════════════════════════════
+   KIES SCREEN (s-kies) — portrait card met hotspots
+   ═══════════════════════════════════════════════════ */
+#s-kies {
+  position: fixed !important; inset: 0 !important;
+  background: #0a0a0a; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  overflow: hidden; z-index: 10000;
+}
+#s-kies.active { display: flex !important; }
+
 .kies-frame {
-  position: relative;
-  flex-shrink: 0;
-  overflow: hidden;
-  /* Width = fits by height on landscape, fits by width on portrait */
+  position: relative; flex-shrink: 0; overflow: hidden;
   width: min(calc(100svh * 941 / 1672), 100svw);
-  /* Height auto-calculated from aspect-ratio */
   aspect-ratio: 941 / 1672;
 }
-/* Background image as <img> inside .kies-frame */
 .kies-frame > img.kies-bg {
-  position: absolute;
-  inset: 0;
-  width: 100%; height: 100%;
-  object-fit: fill; /* exact 1:1 mapping met artboard — geen bijsnijden */
-  display: block;
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: fill; display: block;
 }
-
-/* Back button — invisible hotspot. JSON: x=65,y=52,w=150,h=71 / 941×1672 */
 .kies-back {
-  position: absolute;
-  top:  3.11%; left: 6.91%;
-  width: 15.94%; height: 4.25%;
-  background: transparent !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  text-decoration: none;
-  font-size: 0; color: transparent;
-  display: block;
-  z-index: 10;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
+  position: absolute; background: transparent !important; border: none !important;
+  outline: none !important; box-shadow: none !important;
+  text-decoration: none; font-size: 0; color: transparent;
+  display: block; z-index: 10; cursor: pointer;
 }
 .kies-back:active { filter: brightness(0.8); }
-
-/* Slots / chips / CTA: alle posities worden pixel-exact gezet door JS (placeHotspots) */
 .kies-slots { position: absolute; inset: 0; pointer-events: none; }
 .slot {
   position: absolute; pointer-events: none;
   border-radius: 10px; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
-  transition: background .2s;
   background: transparent;
 }
-.slot.vol {
-  font-size: clamp(1.4rem, 4vw, 2.2rem);
-}
+.slot.vol { font-size: clamp(1.4rem, 4vw, 2.2rem); }
 .chips-grid { position: absolute; inset: 0; pointer-events: none; }
 .chip {
   position: absolute; pointer-events: auto;
   border-radius: 10px; cursor: pointer;
   background: transparent; border: none;
   -webkit-tap-highlight-color: transparent; user-select: none;
-  transition: background .15s;
 }
-.chip.gekozen {
-  /* selection zichtbaar via de afbeelding zelf — geen extra overlay nodig */
-}
+.chip.gekozen { /* selection zichtbaar via de afbeelding zelf */ }
 .chip:active { opacity: 0.65; }
 .chip-emoji, .chip-naam { display: none; }
-/* CTA */
 .kies-cta { position: absolute; transition: opacity .2s; }
 .kies-cta.disabled { opacity: 0.42; pointer-events: none; }
-#kies-btn { width:100%; height:100%; background:transparent; border:none; color:transparent; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+#kies-btn { width:100%; height:100%; background:transparent; border:none; color:transparent; cursor:pointer; }
 #kies-btn:disabled { cursor:default; }
 #kies-btn:not(:disabled):active { opacity:0.7; }
-
-/* chip count feedback: wiggle when trying to add 4th */
 @keyframes kies-wiggle { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-3px)} 75%{transform:translateX(3px)} }
 .chip.vol-schud { animation: kies-wiggle .3s ease; }
 
-/* ── Shared (non-kies screens) chips/slots kept for reveal etc. ── */
-.slots-old{display:flex;gap:8px;justify-content:center;padding:4px 0;}
-.slot-old{width:36px;height:36px;border-radius:10px;border:1.5px dashed rgba(212,175,55,0.35);
-  display:flex;align-items:center;justify-content:center;font-size:0.75rem;
-  color:rgba(255,255,255,0.25);transition:all .2s;}
-.slot-old.vol{background:rgba(212,175,55,0.2);border-color:#d4af37;border-style:solid;font-size:1rem;}
-.reveal-section{width:100%;max-width:420px;padding:0 16px 4px;}
-.label-small{font-size:0.65rem;letter-spacing:0.13em;text-transform:uppercase;
-  margin-bottom:8px;display:flex;align-items:center;gap:6px;}
-.reveal-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;}
+/* ═══════════════════════════════════════════════════
+   ONTHULLING SCREEN (s-reveal) — portrait card
+   ═══════════════════════════════════════════════════ */
+#s-reveal {
+  position: fixed !important; inset: 0 !important;
+  background: #0a0a0a; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  overflow: hidden; z-index: 10000;
+}
+#s-reveal.active { display: flex !important; }
+
+.onthulling-frame {
+  position: relative; flex-shrink: 0; overflow: hidden;
+  width: min(calc(100svh * 941 / 1672), 100svw);
+  aspect-ratio: 941 / 1672;
+}
+.onthulling-frame > img.onthulling-bg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: fill; display: block;
+}
+/* Transparent hotspot back button */
+.onth-back {
+  position: absolute; background: transparent !important; border: none !important;
+  outline: none !important; box-shadow: none !important;
+  text-decoration: none; font-size: 0; color: transparent;
+  display: block; z-index: 10; cursor: pointer;
+}
+/* Value slots — show emoji + naam as text overlay */
+.onth-slot {
+  position: absolute;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; pointer-events: none; overflow: hidden;
+}
+.onth-slot .s-emoji { line-height: 1; }
+.onth-slot .s-naam  {
+  font-family: 'Cinzel', serif; font-weight: 600;
+  color: #3d2008; text-align: center;
+  max-width: 98%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  line-height: 1.1;
+}
+/* Swipable question areas */
+.onth-vraag {
+  position: absolute; overflow: hidden; cursor: pointer;
+  border-radius: 6px;
+  /* visual hint: subtle pulse on first load */
+}
+.onth-vraag-track {
+  display: flex; flex-direction: row;
+  width: 100%; height: 100%;
+  transition: transform 0.32s cubic-bezier(.4,0,.2,1);
+  will-change: transform;
+}
+.onth-vraag-slide {
+  min-width: 100%; height: 100%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 4px 22px 14px;
+  font-family: 'Playfair Display', serif; font-style: italic;
+  color: #3d2008; line-height: 1.4; text-align: center;
+  position: relative; user-select: none;
+}
+/* Left / right swipe arrows */
+.onth-vraag-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  font-style: normal; color: rgba(80,40,5,0.45);
+  font-family: sans-serif; font-size: 1em; line-height: 1;
+  pointer-events: none;
+}
+.onth-vraag-arrow.left  { left: 5px; }
+.onth-vraag-arrow.right { right: 5px; }
+.onth-vraag-arrow.dim   { opacity: 0.15; }
+/* Dots indicator */
+.onth-dots {
+  position: absolute; bottom: 3px; left: 0; right: 0;
+  display: flex; justify-content: center; gap: 4px;
+  pointer-events: none;
+}
+.onth-dot {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: rgba(80,40,5,0.25); transition: background .2s;
+}
+.onth-dot.active { background: rgba(80,40,5,0.75); }
+/* Invisible chat/call hotspot buttons */
+.onth-action-btn {
+  position: absolute; background: transparent; border: none;
+  cursor: pointer; z-index: 10; -webkit-tap-highlight-color: transparent;
+}
+.onth-action-btn:active { opacity: 0.6; }
+
+/* ═══════════════════════════════════════════════════
+   CHAT OVERLAY — opent over alles heen
+   ═══════════════════════════════════════════════════ */
+#chat-overlay {
+  position: fixed; inset: 0; z-index: 40000;
+  background: #120820; display: none; flex-direction: column;
+  animation: chatSlideUp .25s ease;
+}
+#chat-overlay.open { display: flex; }
+@keyframes chatSlideUp { from{transform:translateY(6%);opacity:0} to{transform:none;opacity:1} }
+
+#chat-header {
+  background: #1a0a2e; border-bottom: 1px solid rgba(212,175,55,0.25);
+  padding: 14px 16px; display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+  padding-top: max(14px, env(safe-area-inset-top));
+}
+#chat-back-btn {
+  background: transparent; border: 1px solid rgba(212,175,55,0.4);
+  color: #d4af37; font-size: 0.85rem; border-radius: 18px;
+  padding: 5px 12px; cursor: pointer; flex-shrink: 0; font-family: serif;
+}
+#chat-partner-name {
+  font-family: 'Cinzel', serif; color: #d4af37; font-size: 0.9rem;
+  font-weight: 600; flex: 1;
+}
+#chat-question-bar {
+  background: rgba(212,175,55,0.07);
+  border-bottom: 1px solid rgba(212,175,55,0.15);
+  padding: 12px 18px; flex-shrink: 0;
+  font-family: 'Playfair Display', serif; font-style: italic;
+  color: #e8d8b8; font-size: 0.9rem; line-height: 1.5;
+}
+#chat-messages {
+  flex: 1; overflow-y: auto; padding: 16px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.chat-msg {
+  max-width: 78%; padding: 9px 13px; font-size: 0.88rem; line-height: 1.45;
+}
+.chat-msg.mine {
+  align-self: flex-end;
+  background: rgba(212,175,55,0.18); border: 1px solid rgba(212,175,55,0.35);
+  color: #f0e6d3; border-radius: 16px 16px 4px 16px;
+}
+.chat-msg.theirs {
+  align-self: flex-start;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+  color: #f0e6d3; border-radius: 16px 16px 16px 4px;
+}
+.chat-msg .msg-sender {
+  font-size: 0.65rem; color: #d4af37; margin-bottom: 3px;
+  font-family: 'Cinzel', serif; letter-spacing: 0.05em;
+}
+#chat-input-row {
+  border-top: 1px solid rgba(212,175,55,0.2); padding: 10px 12px;
+  display: flex; gap: 8px; flex-shrink: 0; background: #1a0a2e;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+}
+#chat-text-input {
+  flex: 1; background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(212,175,55,0.3); border-radius: 22px;
+  padding: 10px 16px; color: #f0e6d3;
+  font-family: 'Inter', sans-serif; font-size: 0.9rem; outline: none;
+}
+#chat-text-input:focus { border-color: #d4af37; }
+#chat-text-input::placeholder { color: rgba(240,230,211,0.3); }
+#chat-send-btn {
+  background: linear-gradient(135deg,#d4af37,#f0d060); color: #1a0a2e;
+  border: none; border-radius: 50%; width: 40px; height: 40px;
+  font-size: 1.1rem; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* ── Shared / reveal chips kept for non-image screens */
 .rev-chip{border-radius:20px;padding:7px 14px;font-size:0.82rem;font-weight:600;
   display:flex;align-items:center;gap:6px;border:1.5px solid;}
 .rev-chip.overlap{background:rgba(212,175,55,0.22);border-color:#d4af37;color:#f0d060;}
 .rev-chip.jij{background:rgba(122,196,122,0.12);border-color:rgba(122,196,122,0.5);color:#a0dca0;}
 .rev-chip.partner{background:rgba(160,120,210,0.12);border-color:rgba(160,120,210,0.5);color:#c8a8f0;}
-.vraag-kaart{border-radius:18px;padding:18px 20px;
-  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
-  font-family:'Playfair Display',serif;font-size:0.98rem;font-style:italic;
-  color:#f0e6d3;line-height:1.65;}
-.vraag-nr{font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;
-  color:#d4af37;font-style:normal;font-family:'Inter',sans-serif;margin-bottom:8px;}
 .mic-btn{display:flex;align-items:center;justify-content:center;gap:10px;
   padding:13px 20px;border-radius:14px;border:none;cursor:pointer;font-size:0.92rem;
   font-weight:600;font-family:'Inter',sans-serif;transition:all .2s;width:100%;max-width:390px;margin:0 auto;}
 .mic-btn.idle{background:rgba(122,196,122,0.1);border:1.5px solid rgba(122,196,122,0.4);color:#7ac47a;}
-.mic-btn.active{background:rgba(200,80,80,0.15);border:1.5px solid rgba(200,80,80,0.5);color:#e07070;}
-.mic-status{font-size:0.72rem;color:#9080a8;text-align:center;margin-top:4px;padding:0 20px;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .fade-up{animation:fadeUp .3s ease forwards;}
 </style>
@@ -166,6 +279,7 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
 <body>
 <a href="world.html" class="back-btn">← Kaart</a>
 
+<!-- ══════════════════ START ══════════════════ -->
 <div id="s-start" class="screen active">
   <div class="pad gap" style="padding-top:70px;">
     <div style="text-align:center;">
@@ -180,9 +294,20 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
   </div>
 </div>
 
+<!-- ══════════════════ KOPPEL (met naam) ══════════════════ -->
 <div id="s-koppel" class="screen">
-  <div class="pad gap" style="padding-top:70px;">
+  <div class="pad gap" style="padding-top:60px;">
     <h2 id="koppel-titel">Sessie aanmaken</h2>
+
+    <!-- Stap 1: naam invoeren -->
+    <div id="koppel-naam-stap" class="gap">
+      <p class="sub">Wat is jouw naam?</p>
+      <input class="name-input" id="naam-input" maxlength="20" placeholder="Bijv. Sophie"
+             oninput="this.value=this.value.replace(/[^a-zA-ZÀ-ÿ\s\-]/g,'')">
+      <button class="btn btn-gold" id="naam-ok-btn" onclick="confirmNaam()">Verder →</button>
+    </div>
+
+    <!-- Stap 2: sessie aanmaken / code -->
     <div id="koppel-maak" style="display:none;" class="gap">
       <p class="sub">Jouw koppelcode:</p>
       <div class="big-code" id="display-code">···</div>
@@ -192,6 +317,8 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
         <button class="btn btn-gold" onclick="startKiezen()">Begin →</button>
       </div>
     </div>
+
+    <!-- Stap 2b: code invoeren -->
     <div id="koppel-join" style="display:none;" class="gap">
       <input class="code-input" id="join-input" maxlength="6" placeholder="ABCDE"
              oninput="this.value=this.value.toUpperCase()"/>
@@ -200,36 +327,30 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
         <p class="sub dots">Verbinden<span>.</span><span>.</span><span>.</span></p>
       </div>
     </div>
+
     <p id="koppel-err" style="color:#e07070;text-align:center;display:none;font-size:.85rem;"></p>
     <button class="btn btn-ghost" style="font-size:.85rem;padding:10px;" onclick="showScreen('s-start')">← Terug</button>
   </div>
 </div>
 
+<!-- ══════════════════ KIES (hotspot kaart) ══════════════════ -->
 <div id="s-kies" class="screen">
   <div class="kies-frame">
     <img src="images/waarden.webp" class="kies-bg" alt="">
-
-    <!-- Back button -->
     <a href="world.html" class="kies-back">← Kaart</a>
-
-    <!-- Selection slots -->
     <div class="kies-slots" id="slots">
       <div class="slot" id="sl0"></div>
       <div class="slot" id="sl1"></div>
       <div class="slot" id="sl2"></div>
     </div>
-
-    <!-- Value cards grid (populated by JS) -->
     <div class="chips-grid" id="chips-grid"></div>
-
-    <!-- CTA -->
     <div class="kies-cta">
       <button id="kies-btn" disabled onclick="submitKeuze()">Dit zijn mijn 3 →</button>
     </div>
-
   </div>
 </div>
 
+<!-- ══════════════════ WACHT ══════════════════ -->
 <div id="s-wacht" class="screen">
   <div class="pad gap" style="padding-top:140px;text-align:center;align-items:center;">
     <div style="font-size:3rem;">✨</div>
@@ -239,36 +360,43 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
   </div>
 </div>
 
+<!-- ══════════════════ ONTHULLING (hotspot kaart) ══════════════════ -->
 <div id="s-reveal" class="screen">
-  <div style="width:100%;max-width:440px;padding:50px 0 220px;">
-    <div class="pad" style="padding-bottom:16px;text-align:center;">
-      <h1 style="font-size:1.55rem;">De onthulling</h1>
-    </div>
-    <div class="reveal-section" id="rev-overlap-sect" style="display:none;">
-      <div class="label-small" style="color:#d4af37;">✨ Jullie kozen allebei</div>
-      <div class="reveal-chips" id="rev-overlap"></div>
-    </div>
-    <div class="reveal-section">
-      <div class="label-small" style="color:#7ac47a;">🌱 Jouw waarden</div>
-      <div class="reveal-chips" id="rev-jij"></div>
-    </div>
-    <div class="reveal-section" id="rev-partner-sect" style="display:none;">
-      <div class="label-small" style="color:#c8a8f0;">💌 Waarden van je partner</div>
-      <div class="reveal-chips" id="rev-partner"></div>
-    </div>
-    <div class="reveal-section" style="margin-top:4px;">
-      <div class="label-small" style="color:#d4af37;">💬 Beginvragen</div>
-      <div class="gap" id="vragen-lijst"></div>
-    </div>
-    <div class="pad gap" style="padding-top:20px;">
-      <button class="mic-btn idle" onclick="CommLayer.toggleCall()" style="background:none;border:1.5px solid rgba(212,175,55,0.3);color:#d4af37;border-radius:14px;padding:11px 20px;font-size:.9rem;cursor:pointer;width:100%;font-family:inherit;">
-        <span data-comm-call>📵</span> Bellen via CommLayer
-      </button>
-    </div>
-  </div>
+  <div class="onthulling-frame" id="onthulling-frame">
+    <img src="images/onthulling.webp" class="onthulling-bg" alt="">
 
+    <!-- Back button -->
+    <a href="#" class="onth-back" id="onth-back">← Terug</a>
+
+    <!-- Jouw waarden (3 slots) -->
+    <div class="onth-slot" id="ov0"></div>
+    <div class="onth-slot" id="ov1"></div>
+    <div class="onth-slot" id="ov2"></div>
+
+    <!-- Partner waarden (3 slots) -->
+    <div class="onth-slot" id="ov3"></div>
+    <div class="onth-slot" id="ov4"></div>
+    <div class="onth-slot" id="ov5"></div>
+
+    <!-- Vraag zone 1 (swipable) -->
+    <div class="onth-vraag" id="ovraag1">
+      <div class="onth-vraag-track" id="ovraag1-track"></div>
+      <div class="onth-dots" id="ovraag1-dots"></div>
+    </div>
+
+    <!-- Vraag zone 2 (swipable) -->
+    <div class="onth-vraag" id="ovraag2">
+      <div class="onth-vraag-track" id="ovraag2-track"></div>
+      <div class="onth-dots" id="ovraag2-dots"></div>
+    </div>
+
+    <!-- Chat / Call buttons -->
+    <button class="onth-action-btn" id="onth-chat" onclick="openChat(null)">chat</button>
+    <button class="onth-action-btn" id="onth-call" onclick="CommLayer.toggleCall()">bellen</button>
+  </div>
 </div>
 
+<!-- ══════════════════ EIND ══════════════════ -->
 <div id="s-eind" class="screen">
   <div class="pad gap" style="padding-top:100px;text-align:center;align-items:center;">
     <div style="font-size:3rem;">🌟</div>
@@ -280,9 +408,24 @@ h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:600;color:#
   </div>
 </div>
 
+<!-- ══════════════════ CHAT OVERLAY ══════════════════ -->
+<div id="chat-overlay">
+  <div id="chat-header">
+    <button id="chat-back-btn" onclick="closeChat()">← Terug</button>
+    <div id="chat-partner-name">Chat</div>
+  </div>
+  <div id="chat-question-bar"></div>
+  <div id="chat-messages"></div>
+  <div id="chat-input-row">
+    <input type="text" id="chat-text-input" placeholder="Schrijf iets...">
+    <button id="chat-send-btn" onclick="sendChatMsg()">↑</button>
+  </div>
+</div>
+
 <script>
-// ── DATA: 16 meest voorkomende relatiewaarden (Schwartz + Gottman + eHarmony research)
-// Level 1 / Kaart 1. Diepere levels komen op Kaart 2+
+// ══════════════════════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════════════════════
 const W16 = [
   {id:'eerlijkheid', naam:'Eerlijkheid',  emoji:'🤝'},
   {id:'trouw',       naam:'Trouw',        emoji:'💛'},
@@ -301,7 +444,6 @@ const W16 = [
   {id:'dankbaarheid',naam:'Dankbaarheid', emoji:'🙏'},
   {id:'creativiteit',naam:'Creativiteit', emoji:'🎨'},
 ];
-
 const VRAGEN = {
   eerlijkheid: 'Wanneer was het moeilijkst om eerlijk te zijn — maar ben je blij dat je het deed?',
   trouw:       'Voor wie zou jij alles laten vallen als ze je nu belden?',
@@ -320,8 +462,6 @@ const VRAGEN = {
   dankbaarheid:'Waar ben jij dankbaar voor dat je zelden uitspreekt?',
   creativiteit:'Wanneer voel jij je het meest creatief — en wat maak of doe jij dan?',
 };
-
-// Spanningsvragen als keuzes botsen — geeft rijker gesprek
 const SPANNINGEN = {
   'vrijheid+familie':   'Jij koos Vrijheid, de ander koos Familie — hoe houd jij die twee in evenwicht?',
   'ambitie+rust':       'Ambitie wil vooruit, Rust wil stilstaan. Wanneer geef jij gas — en wanneer rem je?',
@@ -333,50 +473,48 @@ const SPANNINGEN = {
   'rust+ambitie':       'Rust en Ambitie — soms moet je kiezen. Wanneer kies jij voor welke?',
 };
 
+// ══════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════
 const S = {
   code: null, player: '1', solo: false,
+  myName: '', partnerName: '',
+  koppelMode: 'create', // 'create' | 'join'
   gekozen: [], partnerGekozen: [],
 };
 
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const el = document.getElementById(id);
-  if (el) { el.classList.add('active'); el.scrollTop = 0; }
-  if (id === 's-kies') fitKies();
-}
-function wById(id) { return W16.find(x => x.id === id); }
-
-// ── DESIGN JSON — exact pixel coords on 941×1672 artboard
+// ══════════════════════════════════════════════════════════
+//  KIES SCREEN — DESIGN (941×1672 artboard)
+// ══════════════════════════════════════════════════════════
 const AW = 941, AH = 1672;
 const DESIGN = {
   back:  { x:65,  y:52,   w:150, h:71 },
   slots: [
-    { x:281, y:442, w:103, h:115 }, // slot 1 — gemeten
-    { x:414, y:449, w:106, h:103 }, // slot 2
-    { x:560, y:447, w: 98, h:110 }, // slot 3
+    { x:281, y:442, w:103, h:115 },
+    { x:414, y:449, w:106, h:103 },
+    { x:560, y:447, w: 98, h:110 },
   ],
   chips: [
-    { x:148, y: 603, w:136, h:145 }, // Eerlijkheid
-    { x:311, y: 605, w:138, h:146 }, // Trouw
-    { x:482, y: 603, w:141, h:150 }, // Familie
-    { x:653, y: 605, w:138, h:146 }, // Humor
-    { x:143, y: 796, w:141, h:145 }, // Respect
-    { x:314, y: 796, w:138, h:143 }, // Avontuur
-    { x:485, y: 796, w:133, h:148 }, // Geloof
-    { x:658, y: 791, w:130, h:155 }, // Warmte
-    { x:146, y: 982, w:145, h:155 }, // Vrijheid
-    { x:311, y: 982, w:141, h:153 }, // Groei
-    { x:482, y: 982, w:146, h:158 }, // Rust
-    { x:648, y: 982, w:148, h:153 }, // Vriendschap
-    { x:143, y:1170, w:136, h:153 }, // Ambitie
-    { x:311, y:1172, w:143, h:151 }, // Verbinding
-    { x:482, y:1165, w:141, h:156 }, // Dankbaarheid
-    { x:653, y:1170, w:145, h:156 }, // Creativiteit
+    { x:148, y: 603, w:136, h:145 },
+    { x:311, y: 605, w:138, h:146 },
+    { x:482, y: 603, w:141, h:150 },
+    { x:653, y: 605, w:138, h:146 },
+    { x:143, y: 796, w:141, h:145 },
+    { x:314, y: 796, w:138, h:143 },
+    { x:485, y: 796, w:133, h:148 },
+    { x:658, y: 791, w:130, h:155 },
+    { x:146, y: 982, w:145, h:155 },
+    { x:311, y: 982, w:141, h:153 },
+    { x:482, y: 982, w:146, h:158 },
+    { x:648, y: 982, w:148, h:153 },
+    { x:143, y:1170, w:136, h:153 },
+    { x:311, y:1172, w:143, h:151 },
+    { x:482, y:1165, w:141, h:156 },
+    { x:653, y:1170, w:145, h:156 },
   ],
-  cta:   { x:187, y:1211, w:564, h:83 },
+  cta: { x:187, y:1211, w:564, h:83 },
 };
 
-// Place an element pixel-exactly using rendered frame dimensions
 function px(el, d, fw, fh) {
   if (!el) return;
   el.style.left   = (d.x / AW * fw) + 'px';
@@ -384,45 +522,61 @@ function px(el, d, fw, fh) {
   el.style.width  = (d.w / AW * fw) + 'px';
   el.style.height = (d.h / AH * fh) + 'px';
 }
-
 function placeHotspots(fw, fh) {
   px(document.querySelector('.kies-back'), DESIGN.back, fw, fh);
-  DESIGN.slots.forEach((d, i) => px(document.getElementById('sl' + i), d, fw, fh));
-  px(document.querySelector('.kies-cta'),  DESIGN.cta,  fw, fh);
+  DESIGN.slots.forEach((d, i) => px(document.getElementById('sl'+i), d, fw, fh));
+  px(document.querySelector('.kies-cta'), DESIGN.cta, fw, fh);
   document.querySelectorAll('.chip').forEach((el, i) => {
     if (i < DESIGN.chips.length) px(el, DESIGN.chips[i], fw, fh);
   });
 }
+function fitKies() {
+  const ratio = AW / AH;
+  let fw, fh;
+  if (window.innerWidth / window.innerHeight > ratio) {
+    fh = window.innerHeight; fw = fh * ratio;
+  } else {
+    fw = window.innerWidth; fh = fw / ratio;
+  }
+  fw = Math.round(fw); fh = Math.round(fh);
+  const frame = document.querySelector('.kies-frame');
+  if (!frame) return;
+  frame.style.width = fw + 'px'; frame.style.height = fh + 'px';
+  placeHotspots(fw, fh);
+}
+fitKies();
+window.addEventListener('resize', fitKies);
+window.addEventListener('load', fitKies);
 
-// ── CHIPS
+// ══════════════════════════════════════════════════════════
+//  CHIPS & SLOTS (kies screen)
+// ══════════════════════════════════════════════════════════
+function wById(id) { return W16.find(x => x.id === id); }
+
 function buildChips() {
   const grid = document.getElementById('chips-grid');
   grid.innerHTML = '';
-  W16.forEach((waarde, i) => {
+  W16.forEach(waarde => {
     const el = document.createElement('div');
-    el.className = 'chip' + (S.gekozen.includes(waarde.id) ? ' gekozen' : '');
+    el.className = 'chip';
     el.dataset.id = waarde.id;
     el.addEventListener('click', () => toggleChip(waarde.id));
     grid.appendChild(el);
   });
-  // Position chips using current frame pixel size
   const frame = document.querySelector('.kies-frame');
-  const fw = frame ? parseFloat(frame.style.width)  || frame.offsetWidth  : AW;
-  const fh = frame ? parseFloat(frame.style.height) || frame.offsetHeight : AH;
+  const fw = frame ? (parseFloat(frame.style.width) || frame.offsetWidth) : AW;
+  const fh = frame ? (parseFloat(frame.style.height) || frame.offsetHeight) : AH;
   placeHotspots(fw, fh);
   updateSlots();
 }
-
 function toggleChip(id) {
   const idx = S.gekozen.indexOf(id);
   if (idx > -1) {
     S.gekozen.splice(idx, 1);
   } else {
     if (S.gekozen.length >= 3) {
-      // Subtle wiggle feedback on all selected cards
       document.querySelectorAll('.chip.gekozen').forEach(el => {
-        el.classList.remove('vol-schud');
-        void el.offsetWidth;
+        el.classList.remove('vol-schud'); void el.offsetWidth;
         el.classList.add('vol-schud');
         el.addEventListener('animationend', () => el.classList.remove('vol-schud'), {once:true});
       });
@@ -430,52 +584,380 @@ function toggleChip(id) {
     }
     S.gekozen.push(id);
   }
-  document.querySelectorAll('.chip').forEach(el => {
-    el.classList.toggle('gekozen', S.gekozen.includes(el.dataset.id));
-  });
+  document.querySelectorAll('.chip').forEach(el =>
+    el.classList.toggle('gekozen', S.gekozen.includes(el.dataset.id)));
   updateSlots();
 }
-
 function updateSlots() {
   for (let i = 0; i < 3; i++) {
-    const sl = document.getElementById('sl' + i);
+    const sl = document.getElementById('sl'+i);
     const wid = S.gekozen[i];
     if (wid) { sl.classList.add('vol'); sl.textContent = wById(wid).emoji; }
-    else     { sl.classList.remove('vol'); sl.textContent = ''; }
+    else      { sl.classList.remove('vol'); sl.textContent = ''; }
   }
   const btn = document.getElementById('kies-btn');
   btn.disabled = S.gekozen.length < 3;
   btn.closest('.kies-cta').classList.toggle('disabled', S.gekozen.length < 3);
 }
 
-// ── KOPPEL
-function loadKoppelScript(cb) {
-  if (window.KoppelClient) { cb(); return; }
-  const s = document.createElement('script');
-  cb(); // sd-client.js already loaded
-  document.head.appendChild(s);
+// ══════════════════════════════════════════════════════════
+//  ONTHULLING SCREEN — DESIGN (941×1672 artboard)
+// ══════════════════════════════════════════════════════════
+const DESIGN_O = {
+  back:         { x:66,  y:48,  w:156, h:79  },
+  jouwSlots: [
+    { x:189, y:454, w:158, h:102 },
+    { x:390, y:459, w:168, h:92  },
+    { x:589, y:459, w:173, h:92  },
+  ],
+  partnerSlots: [
+    { x:189, y:670, w:155, h:84 },
+    { x:390, y:668, w:166, h:86 },
+    { x:594, y:668, w:168, h:94 },
+  ],
+  vraag1:   { x:208, y:926,  w:505, h:117 },
+  vraag2:   { x:211, y:1194, w:503, h:119 },
+  chatBtn:  { x:181, y:1448, w:250, h:76  },
+  callBtn:  { x:505, y:1448, w:255, h:84  },
+};
+
+// Vraag swipe state per zone
+const vraagState = {
+  1: { idx: 0, items: [], dragging: false, startX: 0, startT: 0 },
+  2: { idx: 0, items: [], dragging: false, startX: 0, startT: 0 },
+};
+
+function pxO(el, d, fw, fh) {
+  if (!el) return;
+  el.style.left   = (d.x / AW * fw) + 'px';
+  el.style.top    = (d.y / AH * fh) + 'px';
+  el.style.width  = (d.w / AW * fw) + 'px';
+  el.style.height = (d.h / AH * fh) + 'px';
+}
+
+function fitOnthulling() {
+  const ratio = AW / AH;
+  let fw, fh;
+  if (window.innerWidth / window.innerHeight > ratio) {
+    fh = window.innerHeight; fw = fh * ratio;
+  } else {
+    fw = window.innerWidth; fh = fw / ratio;
+  }
+  fw = Math.round(fw); fh = Math.round(fh);
+  const frame = document.getElementById('onthulling-frame');
+  if (!frame) return;
+  frame.style.width = fw + 'px'; frame.style.height = fh + 'px';
+  placeOnthullingHotspots(fw, fh);
+}
+
+function placeOnthullingHotspots(fw, fh) {
+  const scalePt = fw / AW; // points per artboard-px, same for fh/AH
+
+  // Back button
+  pxO(document.getElementById('onth-back'), DESIGN_O.back, fw, fh);
+
+  // Jouw slots
+  DESIGN_O.jouwSlots.forEach((d, i) => {
+    const el = document.getElementById('ov'+i);
+    pxO(el, d, fw, fh);
+    // font sizes relative to slot height
+    const slotH = d.h / AH * fh;
+    const slotW = d.w / AW * fw;
+    const emojiPx = Math.round(slotH * 0.35);
+    const naamPx  = Math.round(slotH * 0.18);
+    if (el) {
+      el.querySelector('.s-emoji') && (el.querySelector('.s-emoji').style.fontSize = emojiPx + 'px');
+      el.querySelector('.s-naam')  && (el.querySelector('.s-naam').style.fontSize  = naamPx  + 'px');
+    }
+  });
+
+  // Partner slots
+  DESIGN_O.partnerSlots.forEach((d, i) => {
+    const el = document.getElementById('ov'+(i+3));
+    pxO(el, d, fw, fh);
+    const slotH = d.h / AH * fh;
+    const emojiPx = Math.round(slotH * 0.35);
+    const naamPx  = Math.round(slotH * 0.18);
+    if (el) {
+      el.querySelector('.s-emoji') && (el.querySelector('.s-emoji').style.fontSize = emojiPx + 'px');
+      el.querySelector('.s-naam')  && (el.querySelector('.s-naam').style.fontSize  = naamPx  + 'px');
+    }
+  });
+
+  // Vraag zones
+  [1, 2].forEach(n => {
+    const zone = DESIGN_O['vraag'+n];
+    const el = document.getElementById('ovraag'+n);
+    pxO(el, zone, fw, fh);
+    // font size for slide text
+    const slideFontPx = Math.round(zone.h / AH * fh * 0.20);
+    el.querySelectorAll('.onth-vraag-slide').forEach(s =>
+      s.style.fontSize = Math.max(9, Math.min(15, slideFontPx)) + 'px');
+  });
+
+  // Chat / call buttons
+  pxO(document.getElementById('onth-chat'), DESIGN_O.chatBtn, fw, fh);
+  pxO(document.getElementById('onth-call'), DESIGN_O.callBtn, fw, fh);
+}
+
+window.addEventListener('resize', fitOnthulling);
+
+// ── Slot content helper
+function fillSlot(elId, wid) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = '';
+  if (!wid) return;
+  const w = wById(wid);
+  if (!w) return;
+  el.innerHTML = `<span class="s-emoji">${w.emoji}</span><span class="s-naam">${w.naam}</span>`;
+}
+
+// ── Build the onthulling screen
+function buildOnthulling() {
+  // Fill jouw slots
+  [0,1,2].forEach(i => fillSlot('ov'+i, S.gekozen[i]));
+
+  // Fill partner slots
+  [0,1,2].forEach(i => fillSlot('ov'+(i+3), S.partnerGekozen[i]));
+
+  // Build questions for zone 1: jouw waarden + spanning
+  const jijVragen = S.gekozen.map(id => VRAGEN[id]).filter(Boolean);
+  // Add tension questions
+  const allIds = [...S.gekozen, ...S.partnerGekozen];
+  const tensionVragen = [];
+  for (const [key, vraag] of Object.entries(SPANNINGEN)) {
+    const [a, b] = key.split('+');
+    if (allIds.includes(a) && allIds.includes(b)) tensionVragen.push(vraag);
+  }
+  vraagState[1].items = [...jijVragen, ...tensionVragen].slice(0, 5);
+
+  // Zone 2: partner waarden questions
+  const partnerVragen = S.partnerGekozen.map(id => VRAGEN[id]).filter(Boolean);
+  vraagState[2].items = [...partnerVragen, ...tensionVragen].slice(0, 5);
+
+  // Deduplicate across zones
+  vraagState[2].items = vraagState[2].items.filter(v => !vraagState[1].items.includes(v));
+  if (vraagState[2].items.length === 0 && tensionVragen.length > 0) {
+    vraagState[2].items = tensionVragen.slice(0, 3);
+  }
+
+  // Render both zones
+  [1, 2].forEach(n => buildVraagZone(n));
+
+  // Update partner name in chat header
+  document.getElementById('chat-partner-name').textContent =
+    S.partnerName ? S.partnerName : 'Chat';
+
+  // Fit & place everything
+  fitOnthulling();
+}
+
+function buildVraagZone(n) {
+  const state = vraagState[n];
+  const track = document.getElementById('ovraag'+n+'-track');
+  const dots  = document.getElementById('ovraag'+n+'-dots');
+  if (!track || !dots) return;
+
+  track.innerHTML = '';
+  dots.innerHTML  = '';
+  state.idx = 0;
+
+  if (state.items.length === 0) {
+    const slide = document.createElement('div');
+    slide.className = 'onth-vraag-slide first last';
+    slide.textContent = '—';
+    track.appendChild(slide);
+    return;
+  }
+
+  state.items.forEach((vraag, i) => {
+    const slide = document.createElement('div');
+    slide.className = 'onth-vraag-slide';
+    if (i === 0) slide.classList.add('first');
+    if (i === state.items.length - 1) slide.classList.add('last');
+
+    // Left/right arrows
+    const lArr = document.createElement('span');
+    lArr.className = 'onth-vraag-arrow left';
+    lArr.textContent = '‹';
+    if (i === 0) lArr.classList.add('dim');
+
+    const rArr = document.createElement('span');
+    rArr.className = 'onth-vraag-arrow right';
+    rArr.textContent = '›';
+    if (i === state.items.length - 1) rArr.classList.add('dim');
+
+    const txt = document.createElement('span');
+    txt.textContent = vraag;
+
+    slide.appendChild(lArr);
+    slide.appendChild(txt);
+    slide.appendChild(rArr);
+    track.appendChild(slide);
+
+    // Dot
+    const dot = document.createElement('div');
+    dot.className = 'onth-dot' + (i === 0 ? ' active' : '');
+    dots.appendChild(dot);
+  });
+
+  // Swipe / click interactions
+  setupVraagSwipe(n);
+}
+
+function goToSlide(n, idx) {
+  const state = vraagState[n];
+  if (!state.items.length) return;
+  idx = Math.max(0, Math.min(state.items.length - 1, idx));
+  state.idx = idx;
+  const track = document.getElementById('ovraag'+n+'-track');
+  if (track) track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+  document.querySelectorAll('#ovraag'+n+'-dots .onth-dot').forEach((d, i) =>
+    d.classList.toggle('active', i === idx));
+}
+
+function setupVraagSwipe(n) {
+  const zone  = document.getElementById('ovraag'+n);
+  const state = vraagState[n];
+  if (!zone) return;
+
+  let touchStartX = 0, touchStartT = 0, moved = false;
+
+  const onStart = (clientX) => {
+    touchStartX = clientX; touchStartT = Date.now(); moved = false;
+  };
+  const onMove = (clientX) => {
+    if (Math.abs(clientX - touchStartX) > 5) moved = true;
+  };
+  const onEnd = (clientX) => {
+    const dx = clientX - touchStartX;
+    const dt = Date.now() - touchStartT;
+    if (!moved && Math.abs(dx) < 8) {
+      // Tap → open chat with current question
+      openChat(state.items[state.idx]);
+      return;
+    }
+    // Swipe threshold: 40px or fast flick
+    if (Math.abs(dx) > 40 || (Math.abs(dx) > 15 && dt < 250)) {
+      goToSlide(n, state.idx + (dx < 0 ? 1 : -1));
+    }
+  };
+
+  // Touch
+  zone.addEventListener('touchstart', e => onStart(e.touches[0].clientX), {passive:true});
+  zone.addEventListener('touchmove',  e => onMove(e.touches[0].clientX),  {passive:true});
+  zone.addEventListener('touchend',   e => onEnd(e.changedTouches[0].clientX));
+
+  // Mouse
+  zone.addEventListener('mousedown', e => { onStart(e.clientX); e.preventDefault(); });
+  zone.addEventListener('mousemove', e => { if(e.buttons===1) onMove(e.clientX); });
+  zone.addEventListener('mouseup',   e => onEnd(e.clientX));
+}
+
+// ══════════════════════════════════════════════════════════
+//  CHAT OVERLAY
+// ══════════════════════════════════════════════════════════
+let chatMessages = []; // { sender, text }
+
+function openChat(vraag) {
+  const overlay = document.getElementById('chat-overlay');
+  const qBar = document.getElementById('chat-question-bar');
+  qBar.textContent = vraag || '';
+  overlay.classList.add('open');
+  document.getElementById('chat-partner-name').textContent =
+    S.partnerName ? S.partnerName : (S.solo ? 'Solo verkennen' : 'Je partner');
+  renderChatMessages();
+  setTimeout(() => document.getElementById('chat-text-input').focus(), 100);
+}
+function closeChat() {
+  document.getElementById('chat-overlay').classList.remove('open');
+}
+function sendChatMsg() {
+  const input = document.getElementById('chat-text-input');
+  const text = input.value.trim();
+  if (!text) return;
+  chatMessages.push({ sender: S.myName || 'Jij', mine: true, text });
+  input.value = '';
+  renderChatMessages();
+  // TODO: send via KoppelClient / CommLayer
+}
+function receiveChatMsg(senderName, text) {
+  chatMessages.push({ sender: senderName, mine: false, text });
+  renderChatMessages();
+}
+function renderChatMessages() {
+  const container = document.getElementById('chat-messages');
+  container.innerHTML = '';
+  chatMessages.forEach(m => {
+    const el = document.createElement('div');
+    el.className = 'chat-msg ' + (m.mine ? 'mine' : 'theirs');
+    el.innerHTML = `<div class="msg-sender">${m.sender}</div>${m.text}`;
+    container.appendChild(el);
+  });
+  container.scrollTop = container.scrollHeight;
+}
+document.getElementById('chat-text-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { sendChatMsg(); e.preventDefault(); }
+});
+
+// ══════════════════════════════════════════════════════════
+//  SCHERMEN
+// ══════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('active'); el.scrollTop = 0; }
+  if (id === 's-kies')   fitKies();
+  if (id === 's-reveal') fitOnthulling();
+}
+
+// ══════════════════════════════════════════════════════════
+//  NAAM & KOPPEL
+// ══════════════════════════════════════════════════════════
+function confirmNaam() {
+  const naam = document.getElementById('naam-input').value.trim();
+  if (!naam) {
+    document.getElementById('naam-input').style.borderColor = '#e07070';
+    return;
+  }
+  S.myName = naam;
+  document.getElementById('koppel-naam-stap').style.display = 'none';
+
+  if (S.koppelMode === 'create') {
+    document.getElementById('koppel-maak').style.display = 'block';
+    loadKoppelScript(() => {
+      setupListeners();
+      S.player = '1'; KoppelClient.create('waarden');
+    });
+  } else {
+    document.getElementById('koppel-join').style.display = 'block';
+    loadKoppelScript(() => { setupListeners(); });
+  }
 }
 
 function startKoppel(mode) {
+  S.koppelMode = mode;
   showScreen('s-koppel');
+  document.getElementById('koppel-naam-stap').style.display = 'block';
   document.getElementById('koppel-maak').style.display = 'none';
   document.getElementById('koppel-join').style.display = 'none';
-  loadKoppelScript(() => {
-    setupListeners();
-    if (mode === 'create') {
-      document.getElementById('koppel-titel').textContent = 'Sessie aanmaken';
-      document.getElementById('koppel-maak').style.display = 'block';
-      S.player = '1'; KoppelClient.create('waarden');
-    } else {
-      document.getElementById('koppel-titel').textContent = 'Code invoeren';
-      document.getElementById('koppel-join').style.display = 'block';
-      S.player = '2';
-    }
-  });
+  document.getElementById('koppel-err').style.display = 'none';
+  document.getElementById('naam-input').value = '';
+  document.getElementById('naam-input').style.borderColor = '';
+  document.getElementById('koppel-titel').textContent =
+    mode === 'create' ? 'Sessie aanmaken' : 'Doe mee';
+  setTimeout(() => document.getElementById('naam-input').focus(), 120);
+}
+
+function loadKoppelScript(cb) {
+  if (window.KoppelClient) { cb(); return; }
+  cb();
 }
 
 function setupListeners() {
-  KoppelClient.on('session_created', ({ code }) => { window.CommLayer?.setSession(code,'1');
+  KoppelClient.on('session_created', ({ code }) => {
+    window.CommLayer?.setSession(code, '1');
     S.code = code;
     document.getElementById('display-code').textContent = code;
   });
@@ -497,10 +979,10 @@ function setupListeners() {
     const pk = S.player === '1' ? 'p2' : 'p1';
     if (state[pk] && state[pk].waarden) {
       S.partnerGekozen = state[pk].waarden;
+      S.partnerName = state[pk].naam || '';
       buildReveal(); showScreen('s-reveal');
     }
   });
-  // session_update = één speler klaar, wacht op allebei via session_complete
 }
 
 function doJoin() {
@@ -523,113 +1005,35 @@ function submitKeuze() {
   if (S.code === '1111') {
     showScreen('s-wacht');
     setTimeout(() => {
-      // Admin: simuleer partner met deels andere keuzes
       const pool = W16.map(x => x.id).filter(id => !S.gekozen.includes(id));
       const shuffle = arr => { for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];} return arr; };
       const partner = shuffle(pool).slice(0, 2);
-      partner.push(S.gekozen[Math.floor(Math.random() * 3)]); // 1 overlap
+      partner.push(S.gekozen[Math.floor(Math.random() * 3)]);
       S.partnerGekozen = shuffle(partner);
+      S.partnerName = 'Demo partner';
       buildReveal(); showScreen('s-reveal');
     }, 1500);
     return;
   }
   showScreen('s-wacht');
-  KoppelClient.done({ waarden: S.gekozen });
+  KoppelClient.done({ waarden: S.gekozen, naam: S.myName });
 }
 
 // ── REVEAL
 function buildReveal() {
-  const overlap    = S.gekozen.filter(id => S.partnerGekozen.includes(id));
-  const jijUniek   = S.gekozen.filter(id => !overlap.includes(id));
-  const partnerUniek = S.partnerGekozen.filter(id => !overlap.includes(id));
-
-  const overlapSect = document.getElementById('rev-overlap-sect');
-  if (overlap.length > 0) {
-    overlapSect.style.display = 'block';
-    document.getElementById('rev-overlap').innerHTML = overlap.map(id => chipHTML(id,'overlap')).join('');
-  } else {
-    overlapSect.style.display = 'none';
-  }
-
-  document.getElementById('rev-jij').innerHTML =
-    [...overlap.map(id => chipHTML(id,'overlap')), ...jijUniek.map(id => chipHTML(id,'jij'))].join('');
-
-  const partnerSect = document.getElementById('rev-partner-sect');
-  if (S.partnerGekozen.length > 0) {
-    partnerSect.style.display = 'block';
-    document.getElementById('rev-partner').innerHTML =
-      [...overlap.map(id => chipHTML(id,'overlap')), ...partnerUniek.map(id => chipHTML(id,'partner'))].join('');
-  } else {
-    partnerSect.style.display = 'none';
-  }
-
-  buildVragen(overlap, jijUniek, partnerUniek);
+  buildOnthulling();
 }
 
-function chipHTML(id, type) {
-  const waarde = wById(id);
-  if (!waarde) return '';
-  return '<div class="rev-chip ' + type + '">' + waarde.emoji + ' ' + waarde.naam + '</div>';
-}
-
-function buildVragen(overlap, jijUniek, partnerUniek) {
-  const container = document.getElementById('vragen-lijst');
-  container.innerHTML = '';
-  const vragen = [];
-
-  if (overlap.length > 0) vragen.push(VRAGEN[overlap[0]]);
-
-  const allIds = [...S.gekozen, ...S.partnerGekozen];
-  for (const [key, vraag] of Object.entries(SPANNINGEN)) {
-    const [a, b] = key.split('+');
-    if (allIds.includes(a) && allIds.includes(b) && !vragen.includes(vraag) && vragen.length < 2) {
-      vragen.push(vraag);
-    }
-  }
-  if (vragen.length < 2 && partnerUniek.length > 0) vragen.push(VRAGEN[partnerUniek[0]]);
-  if (vragen.length < 2 && jijUniek.length > 0) vragen.push(VRAGEN[jijUniek[0]]);
-  if (vragen.length === 0) vragen.push(VRAGEN[S.gekozen[0]]);
-
-  vragen.slice(0, 2).forEach((v, i) => {
-    const el = document.createElement('div');
-    el.className = 'vraag-kaart fade-up';
-    el.style.animationDelay = (i * 0.12) + 's';
-    el.innerHTML = '<div class="vraag-nr">Vraag ' + (i+1) + '</div>' + v;
-    container.appendChild(el);
-  });
-}
-
-// ── FRAME SIZING + HOTSPOT POSITIONERING (pixel-exact via JS)
-function fitKies() {
-  const vw = window.innerWidth, vh = window.innerHeight;
-  const ratio = AW / AH;
-  let fw, fh;
-  if (vw / vh > ratio) { fh = vh; fw = fh * ratio; }
-  else                  { fw = vw; fh = fw / ratio; }
-  fw = Math.round(fw); fh = Math.round(fh);
-  const frame = document.querySelector('.kies-frame');
-  if (!frame) return;
-  frame.style.width  = fw + 'px';
-  frame.style.height = fh + 'px';
-  placeHotspots(fw, fh);
-}
-// Run now and on every resize
-fitKies();
-window.addEventListener('resize', fitKies);
-// Also run after fonts/images load (innerHeight may shift)
-window.addEventListener('load', fitKies);
-
-// Bellen gaat via CommLayer (geen lokale WebRTC meer)
-
-// ── AUTO-START: sla start/koppel over als al globaal gekoppeld ──
+// ══════════════════════════════════════════════════════════
+//  AUTO-START (als al globaal gekoppeld)
+// ══════════════════════════════════════════════════════════
 (function() {
   const gc = localStorage.getItem('comm_code');
-  if (!gc) return; // niet gekoppeld: normale flow
-
+  if (!gc) return;
+  const sn = localStorage.getItem('comm_naam');
+  if (sn) S.myName = sn;
   if (gc === '1111') { S.code='1111'; S.player='1'; startKiezen(); return; }
-
   showScreen('s-wacht');
-
   function go() {
     KoppelClient.on('session_created', ({ code, player }) => {
       S.code=code; S.player=player;
@@ -642,41 +1046,21 @@ window.addEventListener('load', fitKies);
     KoppelClient.on('both_connected', () => startKiezen());
     KoppelClient.on('session_complete', ({ state }) => {
       const pk = S.player==='1'?'p2':'p1';
-      if (state[pk]?.waarden) { S.partnerGekozen=state[pk].waarden; buildReveal(); showScreen('s-reveal'); }
+      if (state[pk]?.waarden) {
+        S.partnerGekozen=state[pk].waarden;
+        S.partnerName = state[pk].naam || '';
+        buildReveal(); showScreen('s-reveal');
+      }
     });
-    // session_update = één speler klaar, maar we wachten op allebei (session_complete)
-    KoppelClient.joinOrCreate(gc + '.W', 'waarden');
+    KoppelClient.joinOrCreate(gc+'.W','waarden');
   }
   window.KoppelClient ? go() : loadKoppelScript(go);
 })();
 
-// ── DEBUG: klik op frame → zie exacte artboard-coördinaten
-(function() {
-  const toast = document.createElement('div');
-  toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
-    'background:rgba(0,0,0,0.85);color:#ffd700;padding:8px 16px;border-radius:8px;' +
-    'font-family:monospace;font-size:0.8rem;z-index:99999;pointer-events:none;' +
-    'white-space:pre;display:none;';
-  document.body.appendChild(toast);
-
-  document.addEventListener('click', function(e) {
-    const frame = document.querySelector('.kies-frame');
-    if (!frame) return;
-    const r = frame.getBoundingClientRect();
-    if (e.clientX < r.left || e.clientX > r.right ||
-        e.clientY < r.top  || e.clientY > r.bottom) return;
-    const rx = e.clientX - r.left;
-    const ry = e.clientY - r.top;
-    const ax = Math.round(rx / r.width  * 941);
-    const ay = Math.round(ry / r.height * 1672);
-    const px_pct = (rx / r.width  * 100).toFixed(1) + '%';
-    const py_pct = (ry / r.height * 100).toFixed(1) + '%';
-    toast.textContent = 'artboard: x=' + ax + ' y=' + ay + '\nframe%:  left=' + px_pct + ' top=' + py_pct;
-    toast.style.display = 'block';
-    clearTimeout(toast._t);
-    toast._t = setTimeout(() => toast.style.display = 'none', 3000);
-  }, true);
-})();
+// Sla naam op in localStorage als gezet
+window.addEventListener('beforeunload', () => {
+  if (S.myName) localStorage.setItem('comm_naam', S.myName);
+});
 </script>
 </body>
 </html>
